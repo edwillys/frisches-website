@@ -15,12 +15,20 @@ vi.mock('gsap', () => ({
   }
 }))
 
+// Mock Vue Router
+const mockRouter = {
+  push: vi.fn()
+}
+
 describe('CardDealer', () => {
   it('renders properly', () => {
     const wrapper = mount(CardDealer, {
       global: {
         stubs: {
           MenuCard: true
+        },
+        mocks: {
+          $router: mockRouter
         }
       }
     })
@@ -33,6 +41,9 @@ describe('CardDealer', () => {
       global: {
         stubs: {
           MenuCard: true
+        },
+        mocks: {
+          $router: mockRouter
         }
       }
     })
@@ -45,6 +56,9 @@ describe('CardDealer', () => {
       global: {
         stubs: {
           MenuCard: true
+        },
+        mocks: {
+          $router: mockRouter
         }
       }
     })
@@ -57,6 +71,9 @@ describe('CardDealer', () => {
       global: {
         stubs: {
           MenuCard: true
+        },
+        mocks: {
+          $router: mockRouter
         }
       }
     })
@@ -67,29 +84,47 @@ describe('CardDealer', () => {
   })
 
   it('renders three menu cards', () => {
-    const wrapper = mount(CardDealer)
+    const wrapper = mount(CardDealer, {
+      global: {
+        mocks: {
+          $router: mockRouter
+        }
+      }
+    })
 
     const cards = wrapper.findAllComponents(MenuCard)
     expect(cards.length).toBe(3)
   })
 
   it('passes correct props to MenuCard components', () => {
-    const wrapper = mount(CardDealer)
+    const wrapper = mount(CardDealer, {
+      global: {
+        mocks: {
+          $router: mockRouter
+        }
+      }
+    })
 
     const cards = wrapper.findAllComponents(MenuCard)
     
-    expect(cards[0].props('title')).toBe('Music')
-    expect(cards[0].props('route')).toBe('/music')
+    expect(cards[0]?.props('title')).toBe('Music')
+    expect(cards[0]?.props('route')).toBe('/music')
     
-    expect(cards[1].props('title')).toBe('About')
-    expect(cards[1].props('route')).toBe('/about')
+    expect(cards[1]?.props('title')).toBe('About')
+    expect(cards[1]?.props('route')).toBe('/about')
     
-    expect(cards[2].props('title')).toBe('Tour')
-    expect(cards[2].props('route')).toBe('/tour')
+    expect(cards[2]?.props('title')).toBe('Tour')
+    expect(cards[2]?.props('route')).toBe('/tour')
   })
 
   it('has proper responsive layout structure', () => {
-    const wrapper = mount(CardDealer)
+    const wrapper = mount(CardDealer, {
+      global: {
+        mocks: {
+          $router: mockRouter
+        }
+      }
+    })
 
     expect(wrapper.find('.card-dealer').exists()).toBe(true)
     expect(wrapper.find('.card-dealer__background').exists()).toBe(true)
@@ -102,6 +137,9 @@ describe('CardDealer', () => {
       global: {
         stubs: {
           MenuCard: true
+        },
+        mocks: {
+          $router: mockRouter
         }
       }
     })
