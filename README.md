@@ -1,12 +1,53 @@
-# frisches-website
+# Frisches - Official Website
 
-This template should help get you started developing with Vue 3 in Vite.
+[![CI](https://github.com/edwillys/frisches-website/actions/workflows/ci.yml/badge.svg)](https://github.com/edwillys/frisches-website/actions/workflows/ci.yml)
+[![Deploy to Netlify](https://github.com/edwillys/frisches-website/actions/workflows/deploy-netlify.yml/badge.svg)](https://github.com/edwillys/frisches-website/actions/workflows/deploy-netlify.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-## Recommended IDE Setup
+Official website for the rock band **Frisches**, featuring an immersive card dealer-themed home screen inspired by the animated clip from the song "Witch Hunting."
+
+## ✨ Features
+
+- 🎴 Interactive card dealer interface with GSAP animations
+- 📱 Fully responsive design (mobile, tablet, desktop)
+- 🎨 Custom design system inspired by the band's visual identity
+- ⚡ Built with Vue 3 + TypeScript + Vite
+- ✅ Comprehensive test coverage with Vitest
+- 🚀 CI/CD with GitHub Actions
+
+## 🚀 Quick Start
+
+### Installation
+
+```sh
+npm install
+```
+
+### Development
+
+```sh
+npm run dev
+```
+
+### Testing
+
+```sh
+npm run test:unit
+```
+
+## 📚 Documentation
+
+- [Deployment Guide](.github/DEPLOYMENT.md) - CI/CD and deployment setup
+- [Git Workflow](.github/prompts/git-workflow.prompt.md) - Git commands and conventions
+- [Project Plan](.github/prompts/plan-frischesBandWebsite.prompt.md) - Implementation plan
+
+## 🛠️ Development Setup
+
+### Recommended IDE
 
 [VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
 
-## Recommended Browser Setup
+### Recommended Browser Extensions
 
 - Chromium-based browsers (Chrome, Edge, Brave, etc.):
   - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd) 
