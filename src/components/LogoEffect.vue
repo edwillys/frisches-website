@@ -17,33 +17,30 @@ const mode = props.mode ?? 'animated'
 
 const logoHref = new URL('../assets/images/logo-white-cropped.png', import.meta.url).href
 
-const turbulenceRef = ref<SVGFETurbulenceElement | null>(null)
 const wrapperRef = ref<HTMLElement | null>(null)
+const imageRef = ref<SVGImageElement | null>(null)
 
 useGSAP(() => {
-  if (mode === 'static') return
+  if (mode === 'static' || !imageRef.value) return
 
-  if (wrapperRef.value) {
-    gsap.to(wrapperRef.value, {
-      rotate: 2,
-      duration: 6,
-      yoyo: true,
-      repeat: -1,
-      ease: 'sine.inOut'
-    })
-  }
+  // Continuous heartbeat (pumping)
+  gsap.to(imageRef.value, {
+    scale: 1.03,
+    transformOrigin: 'center center',
+    duration: 0.8,
+    repeat: -1,
+    yoyo: true,
+    ease: 'sine.inOut'
+  })
 
-  if (turbulenceRef.value) {
-    const el = turbulenceRef.value
-    // Animate the baseFrequency attribute for subtle moving noise
-    gsap.to(el, {
-      attr: { baseFrequency: '0.02 0.06' },
-      duration: 4,
-      yoyo: true,
-      repeat: -1,
-      ease: 'sine.inOut'
-    } as any)
-  }
+  // Glowing effect (opacity/filter pulse)
+  gsap.to(imageRef.value, {
+    filter: 'drop-shadow(0 0 8px rgba(255, 255, 255, 0.6))',
+    duration: 1.5,
+    repeat: -1,
+    yoyo: true,
+    ease: 'sine.inOut'
+  })
 })
 
 function onClick() {
@@ -66,16 +63,17 @@ function onClick() {
       :viewBox="`0 0 ${size * 4} ${size}`"
       xmlns="http://www.w3.org/2000/svg" 
       preserveAspectRatio="xMidYMid meet"
-      style="width: 100%; height: 100%; display: block;"
+      style="width: 100%; height: 100%; display: block; overflow: visible;"
     >
-      <defs>
-        <filter id="logoNoise">
-          <feTurbulence ref="turbulenceRef" type="fractalNoise" baseFrequency="0.01 0.03" numOctaves="2" result="noise" />
-          <feDisplacementMap in2="noise" in="SourceGraphic" scale="10" xChannelSelector="R" yChannelSelector="G" />
-        </filter>
-      </defs>
-
-      <image :href="logoHref" x="0" y="0" :width="size * 4" :height="size" preserveAspectRatio="xMidYMid meet" filter="url(#logoNoise)" />
+      <image 
+        ref="imageRef"
+        :href="logoHref" 
+        x="0" 
+        y="0" 
+        :width="size * 4" 
+        :height="size" 
+        preserveAspectRatio="xMidYMid meet" 
+      />
     </svg>
   </div>
 </template>

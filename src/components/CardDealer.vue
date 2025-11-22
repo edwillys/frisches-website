@@ -185,8 +185,17 @@ const playCardOpen = () => {
     return
   }
 
+  const container = cardsContainerRef.value
+  if (!container) return
+
+  const containerRect = container.getBoundingClientRect()
+  const containerCenter = {
+    x: containerRect.width / 2,
+    y: containerRect.height / 2
+  }
+
   const tl = gsap.timeline({
-    defaults: { ease: 'back.out(1.4)', duration: 0.85 },
+    defaults: { ease: 'back.out(1.2)', duration: 1.0 },
     onComplete: () => {
       cards.forEach(card => gsap.set(card, { clearProps: 'transform' }))
       gsap.set(cardsContainerRef.value, { clearProps: 'transform' })
@@ -195,16 +204,23 @@ const playCardOpen = () => {
   })
 
   cards.forEach((card, index) => {
-    const stackState = getStackState(index, cards.length)
+    const rect = card.getBoundingClientRect()
+    // Calculate offset to center (where the logo was)
+    const cardCenterX = (rect.left - containerRect.left) + rect.width / 2
+    const cardCenterY = (rect.top - containerRect.top) + rect.height / 2
+    
+    const offsetX = containerCenter.x - cardCenterX
+    const offsetY = containerCenter.y - cardCenterY
+
     tl.fromTo(
       card,
       {
         opacity: 0,
-        scale: stackState.scale,
-        rotation: stackState.rotation,
-        x: stackState.x,
-        y: stackState.y,
-        transformOrigin: '45% 80%'
+        scale: 0.1,
+        rotation: -120 + (index * 30), // Spiral/Fan start
+        x: offsetX,
+        y: offsetY,
+        transformOrigin: 'center center'
       },
       {
         opacity: 1,
@@ -213,7 +229,7 @@ const playCardOpen = () => {
         x: 0,
         y: 0
       },
-      index * 0.08
+      index * 0.12
     )
   })
 }
@@ -226,8 +242,17 @@ const playCardCloseAndLogoReappear = () => {
     return
   }
 
+  const container = cardsContainerRef.value
+  if (!container) return
+
+  const containerRect = container.getBoundingClientRect()
+  const containerCenter = {
+    x: containerRect.width / 2,
+    y: containerRect.height / 2
+  }
+
   const tl = gsap.timeline({
-    defaults: { ease: 'power2.inOut', duration: 0.55 },
+    defaults: { ease: 'power2.inOut', duration: 0.6 },
     onComplete: () => {
       currentView.value = 'logo'
       nextTick(() => playLogoReappear())
@@ -235,33 +260,26 @@ const playCardCloseAndLogoReappear = () => {
   })
 
   cards.forEach((card, index) => {
-    const stackState = getStackState(index, cards.length)
+    const rect = card.getBoundingClientRect()
+    const cardCenterX = (rect.left - containerRect.left) + rect.width / 2
+    const cardCenterY = (rect.top - containerRect.top) + rect.height / 2
+    
+    const offsetX = containerCenter.x - cardCenterX
+    const offsetY = containerCenter.y - cardCenterY
+
     tl.to(
       card,
       {
-        opacity: 1,
-        scale: stackState.scale,
-        rotation: stackState.rotation,
-        x: stackState.x,
-        y: stackState.y,
-        zIndex: stackState.zIndex,
-        transformOrigin: '45% 80%'
+        opacity: 0,
+        scale: 0.1,
+        rotation: -120 + (index * 30),
+        x: offsetX,
+        y: offsetY,
+        transformOrigin: 'center center'
       },
-      index * 0.05
+      index * 0.06
     )
   })
-
-  tl.to(
-    cards,
-    {
-      opacity: 0,
-      x: '+=45',
-      duration: 0.3,
-      ease: 'power1.in',
-      stagger: 0.04
-    },
-    '-=0.2'
-  )
 }
 
 const playLogoReappear = () => {
@@ -333,6 +351,10 @@ const playCardSelection = (cardIndex: number) => {
     return
   }
 
+  // Get positions before changing view state (which might trigger layout changes)
+  const cardRects = cards.map(c => c.getBoundingClientRect())
+  const selectedRect = cardRects[cardIndex]
+
   currentView.value = 'content'
 
   nextTick(() => {
@@ -340,38 +362,47 @@ const playCardSelection = (cardIndex: number) => {
     const panel = contentPanelRef.value
 
     const tl = gsap.timeline({
-      defaults: { ease: 'power2.inOut', duration: 0.7 },
+      defaults: { ease: 'power2.inOut', duration: 0.8 },
       onComplete: () => {
         isAnimating.value = false
       }
     })
 
     if (container) {
+      // Move the whole container to the left
       tl.to(container, {
-        x: -260,
-        duration: 0.7
+        x: -320, // Moved further left to give space for content
+        duration: 0.8
       }, 0)
     }
 
     cards.forEach((card, index) => {
-      const distance = Math.abs(index - cardIndex)
-      const direction = index >= cardIndex ? 1 : -1
+      const rect = cardRects[index]
+      if (!rect || !selectedRect) return
+
+      // Calculate offset to move this card to the selected card's position
+      const offsetToCenter = selectedRect.left - rect.left
+      
+      // Tiny offset to show there are cards underneath (piling effect)
+      // e.g. 2px per card
+      const stackOffset = (index - cardIndex) * 3
+
       tl.to(card, {
-        x: distance === 0 ? 0 : direction * distance * 14,
-        y: (index - cardIndex) * 6,
-        scale: index === cardIndex ? 1 : 0.92,
-        opacity: index === cardIndex ? 1 : 0.45,
-        rotation: direction * distance * -2,
-        zIndex: index === cardIndex ? 20 : 12 - distance
+        x: offsetToCenter + stackOffset,
+        y: 0,
+        scale: index === cardIndex ? 1.05 : 0.95,
+        opacity: 1, // Keep visible so we see the stack edges
+        rotation: (index - cardIndex) * 1.5, // Very slight rotation
+        zIndex: index === cardIndex ? 50 : 40 - Math.abs(index - cardIndex)
       }, 0)
     })
 
     if (panel) {
       tl.fromTo(
         panel,
-        { opacity: 0, y: 32 },
-        { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' },
-        0.15
+        { opacity: 0, x: 40 },
+        { opacity: 1, x: 0, duration: 0.6, ease: 'power2.out' },
+        0.2
       )
     }
   })
@@ -565,12 +596,13 @@ onBeforeUnmount(() => {
 }
 
 .card-dealer__content-view {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
   z-index: 4;
+  pointer-events: none;
 }
 
 .card-dealer__content-panel {
@@ -581,6 +613,7 @@ onBeforeUnmount(() => {
   max-width: 600px;
   text-align: center;
   color: var(--color-text);
+  pointer-events: auto;
 }
 
 /* Tablet responsiveness */

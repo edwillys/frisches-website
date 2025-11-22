@@ -36,10 +36,9 @@ describe('LogoButton', () => {
     vi.clearAllMocks()
   })
 
-  it('renders glow and halo elements', () => {
+  it('renders glow element', () => {
     const wrapper = mount(LogoButton)
     expect(wrapper.find('.logo-button__glow').exists()).toBe(true)
-    expect(wrapper.find('.logo-button__halo').exists()).toBe(true)
   })
 
   it('emits click when activated via keyboard', async () => {

@@ -271,7 +271,7 @@ describe('CardDealer', () => {
     const containerEl = wrapper.find('.card-dealer__cards').element
     const containerShiftCall = gsapMocks.timelineTo.mock.calls.find(([target, vars]) => {
       const typedVars = vars as { x?: number }
-      return target === containerEl && typeof typedVars?.x === 'number' && typedVars.x === -260
+      return target === containerEl && typeof typedVars?.x === 'number' && typedVars.x === -320
     })
 
     expect(containerShiftCall).toBeTruthy()
