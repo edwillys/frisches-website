@@ -11,7 +11,7 @@ const titleRef = ref<HTMLElement | null>(null)
 const subtitleRef = ref<HTMLElement | null>(null)
 const cardsRef = ref<(HTMLElement | null)[]>([])
 const cardsContainerRef = ref<HTMLElement | null>(null)
-const contentViewRef = ref<HTMLElement | null>(null)
+const contentPanelRef = ref<HTMLElement | null>(null)
 const logoButtonRef = ref<any | null>(null)
 
 // View states: 'logo' | 'cards' | 'content'
@@ -21,11 +21,31 @@ const isAnimating = ref(false)
 
 // Background zoom-in animation on mount
 useGSAP(() => {
-  if (!bgRef.value) return
-  gsap.from(bgRef.value, {
-    scale: 1.1,
-    duration: 2,
-    ease: 'power1.inOut'
+  nextTick(() => {
+    const bgEl = bgRef.value
+    const logoEl = getLogoElement()
+
+    if (!bgEl || !logoEl) return
+
+    const tl = gsap.timeline()
+    tl.fromTo(
+      bgEl,
+      { scale: 1.08, opacity: 0.7 },
+      { scale: 1, opacity: 1, duration: 1.6, ease: 'power2.out' }
+    )
+      .fromTo(
+        logoEl,
+        { opacity: 0, scale: 0.8 },
+        { opacity: 1, scale: 1, duration: 1, ease: 'power2.out' },
+        '-=1.1'
+      )
+      .to(bgEl, {
+        scale: 1.04,
+        duration: 3,
+        ease: 'sine.inOut',
+        repeat: -1,
+        yoyo: true
+      })
   })
 })
 
@@ -93,7 +113,7 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
   if (!target) return
 
   const clickedInsideCards = cardsContainerRef.value?.contains(target) ?? false
-  const clickedInsideContent = contentViewRef.value?.contains(target) ?? false
+  const clickedInsideContent = contentPanelRef.value?.contains(target) ?? false
 
   if (currentView.value === 'cards') {
     if (clickedInsideCards) return
@@ -343,10 +363,9 @@ onBeforeUnmount(() => {
       <!-- Content view (shown after card click) -->
       <div
         v-if="currentView === 'content'"
-        ref="contentViewRef"
         class="card-dealer__content-view"
       >
-        <div class="card-dealer__content-placeholder">
+        <div ref="contentPanelRef" class="card-dealer__content-panel">
           <!-- Card content will be displayed here -->
           <h2 v-if="selectedCard !== null && selectedCard < menuItems.length">
             {{ menuItems[selectedCard]?.title }}
@@ -465,6 +484,13 @@ onBeforeUnmount(() => {
 
 .card-dealer__cards--content {
   pointer-events: none;
+  position: absolute;
+  left: clamp(32px, 10vw, 260px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: block;
+  width: 220px;
+  height: 320px;
 }
 
 .card-dealer__card {
@@ -473,6 +499,12 @@ onBeforeUnmount(() => {
   position: relative;
   z-index: 4;
   flex-shrink: 0;
+}
+
+.card-dealer__cards--content .card-dealer__card {
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 .card-dealer__content-view {
@@ -484,7 +516,7 @@ onBeforeUnmount(() => {
   z-index: 4;
 }
 
-.card-dealer__content-placeholder {
+.card-dealer__content-panel {
   background: rgba(0, 0, 0, 0.7);
   border: 2px solid var(--color-primary);
   border-radius: 16px;
@@ -511,6 +543,19 @@ onBeforeUnmount(() => {
   .card-dealer__cards {
     gap: var(--spacing-lg);
   }
+
+  .card-dealer__cards--content {
+    position: static;
+    transform: none;
+    width: 100%;
+    height: auto;
+    display: flex;
+    justify-content: center;
+  }
+
+  .card-dealer__cards--content .card-dealer__card {
+    position: relative;
+  }
 }
 
 /* Mobile responsiveness */
@@ -530,6 +575,10 @@ onBeforeUnmount(() => {
 
   .card-dealer__cards {
     gap: var(--spacing-md);
+  }
+
+  .card-dealer__content-panel {
+    width: 100%;
   }
 }
 

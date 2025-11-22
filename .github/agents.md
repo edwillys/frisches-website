@@ -17,8 +17,10 @@ We are building a dynamic website for the rock band **Frisches** using Vue.js. T
 ### Initial State (Logo View)
 1. **User lands on the website**
    - Dark, mysterious background with gradient overlay
+   - Background artwork gently pulses/zooms to create a breathing effect
    - White circle outline with animated Frisches logo in center (bottom-middle area)
    - Logo serves as the only interactive element on home screen
+   - Logo fades in sync with the background pulse so both elements feel like the same reveal
    - Minimal, clean, mysterious aesthetic matching "Witch Hunting" theme
 
 ### Logo Click → Cards Reveal (Logo to Cards Transition)
@@ -41,8 +43,8 @@ We are building a dynamic website for the rock band **Frisches** using Vue.js. T
 
 ### Card Click → Content View (Card Selection)
 4. **User clicks a specific card (e.g., "Music")**
-   - Selected card animates: moves to left side, scale 0.9, opacity 0.8
-   - Other cards: fade out (opacity 0) and scale down (0.5)
+   - Selected card animates: slides to the left-hand stack, remains fully opaque, and sits on top of a visible pile
+   - Other cards stay visible in the pile with slight offsets (opacity 0.4–0.6, subtle positional shifts)
    - Content view appears in center with selected card details
    - Duration: 1s smooth transition with `power2.inOut` easing
    - Now in "content" view showing information about selected section
@@ -51,9 +53,10 @@ We are building a dynamic website for the rock band **Frisches** using Vue.js. T
 5. **User views content in content view**
    - Content placeholder shows selected card's title and information
    - Background remains visible with overlay
-   - Selected card still visible on left side (semi-transparent)
-   - Two ways to exit:
-     - Click outside content area → returns cards to original grid
+    - Selected card stack stays on the left so the user keeps context of their selection
+    - Full-screen overlay listens for outside clicks (while the content panel itself blocks propagation)
+    - Two ways to exit:
+       - Click outside content panel (on overlay/background) → returns cards to original grid
      - Navigate to different section → replaces content
 
 ### Return to Cards (Content Close)

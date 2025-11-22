@@ -5,40 +5,53 @@ import CardDealer from '../CardDealer.vue'
 import MenuCard from '../MenuCard.vue'
 
 // Mock GSAP to avoid animation issues in tests
-vi.mock('gsap', () => {
-  const set = vi.fn()
-  const to = vi.fn((_, vars: Record<string, unknown> = {}) => {
-    if (typeof vars.onStart === 'function') {
-      vars.onStart()
-    }
-    if (typeof vars.onComplete === 'function') {
-      vars.onComplete()
-    }
-
-    return { kill: vi.fn() }
-  })
-
-  const delayedCall = vi.fn((_, callback: () => void) => {
-    callback?.()
-    return { kill: vi.fn() }
-  })
+const gsapMocks = vi.hoisted(() => {
+  const timelineFromTo = vi.fn().mockReturnThis()
+  const timelineTo = vi.fn().mockReturnThis()
 
   return {
-    default: {
-      set,
-      to,
-      from: vi.fn(),
-      delayedCall,
-      context: vi.fn((fn?: () => void) => {
-        fn?.()
-        return { revert: vi.fn() }
-      }),
-      matchMedia: vi.fn(() => ({
-        add: vi.fn()
-      }))
-    }
+    set: vi.fn(),
+    to: vi.fn((_, vars: Record<string, unknown> = {}) => {
+      if (typeof vars.onStart === 'function') {
+        vars.onStart()
+      }
+      if (typeof vars.onComplete === 'function') {
+        vars.onComplete()
+      }
+
+      return { kill: vi.fn() }
+    }),
+    delayedCall: vi.fn((_, callback: () => void) => {
+      callback?.()
+      return { kill: vi.fn() }
+    }),
+    timelineFromTo,
+    timelineTo,
+    timeline: vi.fn(() => ({
+      fromTo: timelineFromTo,
+      to: timelineTo
+    })),
+    context: vi.fn((fn?: () => void) => {
+      fn?.()
+      return { revert: vi.fn() }
+    }),
+    matchMedia: vi.fn(() => ({
+      add: vi.fn()
+    }))
   }
 })
+
+vi.mock('gsap', () => ({
+  default: {
+    set: gsapMocks.set,
+    to: gsapMocks.to,
+    from: vi.fn(),
+    delayedCall: gsapMocks.delayedCall,
+    timeline: gsapMocks.timeline,
+    context: gsapMocks.context,
+    matchMedia: gsapMocks.matchMedia
+  }
+}))
 
 // Mock Vue Router
 const mockRouter = {
@@ -154,6 +167,16 @@ describe('CardDealer', () => {
     expect(cards[2]?.props('title')).toBe('Tour')
   })
 
+  it('creates intro animation timeline for background and logo', async () => {
+    const wrapper = mount(CardDealer)
+    await nextTick()
+
+    expect(gsapMocks.timeline).toHaveBeenCalled()
+    expect(gsapMocks.timelineFromTo).toHaveBeenCalled()
+
+    wrapper.unmount()
+  })
+
   it('has proper responsive layout structure', () => {
     const wrapper = mount(CardDealer, {
       global: {
@@ -220,6 +243,7 @@ describe('CardDealer', () => {
 
     expect(wrapper.find('.card-dealer__content-view').exists()).toBe(true)
     expect(wrapper.find('.card-dealer__cards').exists()).toBe(true)
+    expect(wrapper.find('.card-dealer__cards').classes()).toContain('card-dealer__cards--content')
 
     wrapper.unmount()
   })
@@ -243,7 +267,7 @@ describe('CardDealer', () => {
     wrapper.unmount()
   })
 
-  it('clicking outside content returns to cards view', async () => {
+  it('clicking overlay outside the content panel returns to cards view', async () => {
     const wrapper = mount(CardDealer, {
       attachTo: document.body
     })
@@ -261,15 +285,13 @@ describe('CardDealer', () => {
 
     expect(wrapper.find('.card-dealer__content-view').exists()).toBe(true)
 
-    const outside = document.createElement('div')
-    document.body.appendChild(outside)
-    outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    const overlay = wrapper.find('.card-dealer__content-view')
+    overlay.element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
     await nextTick()
 
     expect(wrapper.find('.card-dealer__content-view').exists()).toBe(false)
     expect(wrapper.find('.card-dealer__cards').attributes('style')).not.toContain('display: none')
 
-    document.body.removeChild(outside)
     wrapper.unmount()
   })
 
@@ -289,7 +311,7 @@ describe('CardDealer', () => {
     await firstCard.trigger('click')
     await nextTick()
 
-    const content = wrapper.find('.card-dealer__content-view')
+    const content = wrapper.find('.card-dealer__content-panel')
     await content.trigger('pointerdown')
     await nextTick()
 
