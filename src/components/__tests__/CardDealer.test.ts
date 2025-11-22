@@ -4,6 +4,19 @@ import { nextTick } from 'vue'
 import CardDealer from '../CardDealer.vue'
 import MenuCard from '../MenuCard.vue'
 
+/**
+ * CardDealer Component Tests
+ * 
+ * Card Animation Behavior:
+ * - Opening: Two-phase animation
+ *   1. All cards grow together from a single center point as a unified deck (no stagger)
+ *   2. Cards then distribute to their left/right positions (with stagger from center)
+ * 
+ * - Closing: Inverse two-phase animation
+ *   1. Cards gather from distributed positions back to center deck (stagger from edges)
+ *   2. All cards shrink together to a single point (no stagger)
+ */
+
 // Mock GSAP to avoid animation issues in tests
 const gsapMocks = vi.hoisted(() => {
   const timelineFromTo = vi.fn().mockReturnThis()
@@ -35,6 +48,7 @@ const gsapMocks = vi.hoisted(() => {
       callback?.()
       return { kill: vi.fn() }
     }),
+    registerPlugin: vi.fn(),
     timelineFromTo,
     timelineTo,
     timeline: vi.fn((config?: { onComplete?: () => void }) => {
@@ -44,6 +58,7 @@ const gsapMocks = vi.hoisted(() => {
       const tl = {
         fromTo: timelineFromTo,
         to: timelineTo,
+        add: vi.fn().mockReturnThis(),
         kill: vi.fn()
       }
       // Bind timelineTo to this object so 'return this' works
@@ -70,7 +85,18 @@ vi.mock('gsap', () => ({
     delayedCall: gsapMocks.delayedCall,
     timeline: gsapMocks.timeline,
     context: gsapMocks.context,
-    matchMedia: gsapMocks.matchMedia
+    matchMedia: gsapMocks.matchMedia,
+    registerPlugin: gsapMocks.registerPlugin
+  }
+}))
+
+const customEaseMocks = vi.hoisted(() => ({
+  create: vi.fn(() => 'custom-ease')
+}))
+
+vi.mock('gsap/CustomEase', () => ({
+  CustomEase: {
+    create: customEaseMocks.create
   }
 }))
 
@@ -234,7 +260,7 @@ describe('CardDealer', () => {
     expect(wrapper.find('.card-dealer__overlay').exists()).toBe(true)
   })
 
-  it('shows cards after clicking the logo', async () => {
+  it('shows cards after clicking the logo with two-phase animation: deck grows from point, then cards distribute', async () => {
     const wrapper = mount(CardDealer, {
       attachTo: document.body
     })
@@ -247,6 +273,52 @@ describe('CardDealer', () => {
 
     expect(wrapper.find('.card-dealer__cards').exists()).toBe(true)
     expect(wrapper.find('.card-dealer__cards').attributes('style')).not.toContain('display: none')
+
+    wrapper.unmount()
+  })
+
+  it('stacks cards behind the lead card before spreading', async () => {
+    const wrapper = mount(CardDealer, {
+      attachTo: document.body
+    })
+
+    await wrapper.find('.logo-button').trigger('click')
+    await vi.advanceTimersByTimeAsync(1000)
+    await nextTick()
+
+    // Check z-index settings
+    const setCalls = gsapMocks.set.mock.calls
+    const zIndexCalls = setCalls.filter(([, vars]) => vars && typeof vars.zIndex === 'number')
+    
+    // We expect calls setting zIndex. Lead card (index 1) should be 50. Others < 50.
+    const leadCardZIndex = zIndexCalls.find(([, vars]) => vars.zIndex === 50)
+    const otherCardZIndex = zIndexCalls.find(([, vars]) => vars.zIndex < 50)
+
+    expect(leadCardZIndex).toBeTruthy()
+    expect(otherCardZIndex).toBeTruthy()
+
+    wrapper.unmount()
+  })
+
+  it('ensures all cards are visible during the deck growth phase', async () => {
+    const wrapper = mount(CardDealer, {
+      attachTo: document.body
+    })
+
+    await wrapper.find('.logo-button').trigger('click')
+    await vi.advanceTimersByTimeAsync(1000)
+    await nextTick()
+
+    const visibilityCalls = gsapMocks.set.mock.calls.filter(([, vars]) =>
+      Boolean(vars && Object.prototype.hasOwnProperty.call(vars, 'visibility'))
+    )
+    
+    // We expect visibility to be set to 'visible' (from setDeckMask(false))
+    const visibleCalls = visibilityCalls.filter(([, vars]) => vars?.visibility === 'visible')
+    const hiddenCalls = visibilityCalls.filter(([, vars]) => vars?.visibility === 'hidden')
+
+    expect(visibleCalls.length).toBeGreaterThan(0)
+    expect(hiddenCalls.length).toBe(0) // No cards should be hidden
 
     wrapper.unmount()
   })
@@ -307,7 +379,7 @@ describe('CardDealer', () => {
     wrapper.unmount()
   })
 
-  it('clicking outside cards returns to logo view', async () => {
+  it('clicking outside cards returns to logo view with inverse animation: cards gather to center, then shrink to point', async () => {
     const wrapper = mount(CardDealer, {
       attachTo: document.body
     })

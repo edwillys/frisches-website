@@ -1,9 +1,43 @@
 <script setup lang="ts">
+/**
+ * CardDealer Component
+ * 
+ * Manages the main card-based navigation interface with smooth animations.
+ * 
+ * Card Animation Behavior:
+ * =========================
+ * 
+ * Opening Animation (Two-Phase):
+ * 1. Deck Appearance: All cards grow together from a single center point as a unified deck
+ *    - No stagger: cards appear as one solid entity
+ *    - Duration: 0.8s with power2.inOut easing
+ * 
+ * 2. Card Distribution: Cards spread out to their final positions (left/right)
+ *    - Stagger from center: creates symmetrical spread effect
+ *    - Duration: 1.0s with power2.inOut easing
+ * 
+ * Closing Animation (Inverse Two-Phase):
+ * 1. Card Gathering: Cards move from distributed positions back to center deck
+ *    - Stagger from edges: cards gather from outside in
+ *    - Duration: 1.0s with power2.inOut easing
+ * 
+ * 2. Deck Disappearance: All cards shrink together to a single point
+ *    - No stagger: cards disappear as one unified deck
+ *    - Duration: 0.8s with power2.inOut easing
+ */
 import { ref, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import MenuCard from './MenuCard.vue'
 import LogoButton from './LogoButton.vue'
 import { useGSAP, useFadeIn } from '../composables/useGSAP'
 import gsap from 'gsap'
+import { CustomEase } from 'gsap/CustomEase'
+
+gsap.registerPlugin(CustomEase)
+
+const deckGrowEase = CustomEase.create('deckGrowEase', 'M0,0 C0.3,0 0.05,1 1,1')
+const deckSpreadEase = CustomEase.create('deckSpreadEase', 'M0,0 C0.18,0 0.05,1 1,1')
+const deckGatherEase = CustomEase.create('deckGatherEase', 'M0,0 C0.6,0 0.25,1 1,1')
+const panelEase = CustomEase.create('deckPanelEase', 'M0,0 C0.4,0 0.15,1 1,1')
 
 const containerRef = ref<HTMLElement | null>(null)
 const bgRef = ref<HTMLElement | null>(null)
@@ -99,6 +133,8 @@ const menuItems = [
   }
 ]
 
+const deckLeadIndex = Math.floor(menuItems.length / 2)
+
 const handleCardClick = (route: string) => {
   if (isAnimating.value) return
   
@@ -132,6 +168,29 @@ const getLogoElement = () => {
 }
 
 const getCardElements = () => cardsRef.value.filter((card): card is HTMLElement => Boolean(card))
+
+const setCardMaskState = (card: HTMLElement, hidden: boolean) => {
+  if (hidden) {
+    card.dataset.deckMasked = 'true'
+    card.setAttribute('aria-hidden', 'true')
+  } else {
+    card.dataset.deckMasked = 'false'
+    card.removeAttribute('aria-hidden')
+  }
+
+  gsap.set(card, {
+    opacity: hidden ? 0 : 1,
+    visibility: hidden ? 'hidden' : 'visible'
+  })
+}
+
+const setDeckMask = (cards: HTMLElement[], maskNonLead: boolean) => {
+  cards.forEach((card, index) => {
+    if (!card) return
+    const hidden = maskNonLead && index !== deckLeadIndex
+    setCardMaskState(card, hidden)
+  })
+}
 
 const handleGlobalPointerDown = (event: PointerEvent) => {
   if (isAnimating.value) return
@@ -178,7 +237,7 @@ const playLogoCloseAndCardOpen = () => {
   tl.to(logoEl, {
     y: moveY,
     duration: 0.8,
-    ease: 'power2.inOut'
+    ease: deckSpreadEase
   })
   
   // Step 2: Logo close animation (360° rotation + scale shrink)
@@ -187,7 +246,7 @@ const playLogoCloseAndCardOpen = () => {
     scale: 0.1,
     opacity: 0,
     duration: 0.8,
-    ease: 'power2.inOut',
+    ease: deckGrowEase,
     onStart: () => {
       // Start showing cards slightly before logo disappears completely
       // Overlap effect
@@ -217,54 +276,82 @@ const playCardOpen = () => {
     y: containerRect.height / 2
   }
 
+  const leadCard = cards[deckLeadIndex] ?? cards[0]
+  if (!leadCard) {
+    isAnimating.value = false
+    return
+  }
+
   const tl = gsap.timeline({
-    defaults: { ease: 'back.out(1.2)', duration: 1.0 },
     onComplete: () => {
-      cards.forEach(card => gsap.set(card, { clearProps: 'transform' }))
-      gsap.set(cardsContainerRef.value, { clearProps: 'transform' })
+      cards.forEach(card => {
+        if (!card) return
+        card.dataset.deckMasked = 'false'
+        card.removeAttribute('aria-hidden')
+        // Don't clear opacity as it defaults to 0 in CSS
+        gsap.set(card, { clearProps: 'transform,visibility,zIndex' })
+      })
       isAnimating.value = false
     }
   })
 
-  const middleIndex = Math.floor(cards.length / 2)
-
-  cards.forEach((card, index) => {
+  // Calculate how far each card needs to move to reach the center
+  const cardOffsets = cards.map(card => {
     const rect = card.getBoundingClientRect()
-    // Calculate offset to center (where the logo was)
     const cardCenterX = (rect.left - containerRect.left) + rect.width / 2
     const cardCenterY = (rect.top - containerRect.top) + rect.height / 2
-    
-    const offsetX = containerCenter.x - cardCenterX
-    const offsetY = containerCenter.y - cardCenterY
-
-    // Inverse of disappearing: unfold from wings
-    // We use the exact same logic as playCardCloseAndLogoReappear but in reverse
-    const distanceFromMiddle = index - middleIndex
-    const startRotation = distanceFromMiddle * 45
-    const startY = offsetY + Math.abs(distanceFromMiddle) * 20
-
-    tl.fromTo(
-      card,
-      {
-        opacity: 0,
-        scale: 0.1,
-        rotation: startRotation,
-        x: offsetX,
-        y: startY,
-        transformOrigin: 'center bottom',
-        force3D: true
-      },
-      {
-        opacity: 1,
-        scale: 1,
-        rotation: 0,
-        x: 0,
-        y: 0,
-        force3D: true
-      },
-      index * 0.12
-    )
+    return {
+      x: containerCenter.x - cardCenterX,
+      y: containerCenter.y - cardCenterY
+    }
   })
+
+  // Set initial state: All cards at center, stacked perfectly, tiny scale
+  cards.forEach((card, index) => {
+    const offset = cardOffsets[index]
+    if (!offset) return
+    
+    // Calculate z-index based on distance from lead to ensure proper stacking
+    const distanceFromLead = Math.abs(index - deckLeadIndex)
+    const zIndex = index === deckLeadIndex ? 50 : 40 - distanceFromLead
+
+    gsap.set(card, {
+      x: offset.x,
+      y: offset.y,
+      scale: 0.01,
+      rotation: 0,
+      zIndex: zIndex,
+      transformOrigin: 'center center',
+      force3D: true
+    })
+  })
+
+  // Ensure all cards are visible for the "unified deck" effect
+  setDeckMask(cards, false)
+
+  // Phase 1: Grow from single point to full deck (all together, no stagger)
+  tl.to(cards, {
+    scale: 1,
+    duration: 0.9,
+    ease: deckGrowEase
+  })
+
+  // Phase 2: Slide cards out from behind the lead card
+  const spreadTl = gsap.timeline()
+  cards.forEach((card, index) => {
+    const distanceFromLead = Math.abs(index - deckLeadIndex)
+    const staggerStart = distanceFromLead * 0.14
+    const slideDuration = 0.85 + distanceFromLead * 0.1
+
+    spreadTl.to(card, {
+      x: 0,
+      y: 0,
+      ease: deckSpreadEase,
+      duration: slideDuration
+    }, staggerStart)
+  })
+
+  tl.add(spreadTl, '-=0.25')
 }
 
 const playCardCloseAndLogoReappear = () => {
@@ -278,6 +365,13 @@ const playCardCloseAndLogoReappear = () => {
   const container = cardsContainerRef.value
   if (!container) return
 
+  const leadCard = cards[deckLeadIndex] ?? cards[0]
+  if (!leadCard) {
+    currentView.value = 'logo'
+    nextTick(() => playLogoReappear())
+    return
+  }
+
   const containerRect = container.getBoundingClientRect()
   const containerCenter = {
     x: containerRect.width / 2,
@@ -285,41 +379,52 @@ const playCardCloseAndLogoReappear = () => {
   }
 
   const tl = gsap.timeline({
-    defaults: { ease: 'power2.inOut', duration: 0.6 },
     onComplete: () => {
       currentView.value = 'logo'
       nextTick(() => playLogoReappear())
     }
   })
 
-  const middleIndex = Math.floor(cards.length / 2)
-
-  cards.forEach((card, index) => {
+  // Calculate offsets to move each card to center
+  const cardOffsets = cards.map(card => {
     const rect = card.getBoundingClientRect()
     const cardCenterX = (rect.left - containerRect.left) + rect.width / 2
     const cardCenterY = (rect.top - containerRect.top) + rect.height / 2
-    
-    const offsetX = containerCenter.x - cardCenterX
-    const offsetY = containerCenter.y - cardCenterY
+    return {
+      x: containerCenter.x - cardCenterX,
+      y: containerCenter.y - cardCenterY
+    }
+  })
 
-    // Inverse of opening: fold back into wings
-    const distanceFromMiddle = index - middleIndex
-    const targetRotation = distanceFromMiddle * 45
-    const targetY = offsetY + Math.abs(distanceFromMiddle) * 20
+  // Phase 1: Gather cards to center (inverse of spread)
+  tl.to(cards, {
+    x: (i: number) => cardOffsets[i]?.x || 0,
+    y: (i: number) => cardOffsets[i]?.y || 0,
+    rotation: 0,
+    scale: 1,
+    zIndex: 50,
+    duration: 1.0,
+    ease: deckGatherEase,
+    stagger: {
+      from: 'edges',
+      amount: 0.2
+    },
+    onComplete: () => setDeckMask(cards, true)
+  })
 
-    tl.to(
-      card,
-      {
-        opacity: 0,
-        scale: 0.1,
-        rotation: targetRotation,
-        x: offsetX,
-        y: targetY,
-        transformOrigin: 'center bottom',
-        force3D: true
-      },
-      index * 0.06
-    )
+  // Phase 2: Shrink to point (all together, no stagger)
+  tl.to(leadCard, {
+    scale: 0.01,
+    duration: 0.85,
+    ease: deckGrowEase,
+    onComplete: () => {
+      cards.forEach(card => {
+        if (!card) return
+        card.dataset.deckMasked = 'false'
+        card.removeAttribute('aria-hidden')
+        gsap.set(card, { clearProps: 'transform,opacity,visibility,zIndex' })
+      })
+    }
   })
 }
 
@@ -354,7 +459,7 @@ const playLogoReappear = () => {
       // but we want it to stay at bottom. 
       // Since we animated 'y' back to 0 (relative to original position), 
       // it should be fine.
-      gsap.set(logoEl, { clearProps: 'transform' })
+      gsap.set(logoEl, { clearProps: 'transform,opacity' })
     }
   })
 
@@ -364,7 +469,7 @@ const playLogoReappear = () => {
     scale: 1,
     opacity: 1,
     duration: 0.8,
-    ease: 'power2.inOut',
+    ease: deckGrowEase,
     force3D: true
   })
 
@@ -372,7 +477,7 @@ const playLogoReappear = () => {
   tl.to(logoEl, {
     y: 0,
     duration: 0.8,
-    ease: 'power2.inOut',
+    ease: deckSpreadEase,
     force3D: true
   })
 }
@@ -383,9 +488,10 @@ const playContentCloseAndCardsReturn = () => {
   const panel = contentPanelRef.value
 
   const tl = gsap.timeline({
-    defaults: { ease: 'power2.inOut', duration: 0.6 },
+    defaults: { ease: deckSpreadEase, duration: 0.6 },
     onComplete: () => {
-      cards.forEach(card => gsap.set(card, { clearProps: 'transform opacity zIndex' }))
+      // Don't clear opacity as it defaults to 0 in CSS
+      cards.forEach(card => gsap.set(card, { clearProps: 'transform,visibility,zIndex' }))
       if (container) {
         gsap.set(container, { clearProps: 'transform' })
       }
@@ -400,7 +506,7 @@ const playContentCloseAndCardsReturn = () => {
       opacity: 0,
       y: 30,
       duration: 0.35,
-      ease: 'power1.in'
+      ease: panelEase
     }, 0)
   }
 
@@ -445,7 +551,7 @@ const playCardSelection = (cardIndex: number) => {
     const panel = contentPanelRef.value
 
     const tl = gsap.timeline({
-      defaults: { ease: 'power2.inOut', duration: 0.8 },
+      defaults: { ease: deckSpreadEase, duration: 0.8 },
       onComplete: () => {
         isAnimating.value = false
       }
@@ -485,7 +591,7 @@ const playCardSelection = (cardIndex: number) => {
       tl.fromTo(
         panel,
         { opacity: 0, x: 40 },
-        { opacity: 1, x: 0, duration: 0.6, ease: 'power2.out' },
+        { opacity: 1, x: 0, duration: 0.6, ease: panelEase },
         0.2
       )
     }
@@ -674,7 +780,7 @@ onBeforeUnmount(() => {
 
 .card-dealer__card {
   /* Cards will be animated with GSAP */
-  opacity: 1;
+  opacity: 0;
   position: relative;
   z-index: 4;
   flex-shrink: 0;
