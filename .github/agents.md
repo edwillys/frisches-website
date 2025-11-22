@@ -29,10 +29,10 @@ We are building a dynamic website for the rock band **Frisches** using Vue.js. T
    - Logo animates: Moves to the center of the screen.
    - Logo animates: 360° rotation with scale shrink (fan closing effect)
    - Logo fades out over 1.5s while the background pulse eases down
-   - Upon logo completion, cards appear from the center point (where the logo disappeared) with a vertically-symmetrical spiraling effect (like wings opening).
-   - Left cards spiral out to the left, right cards spiral out to the right, creating a balanced reveal.
-   - Cards animate: scale from 0.2 to 1.0 with stagger effect (0.1s between each).
-   - Duration: 1.8s per card with `back.out(1.2)` easing
+   - Upon logo completion, cards appear as a single deck at the center point (where the logo disappeared).
+   - **Phase 1 (Deck Appearance):** The deck grows from a small point (scale 0) to full size (scale 1) with a smooth, spline-like easing (`power2.inOut`). The movement is lean and natural, without bouncing. All cards appear together as a single unit (no stagger).
+   - **Phase 2 (Distribution):** Once the deck is fully formed, the cards distribute symmetrically to their final left and right positions, sliding away from the center and appearing from behind the deck.
+   - Duration: Phase 1 (0.8s), Phase 2 (1.0s).
    - Cards appear side-by-side (Music, About, Tour) in horizontal layout
    - All 3 cards are now visible and clickable
 
@@ -72,9 +72,9 @@ We are building a dynamic website for the rock band **Frisches** using Vue.js. T
 
 ### Return to Logo (Cards Close)
 7. **User clicks outside cards area (on background)**
-   - Cards animate: spiral back toward the center, reversing the "wings" opening effect.
-   - Cards collapse to center with stagger (0.05s delays)
-   - Duration: 1.5s with `back.in(1.2)` easing
+   - **Phase 1 (Gather):** Cards animate back into a single deck at the center (Inverse of Distribution).
+   - **Phase 2 (Disappear):** Once gathered, the deck shrinks and fades away as a single unit (Inverse of Appearance).
+   - Duration: Phase 1 (1.0s), Phase 2 (0.8s) with `power2.inOut` easing.
    - Once cards disappear, logo reappears at the center.
    - Logo animates: reverse fan-opening effect (scale 0→1, rotation 360°→0) at the center.
    - Logo moves back to its initial position at the bottom.
