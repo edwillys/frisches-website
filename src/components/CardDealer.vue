@@ -161,21 +161,39 @@ const playLogoCloseAndCardOpen = () => {
     return
   }
 
-  // Step 1: Logo close animation (360° rotation + scale shrink)
-  gsap.to(logoEl, {
-    rotation: 360,
-    scale: 0.1,
-    opacity: 0,
-    duration: 0.8,
-    ease: 'power2.inOut',
+  // Step 1: Move logo to center
+  const tl = gsap.timeline({
     onComplete: () => {
-      // Step 2: Update view and trigger card open
+      // Step 3: Update view and trigger card open
       currentView.value = 'cards'
       nextTick(() => {
         playCardOpen()
       })
     }
   })
+
+  // Move to center of screen
+  // Since it's fixed at bottom, we need to calculate the center
+  const windowHeight = window.innerHeight
+  const logoRect = logoEl.getBoundingClientRect()
+  const currentY = logoRect.top + logoRect.height / 2
+  const centerY = windowHeight / 2
+  const moveY = centerY - currentY
+
+  tl.to(logoEl, {
+    y: moveY,
+    duration: 0.8,
+    ease: 'power2.inOut'
+  })
+  
+  // Step 2: Logo close animation (360° rotation + scale shrink)
+  tl.to(logoEl, {
+    rotation: 360,
+    scale: 0.1,
+    opacity: 0,
+    duration: 0.8,
+    ease: 'power2.inOut'
+  }, '-=0.2')
 }
 
 const playCardOpen = () => {
@@ -217,7 +235,7 @@ const playCardOpen = () => {
       {
         opacity: 0,
         scale: 0.1,
-        rotation: -120 + (index * 30), // Spiral/Fan start
+        rotation: -180, // Start from a tighter spiral
         x: offsetX,
         y: offsetY,
         transformOrigin: 'center center'
@@ -353,7 +371,14 @@ const playCardSelection = (cardIndex: number) => {
 
   // Get positions before changing view state (which might trigger layout changes)
   const cardRects = cards.map(c => c.getBoundingClientRect())
-  const selectedRect = cardRects[cardIndex]
+  
+  // We want all cards to move to the position where the middle card would be
+  // if the container was shifted.
+  // The middle card is index 1 (since we have 3 cards).
+  const middleCardIndex = 1
+  const middleRect = cardRects[middleCardIndex]
+  
+  if (!middleRect) return
 
   currentView.value = 'content'
 
@@ -378,17 +403,17 @@ const playCardSelection = (cardIndex: number) => {
 
     cards.forEach((card, index) => {
       const rect = cardRects[index]
-      if (!rect || !selectedRect) return
+      if (!rect) return
 
-      // Calculate offset to move this card to the selected card's position
-      const offsetToCenter = selectedRect.left - rect.left
+      // Calculate offset to move this card to the middle card's position
+      // This ensures the stack always forms at the same visual location
+      const offsetToTarget = middleRect.left - rect.left
       
       // Tiny offset to show there are cards underneath (piling effect)
-      // e.g. 2px per card
       const stackOffset = (index - cardIndex) * 3
 
       tl.to(card, {
-        x: offsetToCenter + stackOffset,
+        x: offsetToTarget + stackOffset,
         y: 0,
         scale: index === cardIndex ? 1.05 : 0.95,
         opacity: 1, // Keep visible so we see the stack edges

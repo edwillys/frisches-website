@@ -26,9 +26,10 @@ We are building a dynamic website for the rock band **Frisches** using Vue.js. T
 
 ### Logo Click → Cards Reveal (Logo to Cards Transition)
 2. **User clicks the logo circle**
+   - Logo animates: Moves to the center of the screen.
    - Logo animates: 360° rotation with scale shrink (fan closing effect)
    - Logo fades out over 1.5s while the background pulse eases down
-   - Upon logo completion, cards spiral out from the logo’s position like an inverse fan, easing into their grid slots
+   - Upon logo completion, cards spiral out from the center point (where the logo disappeared) like an inverse fan, easing into their grid slots
    - Cards animate: scale from 0.2 to 1.0 with stagger effect (0.1s between each) plus slight rotation offsets for a swirling reveal
    - Duration: 1.8s per card with `back.out(1.2)` easing
    - Cards appear side-by-side (Music, About, Tour) in horizontal layout
@@ -44,7 +45,7 @@ We are building a dynamic website for the rock band **Frisches** using Vue.js. T
 
 ### Card Click → Content View (Card Selection)
 4. **User clicks a specific card (e.g., "Music")**
-   - Selected card animates: glides left while remaining fully opaque, then anchors the visible pile
+   - Selected card animates: glides to a fixed position on the left (aligned with where the middle card would be), regardless of which card was clicked.
    - Other cards smoothly close their gaps and stack behind the active card with progressively smaller offsets (opacity 0.4–0.6)
    - Content view fades/slides in from the right in sync with the card stack motion
    - Duration: 1s smooth transition with `power2.inOut` easing
