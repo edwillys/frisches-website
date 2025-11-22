@@ -245,7 +245,8 @@ const playCardOpen = () => {
         scale: 1,
         rotation: 0,
         x: 0,
-        y: 0
+        y: 0,
+        force3D: true // Force hardware acceleration
       },
       index * 0.12
     )
@@ -307,15 +308,50 @@ const playLogoReappear = () => {
     return
   }
 
-  gsap.to(logoEl, {
+  // Calculate center position
+  const windowHeight = window.innerHeight
+  const logoRect = logoEl.getBoundingClientRect()
+  // Current position is likely at the bottom (initial CSS position)
+  // We want to start animation at the center
+  const currentY = logoRect.top + logoRect.height / 2
+  const centerY = windowHeight / 2
+  const moveY = centerY - currentY
+
+  // Set initial state at center
+  gsap.set(logoEl, {
+    y: moveY,
+    rotation: 360,
+    scale: 0.1,
+    opacity: 0
+  })
+
+  const tl = gsap.timeline({
+    onComplete: () => {
+      isAnimating.value = false
+      // Clear props to return to CSS positioning if needed, 
+      // but we want it to stay at bottom. 
+      // Since we animated 'y' back to 0 (relative to original position), 
+      // it should be fine.
+      gsap.set(logoEl, { clearProps: 'transform' })
+    }
+  })
+
+  // Step 1: Spiral in at center (Reverse of disappear)
+  tl.to(logoEl, {
     rotation: 0,
     scale: 1,
     opacity: 1,
     duration: 0.8,
     ease: 'power2.inOut',
-    onComplete: () => {
-      isAnimating.value = false
-    }
+    force3D: true
+  })
+
+  // Step 2: Move back to bottom (original position)
+  tl.to(logoEl, {
+    y: 0,
+    duration: 0.8,
+    ease: 'power2.inOut',
+    force3D: true
   })
 }
 
@@ -418,7 +454,8 @@ const playCardSelection = (cardIndex: number) => {
         scale: index === cardIndex ? 1.05 : 0.95,
         opacity: 1, // Keep visible so we see the stack edges
         rotation: (index - cardIndex) * 1.5, // Very slight rotation
-        zIndex: index === cardIndex ? 50 : 40 - Math.abs(index - cardIndex)
+        zIndex: index === cardIndex ? 50 : 40 - Math.abs(index - cardIndex),
+        force3D: true // Force hardware acceleration
       }, 0)
     })
 
@@ -618,6 +655,10 @@ onBeforeUnmount(() => {
   position: relative;
   z-index: 4;
   flex-shrink: 0;
+  /* Improve rendering performance and reduce glitching */
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
 }
 
 .card-dealer__content-view {
