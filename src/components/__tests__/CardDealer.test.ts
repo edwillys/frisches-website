@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import CardDealer from '../CardDealer.vue'
@@ -7,7 +7,17 @@ import MenuCard from '../MenuCard.vue'
 // Mock GSAP to avoid animation issues in tests
 const gsapMocks = vi.hoisted(() => {
   const timelineFromTo = vi.fn().mockReturnThis()
-  const timelineTo = vi.fn().mockReturnThis()
+  
+  // We need to handle onStart/onComplete in timeline.to()
+  const timelineTo = vi.fn(function(this: any, _, vars: Record<string, unknown> = {}) {
+    if (vars && typeof vars.onStart === 'function') {
+      vars.onStart()
+    }
+    if (vars && typeof vars.onComplete === 'function') {
+      vars.onComplete()
+    }
+    return this
+  })
 
   return {
     set: vi.fn(),
@@ -29,11 +39,17 @@ const gsapMocks = vi.hoisted(() => {
     timelineTo,
     timeline: vi.fn((config?: { onComplete?: () => void }) => {
       config?.onComplete?.()
-      return {
+      // We need to return an object that has 'to' pointing to our enhanced timelineTo
+      // And we need to ensure chaining works.
+      const tl = {
         fromTo: timelineFromTo,
         to: timelineTo,
         kill: vi.fn()
       }
+      // Bind timelineTo to this object so 'return this' works
+      tl.to = timelineTo.bind(tl)
+      tl.fromTo = timelineFromTo.bind(tl)
+      return tl
     }),
     context: vi.fn((fn?: () => void) => {
       fn?.()
@@ -44,6 +60,7 @@ const gsapMocks = vi.hoisted(() => {
     }))
   }
 })
+
 
 vi.mock('gsap', () => ({
   default: {
@@ -65,6 +82,11 @@ const mockRouter = {
 describe('CardDealer', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('renders properly', () => {
@@ -218,6 +240,9 @@ describe('CardDealer', () => {
     })
 
     await wrapper.find('.logo-button').trigger('click')
+    
+    // Wait for the overlap timeout (400ms) + buffer
+    await vi.advanceTimersByTimeAsync(1000)
     await nextTick()
 
     expect(wrapper.find('.card-dealer__cards').exists()).toBe(true)
@@ -232,6 +257,7 @@ describe('CardDealer', () => {
     })
 
     await wrapper.find('.logo-button').trigger('click')
+    await vi.advanceTimersByTimeAsync(1000)
     await nextTick()
 
     const cards = wrapper.findAllComponents(MenuCard)
@@ -258,6 +284,7 @@ describe('CardDealer', () => {
     })
 
     await wrapper.find('.logo-button').trigger('click')
+    await vi.advanceTimersByTimeAsync(1000)
     await nextTick()
 
     const firstCard = wrapper.findAllComponents(MenuCard)[0]
@@ -286,6 +313,7 @@ describe('CardDealer', () => {
     })
 
     await wrapper.find('.logo-button').trigger('click')
+    await vi.advanceTimersByTimeAsync(1000)
     await nextTick()
 
     const outside = document.createElement('div')
@@ -305,6 +333,7 @@ describe('CardDealer', () => {
     })
 
     await wrapper.find('.logo-button').trigger('click')
+    await vi.advanceTimersByTimeAsync(1000)
     await nextTick()
 
     const firstCard = wrapper.findAllComponents(MenuCard)[0]
@@ -333,6 +362,7 @@ describe('CardDealer', () => {
     })
 
     await wrapper.find('.logo-button').trigger('click')
+    await vi.advanceTimersByTimeAsync(1000)
     await nextTick()
 
     const firstCard = wrapper.findAllComponents(MenuCard)[0]

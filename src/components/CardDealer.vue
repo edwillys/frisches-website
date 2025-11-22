@@ -164,16 +164,11 @@ const playLogoCloseAndCardOpen = () => {
   // Step 1: Move logo to center
   const tl = gsap.timeline({
     onComplete: () => {
-      // Step 3: Update view and trigger card open
-      currentView.value = 'cards'
-      nextTick(() => {
-        playCardOpen()
-      })
+      // Animation complete
     }
   })
 
   // Move to center of screen
-  // Since it's fixed at bottom, we need to calculate the center
   const windowHeight = window.innerHeight
   const logoRect = logoEl.getBoundingClientRect()
   const currentY = logoRect.top + logoRect.height / 2
@@ -192,7 +187,17 @@ const playLogoCloseAndCardOpen = () => {
     scale: 0.1,
     opacity: 0,
     duration: 0.8,
-    ease: 'power2.inOut'
+    ease: 'power2.inOut',
+    onStart: () => {
+      // Start showing cards slightly before logo disappears completely
+      // Overlap effect
+      setTimeout(() => {
+        currentView.value = 'cards'
+        nextTick(() => {
+          playCardOpen()
+        })
+      }, 400) // Start halfway through the 0.8s duration
+    }
   }, '-=0.2')
 }
 
@@ -232,13 +237,10 @@ const playCardOpen = () => {
     const offsetX = containerCenter.x - cardCenterX
     const offsetY = containerCenter.y - cardCenterY
 
-    // Symmetrical "wings" opening
-    // Left cards rotate negative, Right cards rotate positive
-    // Middle card stays relatively straight
+    // Inverse of disappearing: unfold from wings
+    // We use the exact same logic as playCardCloseAndLogoReappear but in reverse
     const distanceFromMiddle = index - middleIndex
-    const startRotation = distanceFromMiddle * 45 // -45, 0, 45 for 3 cards
-    
-    // Add some vertical offset for the "folded" state
+    const startRotation = distanceFromMiddle * 45
     const startY = offsetY + Math.abs(distanceFromMiddle) * 20
 
     tl.fromTo(
@@ -249,8 +251,8 @@ const playCardOpen = () => {
         rotation: startRotation,
         x: offsetX,
         y: startY,
-        transformOrigin: 'center bottom', // Pivot from bottom like wings
-        z: 0
+        transformOrigin: 'center bottom',
+        force3D: true
       },
       {
         opacity: 1,
@@ -258,7 +260,6 @@ const playCardOpen = () => {
         rotation: 0,
         x: 0,
         y: 0,
-        z: 0,
         force3D: true
       },
       index * 0.12

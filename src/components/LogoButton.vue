@@ -11,12 +11,13 @@ const emit = defineEmits<{
   (e: 'click'): void
 }>()
 
-const size = props.size ?? 240
+const size = props.size ?? 200 // Reduced from 240
+const LOGO_SIZE = 110 // Reduced from 140
+const CIRCLE_SIZE = LOGO_SIZE + 10
+const GLOW_SIZE = size + 20 // Reduced offset
+
 const wrapperRef = ref<HTMLElement | null>(null)
 const glowRef = ref<HTMLElement | null>(null)
-const logoSize = 140
-const circleSize = logoSize + 10
-const glowSize = size + 28
 
 let glowTween: gsap.core.Tween | null = null
 
@@ -60,17 +61,17 @@ defineExpose({
     <div
       ref="glowRef"
       class="logo-button__glow"
-      :style="{ width: glowSize + 'px', height: glowSize + 'px' }"
+      :style="{ width: GLOW_SIZE + 'px', height: GLOW_SIZE + 'px' }"
     ></div>
 
     <div
       class="logo-button__circle"
-      :style="{ width: circleSize + 'px', height: circleSize + 'px' }"
+      :style="{ width: CIRCLE_SIZE + 'px', height: CIRCLE_SIZE + 'px' }"
     ></div>
     
     <!-- Logo inside circle -->
     <div class="logo-button__content">
-      <LogoEffect :size="logoSize" mode="static" />
+      <LogoEffect :size="LOGO_SIZE" mode="static" />
     </div>
   </div>
 </template>
