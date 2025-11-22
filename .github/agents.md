@@ -29,8 +29,9 @@ We are building a dynamic website for the rock band **Frisches** using Vue.js. T
    - Logo animates: Moves to the center of the screen.
    - Logo animates: 360° rotation with scale shrink (fan closing effect)
    - Logo fades out over 1.5s while the background pulse eases down
-   - Upon logo completion, cards spiral out from the center point (where the logo disappeared) like an inverse fan, easing into their grid slots
-   - Cards animate: scale from 0.2 to 1.0 with stagger effect (0.1s between each) plus slight rotation offsets for a swirling reveal
+   - Upon logo completion, cards appear from the center point (where the logo disappeared) with a vertically-symmetrical spiraling effect (like wings opening).
+   - Left cards spiral out to the left, right cards spiral out to the right, creating a balanced reveal.
+   - Cards animate: scale from 0.2 to 1.0 with stagger effect (0.1s between each).
    - Duration: 1.8s per card with `back.out(1.2)` easing
    - Cards appear side-by-side (Music, About, Tour) in horizontal layout
    - All 3 cards are now visible and clickable
@@ -71,11 +72,12 @@ We are building a dynamic website for the rock band **Frisches** using Vue.js. T
 
 ### Return to Logo (Cards Close)
 7. **User clicks outside cards area (on background)**
-   - Cards animate: spiral back toward the logo, scaling down to 0.2 and rotating in harmony
+   - Cards animate: spiral back toward the center, reversing the "wings" opening effect.
    - Cards collapse to center with stagger (0.05s delays)
    - Duration: 1.5s with `back.in(1.2)` easing
-   - Once cards disappear, logo reappears
-   - Logo animates: reverse fan-opening effect (scale 0→1, rotation 360°→0)
+   - Once cards disappear, logo reappears at the center.
+   - Logo animates: reverse fan-opening effect (scale 0→1, rotation 360°→0) at the center.
+   - Logo moves back to its initial position at the bottom.
    - Duration: 1.5s with `power2.inOut` easing
    - Back in "logo" view - cycle complete
 

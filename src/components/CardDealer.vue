@@ -221,6 +221,8 @@ const playCardOpen = () => {
     }
   })
 
+  const middleIndex = Math.floor(cards.length / 2)
+
   cards.forEach((card, index) => {
     const rect = card.getBoundingClientRect()
     // Calculate offset to center (where the logo was)
@@ -230,15 +232,25 @@ const playCardOpen = () => {
     const offsetX = containerCenter.x - cardCenterX
     const offsetY = containerCenter.y - cardCenterY
 
+    // Symmetrical "wings" opening
+    // Left cards rotate negative, Right cards rotate positive
+    // Middle card stays relatively straight
+    const distanceFromMiddle = index - middleIndex
+    const startRotation = distanceFromMiddle * 45 // -45, 0, 45 for 3 cards
+    
+    // Add some vertical offset for the "folded" state
+    const startY = offsetY + Math.abs(distanceFromMiddle) * 20
+
     tl.fromTo(
       card,
       {
         opacity: 0,
         scale: 0.1,
-        rotation: -180, // Start from a tighter spiral
+        rotation: startRotation,
         x: offsetX,
-        y: offsetY,
-        transformOrigin: 'center center'
+        y: startY,
+        transformOrigin: 'center bottom', // Pivot from bottom like wings
+        z: 0
       },
       {
         opacity: 1,
@@ -246,7 +258,8 @@ const playCardOpen = () => {
         rotation: 0,
         x: 0,
         y: 0,
-        force3D: true // Force hardware acceleration
+        z: 0,
+        force3D: true
       },
       index * 0.12
     )
@@ -278,6 +291,8 @@ const playCardCloseAndLogoReappear = () => {
     }
   })
 
+  const middleIndex = Math.floor(cards.length / 2)
+
   cards.forEach((card, index) => {
     const rect = card.getBoundingClientRect()
     const cardCenterX = (rect.left - containerRect.left) + rect.width / 2
@@ -286,15 +301,21 @@ const playCardCloseAndLogoReappear = () => {
     const offsetX = containerCenter.x - cardCenterX
     const offsetY = containerCenter.y - cardCenterY
 
+    // Inverse of opening: fold back into wings
+    const distanceFromMiddle = index - middleIndex
+    const targetRotation = distanceFromMiddle * 45
+    const targetY = offsetY + Math.abs(distanceFromMiddle) * 20
+
     tl.to(
       card,
       {
         opacity: 0,
         scale: 0.1,
-        rotation: -120 + (index * 30),
+        rotation: targetRotation,
         x: offsetX,
-        y: offsetY,
-        transformOrigin: 'center center'
+        y: targetY,
+        transformOrigin: 'center bottom',
+        force3D: true
       },
       index * 0.06
     )
@@ -643,6 +664,7 @@ onBeforeUnmount(() => {
   z-index: 3;
   flex-wrap: nowrap;
   width: auto;
+  perspective: 1000px; /* Add perspective for 3D transforms */
 }
 
 .card-dealer__cards--content {

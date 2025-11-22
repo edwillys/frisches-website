@@ -99,7 +99,7 @@ defineExpose({
 }
 
 .logo-button__glow {
-  background: radial-gradient(circle, rgba(220, 20, 60, 0.5) 0%, rgba(220, 20, 60, 0.1) 70%, transparent 100%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, rgba(220, 20, 60, 0.4) 50%, transparent 100%);
   filter: blur(16px);
   opacity: 0.4;
 }
