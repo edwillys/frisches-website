@@ -1,0 +1,731 @@
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+
+interface Track {
+  id: number | string
+  title: string
+  artist: string
+  album?: string
+  cover: string
+  url: string
+  duration?: string // Display string like "2:30"
+}
+
+const props = withDefaults(
+  defineProps<{
+    tracks?: Track[]
+  }>(),
+  {
+    tracks: () => []
+  }
+)
+
+// State
+const isPlaying = ref(false)
+const currentTrackIndex = ref(0)
+const currentTime = ref(0)
+const duration = ref(0)
+const isShuffle = ref(false)
+const repeatMode = ref<'off' | 'all' | 'one'>('off')
+const isPlaylistOpen = ref(false)
+const volume = ref(1)
+const showVolume = ref(false)
+const audioRef = ref<HTMLAudioElement | null>(null)
+
+// Mock data if no tracks provided
+const defaultTracks: Track[] = [
+  {
+    id: 0,
+    title: 'Intro',
+    artist: 'Frisches',
+    album: 'Tales From The Cellar',
+    cover: '/audio/TalesFromTheCellar/Cover.png',
+    url: '/audio/TalesFromTheCellar/00 - Intro - Mastered.mp3',
+    duration: '0:45'
+  },
+  {
+    id: 1,
+    title: 'Misled',
+    artist: 'Frisches',
+    album: 'Tales From The Cellar',
+    cover: '/audio/TalesFromTheCellar/Cover.png',
+    url: '/audio/TalesFromTheCellar/01 - Misled - Mastered.mp3',
+    duration: '3:12'
+  },
+  {
+    id: 2,
+    title: 'TOJD',
+    artist: 'Frisches',
+    album: 'Tales From The Cellar',
+    cover: '/audio/TalesFromTheCellar/Cover.png',
+    url: '/audio/TalesFromTheCellar/02 - TOJD - Mastered.mp3',
+    duration: '2:58'
+  },
+  {
+    id: 3,
+    title: 'Etiquette',
+    artist: 'Frisches',
+    album: 'Tales From The Cellar',
+    cover: '/audio/TalesFromTheCellar/Cover.png',
+    url: '/audio/TalesFromTheCellar/03 - Etiquette - Mastered.mp3',
+    duration: '3:05'
+  },
+  {
+    id: 4,
+    title: 'Mr Red Jacket',
+    artist: 'Frisches',
+    album: 'Tales From The Cellar',
+    cover: '/audio/TalesFromTheCellar/Cover.png',
+    url: '/audio/TalesFromTheCellar/04 - Mr Red Jacket - Mastered.mp3',
+    duration: '3:30'
+  },
+  {
+    id: 5,
+    title: 'Witch Hunting',
+    artist: 'Frisches',
+    album: 'Tales From The Cellar',
+    cover: '/audio/TalesFromTheCellar/Cover.png',
+    url: '/audio/TalesFromTheCellar/05 - Witch Hunting - Mastered.mp3',
+    duration: '3:45'
+  },
+  {
+    id: 6,
+    title: 'Suits',
+    artist: 'Frisches',
+    album: 'Tales From The Cellar',
+    cover: '/audio/TalesFromTheCellar/Cover.png',
+    url: '/audio/TalesFromTheCellar/06 - Suits - Mastered.mp3',
+    duration: '3:15'
+  },
+  {
+    id: 7,
+    title: 'Ordinary Suspects',
+    artist: 'Frisches',
+    album: 'Tales From The Cellar',
+    cover: '/audio/TalesFromTheCellar/Cover.png',
+    url: '/audio/TalesFromTheCellar/07 - Ordinary Suspects - Mastered.mp3',
+    duration: '3:20'
+  },
+  {
+    id: 8,
+    title: 'Solitude Etude',
+    artist: 'Frisches',
+    album: 'Tales From The Cellar',
+    cover: '/audio/TalesFromTheCellar/Cover.png',
+    url: '/audio/TalesFromTheCellar/08 - Solitude Etude - Mastered.mp3',
+    duration: '2:50'
+  }
+]
+
+const playlist = computed(() => (props.tracks.length > 0 ? props.tracks : defaultTracks))
+const currentTrack = computed<Track>(() => {
+  const track = playlist.value[currentTrackIndex.value]
+  if (track) return track
+  return playlist.value[0] || {
+    id: -1,
+    title: 'No Track',
+    artist: 'Unknown',
+    cover: '',
+    url: '',
+    duration: '0:00'
+  }
+})
+
+// Formatting
+const formatTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+// Audio Controls
+const togglePlay = () => {
+  if (!audioRef.value) return
+  if (isPlaying.value) {
+    audioRef.value.pause()
+  } else {
+    audioRef.value.play()
+  }
+  isPlaying.value = !isPlaying.value
+}
+
+const nextTrack = () => {
+  if (isShuffle.value) {
+    currentTrackIndex.value = Math.floor(Math.random() * playlist.value.length)
+  } else {
+    currentTrackIndex.value = (currentTrackIndex.value + 1) % playlist.value.length
+  }
+  isPlaying.value = true // Auto play next
+}
+
+const prevTrack = () => {
+  if (currentTime.value > 3) {
+    if (audioRef.value) audioRef.value.currentTime = 0
+    return
+  }
+  currentTrackIndex.value =
+    (currentTrackIndex.value - 1 + playlist.value.length) % playlist.value.length
+  isPlaying.value = true
+}
+
+const seek = (e: Event) => {
+  const target = e.target as HTMLInputElement
+  const time = parseFloat(target.value)
+  if (audioRef.value) {
+    audioRef.value.currentTime = time
+    currentTime.value = time
+  }
+}
+
+const onTimeUpdate = () => {
+  if (audioRef.value) {
+    currentTime.value = audioRef.value.currentTime
+  }
+}
+
+const onLoadedMetadata = () => {
+  if (audioRef.value) {
+    duration.value = audioRef.value.duration
+  }
+}
+
+const onEnded = () => {
+  if (repeatMode.value === 'one') {
+    if (audioRef.value) {
+      audioRef.value.currentTime = 0
+      audioRef.value.play()
+    }
+  } else {
+    nextTrack()
+  }
+}
+
+// Watchers
+watch(currentTrackIndex, () => {
+  if (audioRef.value) {
+    audioRef.value.src = currentTrack.value.url
+    if (isPlaying.value) {
+      // Wait for DOM update
+      setTimeout(() => audioRef.value?.play(), 0)
+    }
+  }
+})
+
+watch(volume, (newVol) => {
+  if (audioRef.value) {
+    audioRef.value.volume = newVol
+  }
+})
+</script>
+
+<template>
+  <div class="audio-player" :class="{ 'is-playlist-open': isPlaylistOpen }">
+    <!-- Main Player View -->
+    <div class="player-main">
+      
+      <!-- Header Section: Transitions between Large and Compact -->
+      <div class="player-header">
+        <div class="artwork-wrapper">
+          <img :src="currentTrack.cover" :alt="currentTrack.title" class="artwork" />
+        </div>
+        
+        <div class="header-info">
+          <h2 class="title">{{ currentTrack.title }}</h2>
+          <p class="artist">{{ currentTrack.artist }}</p>
+        </div>
+      </div>
+
+      <div class="progress-container">
+        <span class="time current">{{ formatTime(currentTime) }}</span>
+        <input
+          type="range"
+          min="0"
+          :max="duration || 100"
+          :value="currentTime"
+          @input="seek"
+          class="progress-bar"
+        />
+        <span class="time total">{{ formatTime(duration) }}</span>
+      </div>
+
+      <div class="controls">
+        <button class="btn-icon" @click="prevTrack">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M11 19V5l-7 7 7 7zm9 0V5l-7 7 7 7z"/></svg>
+        </button>
+        
+        <button class="btn-icon btn-play" @click="togglePlay">
+          <svg v-if="!isPlaying" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
+        
+        <button class="btn-icon" @click="nextTrack">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M4 19V5l7 7-7 7zm9 0V5l7 7-7 7z"/></svg>
+        </button>
+      </div>
+
+      <div class="secondary-controls">
+        <button 
+          class="btn-icon small" 
+          :class="{ active: isShuffle }" 
+          @click="isShuffle = !isShuffle"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
+        </button>
+        
+        <button 
+          class="btn-icon small" 
+          :class="{ active: repeatMode !== 'off' }" 
+          @click="repeatMode = repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off'"
+        >
+          <svg v-if="repeatMode === 'one'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path><text x="10" y="15" font-size="8" fill="currentColor" font-weight="bold">1</text></svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+        </button>
+
+        <div class="spacer"></div>
+
+        <div 
+          class="volume-control" 
+          @mouseenter="showVolume = true" 
+          @mouseleave="showVolume = false"
+        >
+          <button class="btn-icon small">
+            <svg v-if="volume > 0.5" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+            <svg v-else-if="volume > 0" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+          </button>
+          <transition name="fade">
+            <div v-if="showVolume" class="volume-popup">
+              <div class="slider-wrapper">
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="1" 
+                  step="0.01" 
+                  v-model.number="volume" 
+                  class="volume-slider vertical"
+                />
+              </div>
+            </div>
+          </transition>
+        </div>
+
+        <button class="btn-icon small" @click="isPlaylistOpen = !isPlaylistOpen">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Playlist View -->
+    <div class="playlist-drawer">
+      <div class="playlist-content">
+        <div 
+          v-for="(track, index) in playlist" 
+          :key="track.id"
+          class="playlist-item"
+          :class="{ active: index === currentTrackIndex }"
+          @click="currentTrackIndex = index; isPlaying = true"
+        >
+          <div class="thumb-container">
+            <img :src="track.cover" class="thumb" />
+            <div class="play-overlay">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+          </div>
+          <div class="info">
+            <div class="track-title">{{ track.title }}</div>
+            <div class="track-artist">{{ track.artist }}</div>
+          </div>
+          <div class="duration">{{ track.duration }}</div>
+        </div>
+      </div>
+    </div>
+
+    <audio 
+      ref="audioRef" 
+      :src="currentTrack.url"
+      @timeupdate="onTimeUpdate"
+      @loadedmetadata="onLoadedMetadata"
+      @ended="onEnded"
+    ></audio>
+  </div>
+</template>
+
+<style scoped>
+.audio-player {
+  width: 100%;
+  max-width: 320px;
+  background: var(--color-background, #000);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+  color: var(--color-text, #fff);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.player-main {
+  padding: 24px;
+  background: var(--color-background, #000);
+  position: relative;
+  z-index: 2;
+}
+
+/* Header & Artwork Transitions */
+.player-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 24px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.artwork-wrapper {
+  width: 180px;
+  height: 180px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  margin-bottom: 20px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.artwork {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.header-info {
+  width: 100%;
+  transition: all 0.4s ease;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-accent, #d4af37);
+}
+
+.artist {
+  font-size: 14px;
+  color: var(--color-text-secondary, #888);
+  margin: 0;
+}
+
+/* Compact State (Playlist Open) */
+.audio-player.is-playlist-open .player-header {
+  flex-direction: row;
+  text-align: left;
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+.audio-player.is-playlist-open .artwork-wrapper {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 0;
+  margin-right: 12px;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.audio-player.is-playlist-open .title {
+  font-size: 15px;
+}
+
+.audio-player.is-playlist-open .artist {
+  font-size: 12px;
+}
+
+/* Progress Bar */
+.progress-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.time {
+  font-size: 11px;
+  color: var(--color-text-secondary, #888);
+  font-variant-numeric: tabular-nums;
+  width: 35px;
+}
+
+.time.total { text-align: right; }
+
+.progress-bar {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #333;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.progress-bar::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--color-accent, #d4af37);
+  border-radius: 50%;
+  transition: transform 0.1s;
+}
+
+.progress-bar::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* Main Controls */
+.controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text, #fff);
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-icon:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+.btn-play {
+  width: 64px;
+  height: 64px;
+  background: var(--color-accent, #d4af37);
+  color: #000; /* Contrast for play button */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.btn-play:hover {
+  background: #fff;
+  transform: scale(1.05);
+}
+
+/* Secondary Controls */
+.secondary-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid #222;
+}
+
+.btn-icon.small {
+  padding: 6px;
+  color: var(--color-text-secondary, #888);
+}
+
+.btn-icon.small:hover {
+  color: var(--color-text, #fff);
+  background: rgba(255,255,255,0.1);
+}
+
+.btn-icon.small.active {
+  color: var(--color-accent, #d4af37);
+  background: rgba(212, 175, 55, 0.1);
+}
+
+.spacer { flex: 1; }
+
+/* Volume Control - Refactored */
+.volume-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.volume-popup {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #222;
+  padding: 12px 8px;
+  border-radius: 20px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  margin-bottom: 8px;
+  z-index: 100;
+  pointer-events: auto; 
+}
+
+.slider-wrapper {
+  width: 24px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Vertical Slider using Rotation Trick */
+.volume-slider.vertical {
+  width: 100px; /* Length of the slider */
+  height: 24px; /* Hit area height */
+  transform: rotate(-90deg);
+  transform-origin: center;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  margin: 0;
+}
+
+/* Track styling for rotated slider */
+.volume-slider.vertical::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 4px;
+  background: #444;
+  border-radius: 2px;
+}
+
+.volume-slider.vertical::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 14px;
+  width: 14px;
+  border-radius: 50%;
+  background: var(--color-accent, #d4af37);
+  margin-top: -5px; /* Center thumb on track */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+/* Playlist Drawer Animation */
+.playlist-drawer {
+  background: #111;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  border-top: 1px solid #222;
+}
+
+.audio-player.is-playlist-open .playlist-drawer {
+  max-height: 300px; /* Adjust based on desired visible items */
+  overflow-y: auto;
+}
+
+/* Scrollbar styling */
+.playlist-drawer::-webkit-scrollbar {
+  width: 4px;
+}
+.playlist-drawer::-webkit-scrollbar-track {
+  background: transparent;
+}
+.playlist-drawer::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 2px;
+}
+
+.playlist-content {
+  padding: 10px 0;
+}
+
+.playlist-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.playlist-item:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.playlist-item.active {
+  background: rgba(212, 175, 55, 0.1);
+  border-left: 3px solid var(--color-accent, #d4af37);
+}
+
+.thumb-container {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.thumb {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.play-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.2s;
+  border-radius: 4px;
+}
+
+.playlist-item:hover .play-overlay,
+.playlist-item.active .play-overlay {
+  opacity: 1;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.track-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-text, #fff);
+}
+
+.track-artist {
+  font-size: 12px;
+  color: var(--color-text-secondary, #888);
+}
+
+.duration {
+  font-size: 12px;
+  color: var(--color-text-secondary, #888);
+  margin-left: 10px;
+}
+
+/* Transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(10px);
+}
+</style>

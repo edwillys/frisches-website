@@ -28,6 +28,7 @@
 import { ref, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import MenuCard from './MenuCard.vue'
 import LogoButton from './LogoButton.vue'
+import AudioPlayer from './AudioPlayer.vue'
 import { useGSAP, useFadeIn } from '../composables/useGSAP'
 import gsap from 'gsap'
 import { CustomEase } from 'gsap/CustomEase'
@@ -657,13 +658,20 @@ onBeforeUnmount(() => {
         class="card-dealer__content-view"
       >
         <div ref="contentPanelRef" class="card-dealer__content-panel">
-          <!-- Card content will be displayed here -->
+          <!-- Music Player -->
+          <div v-if="selectedCard !== null && menuItems[selectedCard]?.title === 'Music'" class="card-dealer__music-content">
+            <AudioPlayer />
+          </div>
+          
+          <!-- Other content -->
+          <div v-else>
             <h2 v-if="selectedCard !== null && selectedCard < menuItems.length">
               {{ menuItems[selectedCard]?.title }}
             </h2>
             <p>
               Content for {{ selectedCard !== null && selectedCard < menuItems.length ? menuItems[selectedCard]?.title : '' }}
             </p>
+          </div>
         </div>
       </div>
     </div>
