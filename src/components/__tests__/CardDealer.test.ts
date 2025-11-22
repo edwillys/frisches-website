@@ -27,10 +27,14 @@ const gsapMocks = vi.hoisted(() => {
     }),
     timelineFromTo,
     timelineTo,
-    timeline: vi.fn(() => ({
-      fromTo: timelineFromTo,
-      to: timelineTo
-    })),
+    timeline: vi.fn((config?: { onComplete?: () => void }) => {
+      config?.onComplete?.()
+      return {
+        fromTo: timelineFromTo,
+        to: timelineTo,
+        kill: vi.fn()
+      }
+    }),
     context: vi.fn((fn?: () => void) => {
       fn?.()
       return { revert: vi.fn() }
@@ -244,6 +248,34 @@ describe('CardDealer', () => {
     expect(wrapper.find('.card-dealer__content-view').exists()).toBe(true)
     expect(wrapper.find('.card-dealer__cards').exists()).toBe(true)
     expect(wrapper.find('.card-dealer__cards').classes()).toContain('card-dealer__cards--content')
+
+    wrapper.unmount()
+  })
+
+  it('animates card stack and content fade when selecting a card', async () => {
+    const wrapper = mount(CardDealer, {
+      attachTo: document.body
+    })
+
+    await wrapper.find('.logo-button').trigger('click')
+    await nextTick()
+
+    const firstCard = wrapper.findAllComponents(MenuCard)[0]
+    if (!firstCard) {
+      throw new Error('Expected menu card to exist')
+    }
+
+    await firstCard.trigger('click')
+    await nextTick()
+
+    const containerEl = wrapper.find('.card-dealer__cards').element
+    const containerShiftCall = gsapMocks.timelineTo.mock.calls.find(([target, vars]) => {
+      const typedVars = vars as { x?: number }
+      return target === containerEl && typeof typedVars?.x === 'number' && typedVars.x === -260
+    })
+
+    expect(containerShiftCall).toBeTruthy()
+    expect(wrapper.find('.card-dealer__content-panel').exists()).toBe(true)
 
     wrapper.unmount()
   })

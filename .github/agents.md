@@ -19,6 +19,7 @@ We are building a dynamic website for the rock band **Frisches** using Vue.js. T
    - Dark, mysterious background with gradient overlay
    - Background artwork gently pulses/zooms to create a breathing effect
    - White circle outline with animated Frisches logo in center (bottom-middle area)
+   - Logo emits a continuous heartbeat glow that matches the background pulse for a unified breathing effect
    - Logo serves as the only interactive element on home screen
    - Logo fades in sync with the background pulse so both elements feel like the same reveal
    - Minimal, clean, mysterious aesthetic matching "Witch Hunting" theme
@@ -26,9 +27,9 @@ We are building a dynamic website for the rock band **Frisches** using Vue.js. T
 ### Logo Click → Cards Reveal (Logo to Cards Transition)
 2. **User clicks the logo circle**
    - Logo animates: 360° rotation with scale shrink (fan closing effect)
-   - Logo fades out over 1.5s
-   - Upon logo completion, cards immediately appear
-   - Cards animate: scale from 0.3 to 1.0 with stagger effect (0.1s between each)
+   - Logo fades out over 1.5s while the background pulse eases down
+   - Upon logo completion, cards spiral out from the logo’s position like an inverse fan, easing into their grid slots
+   - Cards animate: scale from 0.2 to 1.0 with stagger effect (0.1s between each) plus slight rotation offsets for a swirling reveal
    - Duration: 1.8s per card with `back.out(1.2)` easing
    - Cards appear side-by-side (Music, About, Tour) in horizontal layout
    - All 3 cards are now visible and clickable
@@ -43,9 +44,9 @@ We are building a dynamic website for the rock band **Frisches** using Vue.js. T
 
 ### Card Click → Content View (Card Selection)
 4. **User clicks a specific card (e.g., "Music")**
-   - Selected card animates: slides to the left-hand stack, remains fully opaque, and sits on top of a visible pile
-   - Other cards stay visible in the pile with slight offsets (opacity 0.4–0.6, subtle positional shifts)
-   - Content view appears in center with selected card details
+   - Selected card animates: glides left while remaining fully opaque, then anchors the visible pile
+   - Other cards smoothly close their gaps and stack behind the active card with progressively smaller offsets (opacity 0.4–0.6)
+   - Content view fades/slides in from the right in sync with the card stack motion
    - Duration: 1s smooth transition with `power2.inOut` easing
    - Now in "content" view showing information about selected section
 
@@ -61,15 +62,15 @@ We are building a dynamic website for the rock band **Frisches** using Vue.js. T
 
 ### Return to Cards (Content Close)
 6. **User clicks outside the content area**
-   - Content view fades/closes
-   - Cards return to horizontal grid layout
+   - Content view fades/closes while the left-hand stack eases back toward center
+   - Cards glide back to horizontal grid layout with reversing offsets
    - Animations reverse: cards scale back to 1.0, move to original positions
    - Duration: 1s with stagger effect (0.05s delay)
    - Back in "cards" view
 
 ### Return to Logo (Cards Close)
 7. **User clicks outside cards area (on background)**
-   - Cards animate: scale down to 0.3, fade to 0 (opacity 0)
+   - Cards animate: spiral back toward the logo, scaling down to 0.2 and rotating in harmony
    - Cards collapse to center with stagger (0.05s delays)
    - Duration: 1.5s with `back.in(1.2)` easing
    - Once cards disappear, logo reappears

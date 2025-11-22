@@ -14,6 +14,34 @@ const cardsContainerRef = ref<HTMLElement | null>(null)
 const contentPanelRef = ref<HTMLElement | null>(null)
 const logoButtonRef = ref<any | null>(null)
 
+type StackState = {
+  x: number
+  y: number
+  rotation: number
+  scale: number
+  zIndex: number
+}
+
+const STACK_BASE_X = 140
+const STACK_BASE_Y = 20
+const STACK_X_STEP = 10
+const STACK_Y_STEP = -4
+const STACK_ROTATION_BASE = -12
+const STACK_ROTATION_STEP = 3.5
+const STACK_SCALE_BASE = 0.82
+const STACK_SCALE_STEP = 0.06
+
+const getStackState = (index: number, total: number): StackState => {
+  const order = index
+  return {
+    x: STACK_BASE_X + order * STACK_X_STEP,
+    y: STACK_BASE_Y + order * STACK_Y_STEP,
+    rotation: STACK_ROTATION_BASE + order * STACK_ROTATION_STEP,
+    scale: STACK_SCALE_BASE + order * STACK_SCALE_STEP,
+    zIndex: 40 + (total - order)
+  }
+}
+
 // View states: 'logo' | 'cards' | 'content'
 const currentView = ref<'logo' | 'cards' | 'content'>('logo')
 const selectedCard = ref<number | null>(null)
@@ -157,28 +185,36 @@ const playCardOpen = () => {
     return
   }
 
-  // Set initial state (cards at center, hidden)
-  gsap.set(cards, {
-    opacity: 0,
-    scale: 0.3,
-    rotation: 0
+  const tl = gsap.timeline({
+    defaults: { ease: 'back.out(1.4)', duration: 0.85 },
+    onComplete: () => {
+      cards.forEach(card => gsap.set(card, { clearProps: 'transform' }))
+      gsap.set(cardsContainerRef.value, { clearProps: 'transform' })
+      isAnimating.value = false
+    }
   })
 
-  // Animate cards expanding from center (using scale only, let flex do the layout)
   cards.forEach((card, index) => {
-    gsap.to(card, {
-      opacity: 1,
-      scale: 1,
-      rotation: 0,
-      duration: 0.9,
-      delay: index * 0.06,
-      ease: 'back.out(1.2)',
-      onComplete: () => {
-        if (index === cards.length - 1) {
-          isAnimating.value = false
-        }
-      }
-    })
+    const stackState = getStackState(index, cards.length)
+    tl.fromTo(
+      card,
+      {
+        opacity: 0,
+        scale: stackState.scale,
+        rotation: stackState.rotation,
+        x: stackState.x,
+        y: stackState.y,
+        transformOrigin: '45% 80%'
+      },
+      {
+        opacity: 1,
+        scale: 1,
+        rotation: 0,
+        x: 0,
+        y: 0
+      },
+      index * 0.08
+    )
   })
 }
 
@@ -186,28 +222,46 @@ const playCardCloseAndLogoReappear = () => {
   const cards = getCardElements()
   if (cards.length === 0) {
     currentView.value = 'logo'
-    isAnimating.value = false
+    nextTick(() => playLogoReappear())
     return
   }
 
-  // Collapse cards back to center
-  gsap.to(cards, {
-    opacity: 0,
-    scale: 0.3,
-    x: 0,
-    y: 0,
-    rotation: 0,
-    duration: 0.8,
-    stagger: 0.03,
-    ease: 'back.in(1.2)',
+  const tl = gsap.timeline({
+    defaults: { ease: 'power2.inOut', duration: 0.55 },
     onComplete: () => {
-      // Bring back logo
       currentView.value = 'logo'
-      nextTick(() => {
-        playLogoReappear()
-      })
+      nextTick(() => playLogoReappear())
     }
   })
+
+  cards.forEach((card, index) => {
+    const stackState = getStackState(index, cards.length)
+    tl.to(
+      card,
+      {
+        opacity: 1,
+        scale: stackState.scale,
+        rotation: stackState.rotation,
+        x: stackState.x,
+        y: stackState.y,
+        zIndex: stackState.zIndex,
+        transformOrigin: '45% 80%'
+      },
+      index * 0.05
+    )
+  })
+
+  tl.to(
+    cards,
+    {
+      opacity: 0,
+      x: '+=45',
+      duration: 0.3,
+      ease: 'power1.in',
+      stagger: 0.04
+    },
+    '-=0.2'
+  )
 }
 
 const playLogoReappear = () => {
@@ -231,79 +285,95 @@ const playLogoReappear = () => {
 
 const playContentCloseAndCardsReturn = () => {
   const cards = getCardElements()
-  if (cards.length === 0) {
-    selectedCard.value = null
-    currentView.value = 'cards'
-    isAnimating.value = false
-    return
+  const container = cardsContainerRef.value
+  const panel = contentPanelRef.value
+
+  const tl = gsap.timeline({
+    defaults: { ease: 'power2.inOut', duration: 0.6 },
+    onComplete: () => {
+      cards.forEach(card => gsap.set(card, { clearProps: 'transform opacity zIndex' }))
+      if (container) {
+        gsap.set(container, { clearProps: 'transform' })
+      }
+      selectedCard.value = null
+      currentView.value = 'cards'
+      isAnimating.value = false
+    }
+  })
+
+  if (panel) {
+    tl.to(panel, {
+      opacity: 0,
+      y: 30,
+      duration: 0.35,
+      ease: 'power1.in'
+    }, 0)
   }
 
-  // Reverse card selection animation - cards return to normal layout
-  cards.forEach((card, index) => {
-    gsap.to(card, {
+  if (container) {
+    tl.to(container, { x: 0 }, 0)
+  }
+
+  cards.forEach(card => {
+    tl.to(card, {
       opacity: 1,
       scale: 1,
       x: 0,
       y: 0,
       rotation: 0,
-      zIndex: 1,
-      duration: 0.6,
-      delay: index * 0.03,
-      ease: 'back.out(1)',
-      onComplete: () => {
-        if (index === cards.length - 1) {
-          selectedCard.value = null
-          currentView.value = 'cards'
-          isAnimating.value = false
-        }
-      }
-    })
+      zIndex: 1
+    }, 0)
   })
 }
 
 const playCardSelection = (cardIndex: number) => {
   const cards = getCardElements()
   if (cards.length === 0 || !cards[cardIndex]) {
-    currentView.value = 'content'
     isAnimating.value = false
     return
   }
 
-  // Animate selected card to side as a pile, others stack behind with slight offset
-  cards.forEach((card, index) => {
-    if (index === cardIndex) {
-      // Selected card: move to left side, on top of pile
-      gsap.to(card, {
-        x: -320,
-        y: 0,
-        scale: 1,
-        opacity: 1,
-        rotation: 0,
-        zIndex: 10,
-        duration: 0.6,
-        ease: 'power2.inOut'
-      })
-    } else {
-      // Other cards: stack behind with slight offset, visible but faded
-      const offsetX = -320 + (index > cardIndex ? 8 : -8)
-      const offsetY = (index > cardIndex ? 4 : -4)
-      gsap.to(card, {
-        x: offsetX,
-        y: offsetY,
-        scale: 0.95,
-        opacity: 0.4,
-        rotation: 0,
-        zIndex: 5,
-        duration: 0.6,
-        ease: 'power2.inOut'
-      })
-    }
-  })
+  currentView.value = 'content'
 
-  // Show content view after animation
-  gsap.delayedCall(0.6, () => {
-    currentView.value = 'content'
-    isAnimating.value = false
+  nextTick(() => {
+    const container = cardsContainerRef.value
+    const panel = contentPanelRef.value
+
+    const tl = gsap.timeline({
+      defaults: { ease: 'power2.inOut', duration: 0.7 },
+      onComplete: () => {
+        isAnimating.value = false
+      }
+    })
+
+    if (container) {
+      tl.to(container, {
+        x: -260,
+        duration: 0.7
+      }, 0)
+    }
+
+    cards.forEach((card, index) => {
+      const distance = Math.abs(index - cardIndex)
+      const direction = index >= cardIndex ? 1 : -1
+      tl.to(card, {
+        x: distance === 0 ? 0 : direction * distance * 14,
+        y: (index - cardIndex) * 6,
+        scale: index === cardIndex ? 1 : 0.92,
+        opacity: index === cardIndex ? 1 : 0.45,
+        rotation: direction * distance * -2,
+        zIndex: index === cardIndex ? 20 : 12 - distance
+      }, 0)
+    })
+
+    if (panel) {
+      tl.fromTo(
+        panel,
+        { opacity: 0, y: 32 },
+        { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' },
+        0.15
+      )
+    }
   })
 }
 
@@ -484,13 +554,6 @@ onBeforeUnmount(() => {
 
 .card-dealer__cards--content {
   pointer-events: none;
-  position: absolute;
-  left: clamp(32px, 10vw, 260px);
-  top: 50%;
-  transform: translateY(-50%);
-  display: block;
-  width: 220px;
-  height: 320px;
 }
 
 .card-dealer__card {
@@ -499,12 +562,6 @@ onBeforeUnmount(() => {
   position: relative;
   z-index: 4;
   flex-shrink: 0;
-}
-
-.card-dealer__cards--content .card-dealer__card {
-  position: absolute;
-  top: 0;
-  left: 0;
 }
 
 .card-dealer__content-view {
@@ -544,18 +601,6 @@ onBeforeUnmount(() => {
     gap: var(--spacing-lg);
   }
 
-  .card-dealer__cards--content {
-    position: static;
-    transform: none;
-    width: 100%;
-    height: auto;
-    display: flex;
-    justify-content: center;
-  }
-
-  .card-dealer__cards--content .card-dealer__card {
-    position: relative;
-  }
 }
 
 /* Mobile responsiveness */

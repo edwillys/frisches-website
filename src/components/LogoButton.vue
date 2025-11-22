@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import gsap from 'gsap'
 import LogoEffect from './LogoEffect.vue'
 
@@ -13,81 +13,58 @@ const emit = defineEmits<{
 
 const size = props.size ?? 240
 const wrapperRef = ref<HTMLElement | null>(null)
-const particlesRef = ref<HTMLElement | null>(null)
-const logoSize = 140 // Internal logo size
-const circleRadius = computed(() => (logoSize + 30) / 2) // Logo size plus margin, then radius
+const glowRef = ref<HTMLElement | null>(null)
+const haloRef = ref<HTMLElement | null>(null)
+const pulseRef = ref<HTMLElement | null>(null)
+const logoSize = 140
+const circleSize = logoSize + 10
+const pulseSize = circleSize + 16
+const haloSize = size + 16
+const glowSize = size + 28
 
-interface Particle {
-  x: number
-  y: number
-  angle: number
-  distance: number
-}
-
-const particles = ref<Particle[]>([])
+let heartbeatTimeline: gsap.core.Timeline | null = null
+let glowTween: gsap.core.Tween | null = null
+let haloTween: gsap.core.Tween | null = null
 
 function onClick() {
   emit('click')
 }
 
-function generateParticles() {
-  // Generate 8-12 random particles
-  const particleCount = Math.floor(Math.random() * 5) + 8
-  const newParticles: Particle[] = []
-
-  for (let i = 0; i < particleCount; i++) {
-    const angle = Math.random() * Math.PI * 2
-    const distance = circleRadius.value + Math.random() * 40 + 10
-    newParticles.push({
-      angle,
-      distance,
-      x: Math.cos(angle) * distance,
-      y: Math.sin(angle) * distance,
-    })
-  }
-
-  particles.value = newParticles
-}
-
-function animateParticles() {
-  if (!particlesRef.value) return
-
-  const particleElements = particlesRef.value.querySelectorAll('.particle')
-
-  particles.value.forEach((particle, index) => {
-    if (!particleElements[index]) return
-
-    const element = particleElements[index] as HTMLElement
-    const distance = circleRadius.value + Math.random() * 60 + 20
-    const angle = particle.angle + (Math.random() - 0.5) * 0.6
-
-    gsap.to(element, {
-      x: Math.cos(angle) * distance,
-      y: Math.sin(angle) * distance,
-      opacity: 0,
-      duration: 1.2 + Math.random() * 0.6,
-      ease: 'power1.out',
-      onComplete: () => {
-        // Reset particle for next burst
-        gsap.set(element, {
-          x: Math.cos(particle.angle) * circleRadius.value,
-          y: Math.sin(particle.angle) * circleRadius.value,
-          opacity: 1,
-        })
-      },
-    })
-  })
-}
-
 onMounted(() => {
-  generateParticles()
+  if (!wrapperRef.value || !glowRef.value || !haloRef.value || !pulseRef.value) return
 
-  // Animate particles periodically
-  const interval = setInterval(() => {
-    animateParticles()
-  }, 2000)
+  heartbeatTimeline = gsap.timeline({ repeat: -1, defaults: { ease: 'sine.inOut' } })
+  heartbeatTimeline
+    .fromTo(
+      pulseRef.value,
+      { scale: 0.96 },
+      { scale: 1.05, duration: 0.55 }
+    )
+    .to(pulseRef.value, { scale: 0.98, duration: 0.45 })
 
-  return () => clearInterval(interval)
+  glowTween = gsap.to(glowRef.value, {
+    opacity: 0.75,
+    scale: 1.12,
+    duration: 1.2,
+    ease: 'sine.inOut',
+    repeat: -1,
+    yoyo: true
+  })
+
+  haloTween = gsap.to(haloRef.value, {
+    opacity: 0.7,
+    scale: 1.06,
+    duration: 1.4,
+    ease: 'sine.inOut',
+    repeat: -1,
+    yoyo: true
+  })
+})
+
+onBeforeUnmount(() => {
+  heartbeatTimeline && 'kill' in heartbeatTimeline && (heartbeatTimeline as gsap.core.Timeline).kill()
+  glowTween?.kill()
+  haloTween?.kill()
 })
 
 defineExpose({
@@ -106,21 +83,27 @@ defineExpose({
     @click="onClick"
     @keydown.enter="onClick"
   >
-    <!-- Animated particles -->
-    <div ref="particlesRef" class="logo-button__particles">
-      <div
-        v-for="(particle, index) in particles"
-        :key="index"
-        class="particle"
-        :style="{
-          left: size / 2 + 'px',
-          top: size / 2 + 'px',
-        }"
-      ></div>
-    </div>
+    <div
+      ref="glowRef"
+      class="logo-button__glow"
+      :style="{ width: glowSize + 'px', height: glowSize + 'px' }"
+    ></div>
+    <div
+      ref="haloRef"
+      class="logo-button__halo"
+      :style="{ width: haloSize + 'px', height: haloSize + 'px' }"
+    ></div>
 
-    <!-- White circle background (sized to fit logo with margin) -->
-    <div class="logo-button__circle"></div>
+    <div
+      ref="pulseRef"
+      class="logo-button__pulse"
+      :style="{ width: pulseSize + 'px', height: pulseSize + 'px' }"
+    ></div>
+
+    <div
+      class="logo-button__circle"
+      :style="{ width: circleSize + 'px', height: circleSize + 'px' }"
+    ></div>
     
     <!-- Logo inside circle -->
     <div class="logo-button__content">
@@ -140,35 +123,40 @@ defineExpose({
   -webkit-tap-highlight-color: transparent;
 }
 
-.logo-button__particles {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.particle {
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 50%;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
-  transform: translate(-50%, -50%);
-  opacity: 1;
-}
-
-/* Circle is now sized to fit the logo (140px) plus margin (30px total), so diameter is 170px, radius 85px */
+.logo-button__glow,
+.logo-button__halo,
+.logo-button__pulse,
 .logo-button__circle {
   position: absolute;
-  width: 170px;
-  height: 170px;
+  width: 100%;
+  height: 100%;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: transparent;
-  border: 3px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+}
+
+.logo-button__glow {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.05) 70%, transparent 100%);
+  filter: blur(16px);
+  opacity: 0.6;
+}
+
+.logo-button__halo {
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  opacity: 0.4;
+}
+
+.logo-button__pulse {
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 25px rgba(255, 255, 255, 0.25);
+  opacity: 0.85;
+}
+
+.logo-button__circle {
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
 }
 
 .logo-button__content {
@@ -189,7 +177,8 @@ defineExpose({
     transition: none !important;
   }
 
-  .particle {
+  .logo-button__glow,
+  .logo-button__halo {
     animation: none !important;
   }
 }
