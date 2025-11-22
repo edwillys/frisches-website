@@ -11,10 +11,10 @@ const emit = defineEmits<{
   (e: 'click'): void
 }>()
 
-const size = props.size ?? 200 // Reduced from 240
-const LOGO_SIZE = 110 // Reduced from 140
+const size = props.size ?? 200
+const LOGO_SIZE = 110
 const CIRCLE_SIZE = LOGO_SIZE + 10
-const GLOW_SIZE = size + 20 // Reduced offset
+const GLOW_SIZE = size - 50
 
 const wrapperRef = ref<HTMLElement | null>(null)
 const glowRef = ref<HTMLElement | null>(null)
@@ -48,27 +48,12 @@ defineExpose({
 </script>
 
 <template>
-  <div
-    ref="wrapperRef"
-    class="logo-button"
-    :style="{ width: size + 'px', height: size + 'px' }"
-    role="button"
-    tabindex="0"
-    aria-label="Frisches - Click to reveal menu"
-    @click="onClick"
-    @keydown.enter="onClick"
-  >
-    <div
-      ref="glowRef"
-      class="logo-button__glow"
-      :style="{ width: GLOW_SIZE + 'px', height: GLOW_SIZE + 'px' }"
-    ></div>
+  <div ref="wrapperRef" class="logo-button" :style="{ width: size + 'px', height: size + 'px' }" role="button"
+    tabindex="0" aria-label="Frisches - Click to reveal menu" @click="onClick" @keydown.enter="onClick">
+    <div ref="glowRef" class="logo-button__glow" :style="{ width: GLOW_SIZE + 'px', height: GLOW_SIZE + 'px' }"></div>
 
-    <div
-      class="logo-button__circle"
-      :style="{ width: CIRCLE_SIZE + 'px', height: CIRCLE_SIZE + 'px' }"
-    ></div>
-    
+    <div class="logo-button__circle" :style="{ width: CIRCLE_SIZE + 'px', height: CIRCLE_SIZE + 'px' }"></div>
+
     <!-- Logo inside circle -->
     <div class="logo-button__content">
       <LogoEffect :size="LOGO_SIZE" mode="static" />
