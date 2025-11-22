@@ -248,70 +248,75 @@ watch(volume, (newVol) => {
         <span class="time total">{{ formatTime(duration) }}</span>
       </div>
 
-      <div class="controls">
-        <button class="btn-icon" @click="prevTrack">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M11 19V5l-7 7 7 7zm9 0V5l-7 7 7 7z"/></svg>
-        </button>
-        
-        <button class="btn-icon btn-play" @click="togglePlay">
-          <svg v-if="!isPlaying" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          <svg v-else xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-        </button>
-        
-        <button class="btn-icon" @click="nextTrack">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M4 19V5l7 7-7 7zm9 0V5l7 7-7 7z"/></svg>
-        </button>
-      </div>
-
-      <div class="secondary-controls">
-        <button 
-          class="btn-icon small" 
-          :class="{ active: isShuffle }" 
-          @click="isShuffle = !isShuffle"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
-        </button>
-        
-        <button 
-          class="btn-icon small" 
-          :class="{ active: repeatMode !== 'off' }" 
-          @click="repeatMode = repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off'"
-        >
-          <svg v-if="repeatMode === 'one'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path><text x="10" y="15" font-size="8" fill="currentColor" font-weight="bold">1</text></svg>
-          <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
-        </button>
-
-        <div class="spacer"></div>
-
-        <div 
-          class="volume-control" 
-          @mouseenter="showVolume = true" 
-          @mouseleave="showVolume = false"
-        >
-          <button class="btn-icon small">
-            <svg v-if="volume > 0.5" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-            <svg v-else-if="volume > 0" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-            <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+      <div class="controls-layout">
+        <!-- Secondary Left -->
+        <div class="controls-group left">
+          <button 
+            class="btn-icon small" 
+            :class="{ active: isShuffle }" 
+            @click="isShuffle = !isShuffle"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
           </button>
-          <transition name="fade">
-            <div v-if="showVolume" class="volume-popup">
-              <div class="slider-wrapper">
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="1" 
-                  step="0.01" 
-                  v-model.number="volume" 
-                  class="volume-slider vertical"
-                />
-              </div>
-            </div>
-          </transition>
+          
+          <button 
+            class="btn-icon small" 
+            :class="{ active: repeatMode !== 'off' }" 
+            @click="repeatMode = repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off'"
+          >
+            <svg v-if="repeatMode === 'one'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path><text x="10" y="15" font-size="8" fill="currentColor" font-weight="bold">1</text></svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+          </button>
         </div>
 
-        <button class="btn-icon small" @click="isPlaylistOpen = !isPlaylistOpen">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-        </button>
+        <!-- Main Controls -->
+        <div class="controls-main">
+          <button class="btn-icon" @click="prevTrack">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M11 19V5l-7 7 7 7zm9 0V5l-7 7 7 7z"/></svg>
+          </button>
+          
+          <button class="btn-icon btn-play" @click="togglePlay">
+            <svg v-if="!isPlaying" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+          </button>
+          
+          <button class="btn-icon" @click="nextTrack">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M4 19V5l7 7-7 7zm9 0V5l7 7-7 7z"/></svg>
+          </button>
+        </div>
+
+        <!-- Secondary Right -->
+        <div class="controls-group right">
+          <div 
+            class="volume-control" 
+            @mouseenter="showVolume = true" 
+            @mouseleave="showVolume = false"
+          >
+            <button class="btn-icon small">
+              <svg v-if="volume > 0.5" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+              <svg v-else-if="volume > 0" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+            </button>
+            <transition name="fade">
+              <div v-if="showVolume" class="volume-popup">
+                <div class="slider-wrapper">
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="1" 
+                    step="0.01" 
+                    v-model.number="volume" 
+                    class="volume-slider vertical"
+                  />
+                </div>
+              </div>
+            </transition>
+          </div>
+
+          <button class="btn-icon small" @click="isPlaylistOpen = !isPlaylistOpen">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -366,7 +371,7 @@ watch(volume, (newVol) => {
 }
 
 .player-main {
-  padding: 24px;
+  padding: 20px;
   background: var(--color-background, #000);
   position: relative;
   z-index: 2;
@@ -376,8 +381,8 @@ watch(volume, (newVol) => {
 .player-header {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
+  align-items: flex-start; /* Left align */
+  text-align: left; /* Left align */
   margin-bottom: 24px;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -389,6 +394,7 @@ watch(volume, (newVol) => {
   overflow: hidden;
   box-shadow: 0 8px 20px rgba(0,0,0,0.4);
   margin-bottom: 20px;
+  align-self: center; /* Keep artwork centered in large view */
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -434,6 +440,7 @@ watch(volume, (newVol) => {
   margin-right: 12px;
   border-radius: 6px;
   box-shadow: none;
+  align-self: auto; /* Reset alignment */
 }
 
 .audio-player.is-playlist-open .title {
@@ -485,21 +492,70 @@ watch(volume, (newVol) => {
   transform: scale(1.2);
 }
 
-/* Main Controls */
-.controls {
+/* Controls Layout System */
+.controls-layout {
+  display: flex;
+  flex-direction: row; /* Always row */
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+  transition: all 0.3s ease;
+  padding: 0; /* Remove padding to maximize space */
+}
+
+.controls-main {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 24px;
-  margin-bottom: 20px;
+  gap: 12px; /* Reduced gap */
+  order: 2; /* Center */
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
+.controls-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.controls-group.left {
+  justify-content: flex-start;
+  order: 1; /* Left */
+}
+
+.controls-group.right {
+  justify-content: flex-end;
+  order: 3; /* Right */
+}
+
+/* When Playlist is Open (Streamlined Layout) */
+.audio-player.is-playlist-open .controls-main {
+  gap: 8px; /* Even tighter in compact mode */
+}
+
+/* Adjust button sizes in compact mode */
+.audio-player.is-playlist-open .btn-play {
+  width: 40px;
+  height: 40px;
+  box-shadow: none;
+}
+
+.audio-player.is-playlist-open .btn-play svg {
+  width: 24px;
+  height: 24px;
+}
+
+.audio-player.is-playlist-open .btn-icon {
+  padding: 6px;
+}
+
+/* Common Button Styles */
 .btn-icon {
   background: none;
   border: none;
   cursor: pointer;
   color: var(--color-text, #fff);
-  padding: 8px;
+  padding: 6px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -512,11 +568,12 @@ watch(volume, (newVol) => {
 }
 
 .btn-play {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   background: var(--color-accent, #d4af37);
   color: #000; /* Contrast for play button */
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transition: all 0.3s ease;
 }
 
 .btn-play:hover {
@@ -524,17 +581,8 @@ watch(volume, (newVol) => {
   transform: scale(1.05);
 }
 
-/* Secondary Controls */
-.secondary-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-top: 16px;
-  border-top: 1px solid #222;
-}
-
 .btn-icon.small {
-  padding: 6px;
+  padding: 4px;
   color: var(--color-text-secondary, #888);
 }
 
@@ -573,8 +621,8 @@ watch(volume, (newVol) => {
 }
 
 .slider-wrapper {
-  width: 24px;
-  height: 100px;
+  width: 7px;
+  height: 90px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -582,8 +630,8 @@ watch(volume, (newVol) => {
 
 /* Vertical Slider using Rotation Trick */
 .volume-slider.vertical {
-  width: 100px; /* Length of the slider */
-  height: 24px; /* Hit area height */
+  width: 90px; /* Length of the slider */
+  height: 7px; /* Hit area height */
   transform: rotate(-90deg);
   transform-origin: center;
   -webkit-appearance: none;
@@ -694,6 +742,7 @@ watch(volume, (newVol) => {
 .info {
   flex: 1;
   min-width: 0;
+  text-align: left; /* Ensure left alignment */
 }
 
 .track-title {
