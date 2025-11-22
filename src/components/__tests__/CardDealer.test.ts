@@ -1,19 +1,44 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import CardDealer from '../CardDealer.vue'
 import MenuCard from '../MenuCard.vue'
 
 // Mock GSAP to avoid animation issues in tests
-vi.mock('gsap', () => ({
-  default: {
-    set: vi.fn(),
-    to: vi.fn(),
-    from: vi.fn(),
-    context: vi.fn(() => ({
-      revert: vi.fn()
-    }))
+vi.mock('gsap', () => {
+  const set = vi.fn()
+  const to = vi.fn((_, vars: Record<string, unknown> = {}) => {
+    if (typeof vars.onStart === 'function') {
+      vars.onStart()
+    }
+    if (typeof vars.onComplete === 'function') {
+      vars.onComplete()
+    }
+
+    return { kill: vi.fn() }
+  })
+
+  const delayedCall = vi.fn((_, callback: () => void) => {
+    callback?.()
+    return { kill: vi.fn() }
+  })
+
+  return {
+    default: {
+      set,
+      to,
+      from: vi.fn(),
+      delayedCall,
+      context: vi.fn((fn?: () => void) => {
+        fn?.()
+        return { revert: vi.fn() }
+      }),
+      matchMedia: vi.fn(() => ({
+        add: vi.fn()
+      }))
+    }
   }
-}))
+})
 
 // Mock Vue Router
 const mockRouter = {
@@ -21,6 +46,10 @@ const mockRouter = {
 }
 
 describe('CardDealer', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('renders properly', () => {
     const wrapper = mount(CardDealer, {
       global: {
@@ -103,9 +132,10 @@ describe('CardDealer', () => {
       }
     })
 
-    // Cards are hidden initially (only show after moon click)
+    // Cards are mounted but hidden until logo click
     const cards = wrapper.findAllComponents(MenuCard)
-    expect(cards.length).toBe(0) // Not rendered until moon clicked
+    expect(cards.length).toBe(3)
+    expect(wrapper.find('.card-dealer__cards').attributes('style')).toContain('display: none')
   })
 
   it('passes correct props to MenuCard components', () => {
@@ -117,9 +147,11 @@ describe('CardDealer', () => {
       }
     })
 
-    // Cards only rendered after moon click, so none exist initially
     const cards = wrapper.findAllComponents(MenuCard)
-    expect(cards.length).toBe(0)
+    expect(cards.length).toBe(3)
+    expect(cards[0]?.props('title')).toBe('Music')
+    expect(cards[1]?.props('title')).toBe('About')
+    expect(cards[2]?.props('title')).toBe('Tour')
   })
 
   it('has proper responsive layout structure', () => {
@@ -151,5 +183,118 @@ describe('CardDealer', () => {
     })
 
     expect(wrapper.find('.card-dealer__overlay').exists()).toBe(true)
+  })
+
+  it('shows cards after clicking the logo', async () => {
+    const wrapper = mount(CardDealer, {
+      attachTo: document.body
+    })
+
+    await wrapper.find('.logo-button').trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('.card-dealer__cards').exists()).toBe(true)
+    expect(wrapper.find('.card-dealer__cards').attributes('style')).not.toContain('display: none')
+
+    wrapper.unmount()
+  })
+
+  it('keeps cards mounted while viewing content', async () => {
+    const wrapper = mount(CardDealer, {
+      attachTo: document.body
+    })
+
+    await wrapper.find('.logo-button').trigger('click')
+    await nextTick()
+
+    const cards = wrapper.findAllComponents(MenuCard)
+    expect(cards.length).toBe(3)
+
+    const firstCard = cards[0]
+    if (!firstCard) {
+      throw new Error('Expected first menu card to exist')
+    }
+
+    await firstCard.trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('.card-dealer__content-view').exists()).toBe(true)
+    expect(wrapper.find('.card-dealer__cards').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  it('clicking outside cards returns to logo view', async () => {
+    const wrapper = mount(CardDealer, {
+      attachTo: document.body
+    })
+
+    await wrapper.find('.logo-button').trigger('click')
+    await nextTick()
+
+    const outside = document.createElement('div')
+    document.body.appendChild(outside)
+    outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    await nextTick()
+
+    expect(wrapper.find('.card-dealer__logo-button-wrapper').exists()).toBe(true)
+
+    document.body.removeChild(outside)
+    wrapper.unmount()
+  })
+
+  it('clicking outside content returns to cards view', async () => {
+    const wrapper = mount(CardDealer, {
+      attachTo: document.body
+    })
+
+    await wrapper.find('.logo-button').trigger('click')
+    await nextTick()
+
+    const firstCard = wrapper.findAllComponents(MenuCard)[0]
+    if (!firstCard) {
+      throw new Error('Expected menu card to exist')
+    }
+
+    await firstCard.trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('.card-dealer__content-view').exists()).toBe(true)
+
+    const outside = document.createElement('div')
+    document.body.appendChild(outside)
+    outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    await nextTick()
+
+    expect(wrapper.find('.card-dealer__content-view').exists()).toBe(false)
+    expect(wrapper.find('.card-dealer__cards').attributes('style')).not.toContain('display: none')
+
+    document.body.removeChild(outside)
+    wrapper.unmount()
+  })
+
+  it('ignores inside-content pointer events while content is visible', async () => {
+    const wrapper = mount(CardDealer, {
+      attachTo: document.body
+    })
+
+    await wrapper.find('.logo-button').trigger('click')
+    await nextTick()
+
+    const firstCard = wrapper.findAllComponents(MenuCard)[0]
+    if (!firstCard) {
+      throw new Error('Expected menu card to exist')
+    }
+
+    await firstCard.trigger('click')
+    await nextTick()
+
+    const content = wrapper.find('.card-dealer__content-view')
+    await content.trigger('pointerdown')
+    await nextTick()
+
+    expect(wrapper.find('.card-dealer__content-view').exists()).toBe(true)
+
+    wrapper.unmount()
   })
 })

@@ -89,6 +89,10 @@ onMounted(() => {
 
   return () => clearInterval(interval)
 })
+
+defineExpose({
+  rootEl: wrapperRef
+})
 </script>
 
 <template>

@@ -1,20 +1,18 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import MenuCard from './MenuCard.vue'
-import LogoEffect from './LogoEffect.vue'
 import LogoButton from './LogoButton.vue'
 import { useGSAP, useFadeIn } from '../composables/useGSAP'
 import gsap from 'gsap'
 
-const router = useRouter()
 const containerRef = ref<HTMLElement | null>(null)
 const bgRef = ref<HTMLElement | null>(null)
 const titleRef = ref<HTMLElement | null>(null)
 const subtitleRef = ref<HTMLElement | null>(null)
-const cardsRef = ref<(any)[]>([])
+const cardsRef = ref<(HTMLElement | null)[]>([])
 const cardsContainerRef = ref<HTMLElement | null>(null)
-const logoButtonRef = ref<HTMLElement | null>(null)
+const contentViewRef = ref<HTMLElement | null>(null)
+const logoButtonRef = ref<any | null>(null)
 
 // View states: 'logo' | 'cards' | 'content'
 const currentView = ref<'logo' | 'cards' | 'content'>('logo')
@@ -75,26 +73,48 @@ const handleLogoClick = () => {
   playLogoCloseAndCardOpen()
 }
 
-const handleBackgroundClick = () => {
+const setCardRef = (componentOrEl: any, index: number) => {
+  cardsRef.value[index] = componentOrEl?.cardEl ?? componentOrEl?.$el ?? componentOrEl ?? null
+}
+
+const getLogoElement = () => {
+  const instance = logoButtonRef.value
+  if (!instance) return null
+  return instance.rootEl ?? instance.$el ?? instance
+}
+
+const getCardElements = () => cardsRef.value.filter((card): card is HTMLElement => Boolean(card))
+
+const handleGlobalPointerDown = (event: PointerEvent) => {
   if (isAnimating.value) return
+  if (currentView.value === 'logo') return
+
+  const target = event.target as Node | null
+  if (!target) return
+
+  const clickedInsideCards = cardsContainerRef.value?.contains(target) ?? false
+  const clickedInsideContent = contentViewRef.value?.contains(target) ?? false
+
   if (currentView.value === 'cards') {
-    // Close cards, show logo
-    console.log('Background clicked - returning to logo')
+    if (clickedInsideCards) return
     isAnimating.value = true
     playCardCloseAndLogoReappear()
   } else if (currentView.value === 'content') {
-    // Close content, show cards
-    console.log('Background clicked - returning to cards')
+    if (clickedInsideContent) return
     isAnimating.value = true
     playContentCloseAndCardsReturn()
   }
 }
 
 const playLogoCloseAndCardOpen = () => {
-  if (!logoButtonRef.value) return
+  const logoEl = getLogoElement()
+  if (!logoEl) {
+    isAnimating.value = false
+    return
+  }
 
   // Step 1: Logo close animation (360° rotation + scale shrink)
-  gsap.to(logoButtonRef.value, {
+  gsap.to(logoEl, {
     rotation: 360,
     scale: 0.1,
     opacity: 0,
@@ -111,14 +131,7 @@ const playLogoCloseAndCardOpen = () => {
 }
 
 const playCardOpen = () => {
-  if (!cardsRef.value || cardsRef.value.length === 0) {
-    isAnimating.value = false
-    return
-  }
-
-  // Get actual DOM elements from component refs
-  const cards = cardsRef.value.map((ref: any) => ref?.$el || ref).filter(Boolean)
-  
+  const cards = getCardElements()
   if (cards.length === 0) {
     isAnimating.value = false
     return
@@ -150,15 +163,7 @@ const playCardOpen = () => {
 }
 
 const playCardCloseAndLogoReappear = () => {
-  if (!cardsRef.value || cardsRef.value.length === 0) {
-    currentView.value = 'logo'
-    isAnimating.value = false
-    return
-  }
-
-  // Get actual DOM elements from component refs
-  const cards = cardsRef.value.map((ref: any) => ref?.$el || ref).filter(Boolean)
-
+  const cards = getCardElements()
   if (cards.length === 0) {
     currentView.value = 'logo'
     isAnimating.value = false
@@ -186,12 +191,13 @@ const playCardCloseAndLogoReappear = () => {
 }
 
 const playLogoReappear = () => {
-  if (!logoButtonRef.value) {
+  const logoEl = getLogoElement()
+  if (!logoEl) {
     isAnimating.value = false
     return
   }
 
-  gsap.to(logoButtonRef.value, {
+  gsap.to(logoEl, {
     rotation: 0,
     scale: 1,
     opacity: 1,
@@ -204,16 +210,7 @@ const playLogoReappear = () => {
 }
 
 const playContentCloseAndCardsReturn = () => {
-  if (!cardsRef.value || cardsRef.value.length === 0) {
-    selectedCard.value = null
-    currentView.value = 'cards'
-    isAnimating.value = false
-    return
-  }
-
-  // Get actual DOM elements from component refs
-  const cards = cardsRef.value.map((ref: any) => ref?.$el || ref).filter(Boolean)
-
+  const cards = getCardElements()
   if (cards.length === 0) {
     selectedCard.value = null
     currentView.value = 'cards'
@@ -245,15 +242,7 @@ const playContentCloseAndCardsReturn = () => {
 }
 
 const playCardSelection = (cardIndex: number) => {
-  if (!cardsRef.value || cardsRef.value.length === 0) {
-    currentView.value = 'content'
-    isAnimating.value = false
-    return
-  }
-
-  // Get actual DOM elements from component refs
-  const cards = cardsRef.value.map((ref: any) => ref?.$el || ref).filter(Boolean)
-
+  const cards = getCardElements()
   if (cards.length === 0 || !cards[cardIndex]) {
     currentView.value = 'content'
     isAnimating.value = false
@@ -299,7 +288,12 @@ const playCardSelection = (cardIndex: number) => {
 }
 
 onMounted(() => {
+  window.addEventListener('pointerdown', handleGlobalPointerDown)
   console.log('CardDealer mounted')
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('pointerdown', handleGlobalPointerDown)
 })
 </script>
 
@@ -314,15 +308,6 @@ onMounted(() => {
       <div class="card-dealer__overlay"></div>
     </div>
 
-    <!-- Click overlay for handling background clicks (always present) -->
-    <div 
-      :class="[
-        'card-dealer__click-overlay',
-        { active: currentView === 'cards' || currentView === 'content' }
-      ]"
-      @click="handleBackgroundClick"
-    ></div>
-
     <div class="card-dealer__content">
       <!-- Logo button (initial view) -->
       <div v-if="currentView === 'logo'" class="card-dealer__logo-button-wrapper">
@@ -334,11 +319,18 @@ onMounted(() => {
       </div>
 
       <!-- Cards container (shown after logo click) -->
-      <div v-if="currentView === 'cards'" class="card-dealer__cards">
+      <div
+        v-show="currentView !== 'logo'"
+        ref="cardsContainerRef"
+        :class="[
+          'card-dealer__cards',
+          { 'card-dealer__cards--content': currentView === 'content' }
+        ]"
+      >
         <MenuCard
           v-for="(item, index) in menuItems"
           :key="item.route"
-          :ref="el => { if (el) (cardsRef[index] = el as any) }"
+          :ref="el => setCardRef(el, index)"
           :title="item.title"
           :image="item.image"
           :route="item.route"
@@ -349,7 +341,11 @@ onMounted(() => {
       </div>
 
       <!-- Content view (shown after card click) -->
-      <div v-if="currentView === 'content'" class="card-dealer__content-view">
+      <div
+        v-if="currentView === 'content'"
+        ref="contentViewRef"
+        class="card-dealer__content-view"
+      >
         <div class="card-dealer__content-placeholder">
           <!-- Card content will be displayed here -->
           <h2 v-if="selectedCard !== null && selectedCard < menuItems.length">
@@ -467,16 +463,8 @@ onMounted(() => {
   width: auto;
 }
 
-.card-dealer__click-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  cursor: pointer;
-  pointer-events: none; /* Disabled by default */
-}
-
-.card-dealer__click-overlay.active {
-  pointer-events: auto; /* Enabled when cards or content visible */
+.card-dealer__cards--content {
+  pointer-events: none;
 }
 
 .card-dealer__card {

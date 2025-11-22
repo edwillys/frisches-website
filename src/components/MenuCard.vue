@@ -26,6 +26,10 @@ const emit = defineEmits<{
 const handleClick = () => {
   emit('click', props.route)
 }
+
+defineExpose({
+  cardEl: cardRef
+})
 </script>
 
 <template>
