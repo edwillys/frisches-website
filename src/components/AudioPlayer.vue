@@ -625,7 +625,7 @@ watch(volume, (newVol) => {
   padding: 12px 8px;
   border-radius: 20px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-  margin-bottom: 8px;
+  margin-bottom: 0px;
   z-index: 100;
   pointer-events: auto; 
 }
