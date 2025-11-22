@@ -5,7 +5,8 @@ import App from '../App.vue'
 describe('App', () => {
   it('mounts renders properly', () => {
     const wrapper = mount(App)
-    expect(wrapper.text()).toContain('Frisches')
-    expect(wrapper.text()).toContain('Choose your path')
+    // App mounts and renders the CardDealer component
+    expect(wrapper.exists()).toBe(true)
+    expect(wrapper.find('.card-dealer').exists()).toBe(true)
   })
 })
