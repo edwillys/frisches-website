@@ -118,17 +118,17 @@ useFadeIn(titleRef, { duration: 1, delay: 0.3, y: 50 })
 const menuItems = [
   {
     title: 'Music',
-    image: new URL('../assets/images/menu-card-music.jpg', import.meta.url).href,
+    image: new URL('../assets/images/menu-card-music.png', import.meta.url).href,
     route: '/music'
   },
   {
     title: 'About',
-    image: new URL('../assets/images/menu-card-about.jpg', import.meta.url).href,
+    image: new URL('../assets/images/menu-card-about.png', import.meta.url).href,
     route: '/about'
   },
   {
     title: 'Tour',
-    image: new URL('../assets/images/menu-card-tour.jpg', import.meta.url).href,
+    image: new URL('../assets/images/menu-card-tour.png', import.meta.url).href,
     route: '/tour'
   }
 ]
@@ -658,12 +658,12 @@ onBeforeUnmount(() => {
       >
         <div ref="contentPanelRef" class="card-dealer__content-panel">
           <!-- Card content will be displayed here -->
-          <h2 v-if="selectedCard !== null && selectedCard < menuItems.length">
-            {{ menuItems[selectedCard]?.title }}
-          </h2>
-          <p>
-            Content for {{ selectedCard !== null && selectedCard < menuItems.length ? menuItems[selectedCard]?.title : '' }}
-          </p>
+            <h2 v-if="selectedCard !== null && selectedCard < menuItems.length">
+              {{ menuItems[selectedCard]?.title }}
+            </h2>
+            <p>
+              Content for {{ selectedCard !== null && selectedCard < menuItems.length ? menuItems[selectedCard]?.title : '' }}
+            </p>
         </div>
       </div>
     </div>
@@ -809,6 +809,13 @@ onBeforeUnmount(() => {
   text-align: center;
   color: var(--color-text);
   pointer-events: auto;
+}
+
+.card-dealer__music-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
 }
 
 /* Tablet responsiveness */
