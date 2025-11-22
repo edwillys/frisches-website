@@ -13,8 +13,8 @@ const emit = defineEmits<{
 
 const size = props.size ?? 200
 const LOGO_SIZE = 110
-const CIRCLE_SIZE = LOGO_SIZE + 10
-const GLOW_SIZE = size - 50
+const CIRCLE_SIZE = LOGO_SIZE - 15
+const GLOW_SIZE = size - 100
 
 const wrapperRef = ref<HTMLElement | null>(null)
 const glowRef = ref<HTMLElement | null>(null)
@@ -91,7 +91,7 @@ defineExpose({
 }
 
 .logo-button__circle {
-  border: 2px solid rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.7);
   box-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
 }
 
