@@ -19,7 +19,7 @@ const props = withDefaults(
   }>(),
   {
     tracks: () => [],
-    hidePlaylistCovers: false
+    hidePlaylistCovers: true
   }
 )
 
@@ -373,7 +373,23 @@ watch(volume, (newVol) => {
             </div>
           </div>
           <div class="info">
-            <div class="track-title">{{ track.title }}</div>
+            <div class="track-title" :class="{ active: index === currentTrackIndex }">
+              <svg v-if="index === currentTrackIndex" class="visualizer" xmlns="http://www.w3.org/2000/svg" width="16" height="14" viewBox="0 0 16 14" fill="currentColor">
+                <rect x="2" y="4" width="2" height="10" rx="1">
+                  <animate attributeName="height" values="10;6;10" dur="0.5s" repeatCount="indefinite" />
+                  <animate attributeName="y" values="4;7;4" dur="0.5s" repeatCount="indefinite" />
+                </rect>
+                <rect x="7" y="2" width="2" height="12" rx="1">
+                  <animate attributeName="height" values="12;8;12" dur="0.7s" repeatCount="indefinite" />
+                  <animate attributeName="y" values="2;5;2" dur="0.7s" repeatCount="indefinite" />
+                </rect>
+                <rect x="12" y="5" width="2" height="9" rx="1">
+                  <animate attributeName="height" values="9;5;9" dur="1.1s" repeatCount="indefinite" />
+                  <animate attributeName="y" values="5;8;5" dur="1.1s" repeatCount="indefinite" />
+                </rect>
+              </svg>
+              {{ track.title }}
+            </div>
             <div class="track-artist">{{ track.artist }}</div>
           </div>
           <div class="duration">{{ track.duration }}</div>
@@ -827,6 +843,19 @@ watch(volume, (newVol) => {
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--color-text, #fff);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.track-title.active {
+  color: var(--color-accent, #d4af37);
+}
+
+.visualizer {
+  flex-shrink: 0;
+  width: 16px;
+  height: 14px;
 }
 
 .track-artist {
