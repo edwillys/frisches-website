@@ -6,7 +6,8 @@ interface Track {
   title: string
   artist: string
   album?: string
-  cover: string
+  cover?: string // Optional: Track cover art
+  fallbackCover?: string // Optional: Album/fallback cover art
   url: string
   duration?: string // Display string like "2:30"
 }
@@ -14,9 +15,11 @@ interface Track {
 const props = withDefaults(
   defineProps<{
     tracks?: Track[]
+    hidePlaylistCovers?: boolean
   }>(),
   {
-    tracks: () => []
+    tracks: () => [],
+    hidePlaylistCovers: false
   }
 )
 
@@ -27,7 +30,7 @@ const currentTime = ref(0)
 const duration = ref(0)
 const isShuffle = ref(false)
 const repeatMode = ref<'off' | 'all' | 'one'>('off')
-const isPlaylistOpen = ref(false)
+const isPlaylistOpen = ref(true)
 const volume = ref(1)
 const previousVolume = ref(1)
 const showVolume = ref(false)
@@ -40,7 +43,7 @@ const defaultTracks: Track[] = [
     title: 'Intro',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    cover: '/audio/TalesFromTheCellar/Cover.png',
+    fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
     url: '/audio/TalesFromTheCellar/00 - Intro - Mastered.mp3',
     duration: '0:45'
   },
@@ -49,7 +52,7 @@ const defaultTracks: Track[] = [
     title: 'Misled',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    cover: '/audio/TalesFromTheCellar/Cover.png',
+    fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
     url: '/audio/TalesFromTheCellar/01 - Misled - Mastered.mp3',
     duration: '3:12'
   },
@@ -58,7 +61,7 @@ const defaultTracks: Track[] = [
     title: 'TOJD',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    cover: '/audio/TalesFromTheCellar/Cover.png',
+    fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
     url: '/audio/TalesFromTheCellar/02 - TOJD - Mastered.mp3',
     duration: '2:58'
   },
@@ -67,7 +70,7 @@ const defaultTracks: Track[] = [
     title: 'Etiquette',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    cover: '/audio/TalesFromTheCellar/Cover.png',
+    fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
     url: '/audio/TalesFromTheCellar/03 - Etiquette - Mastered.mp3',
     duration: '3:05'
   },
@@ -76,7 +79,7 @@ const defaultTracks: Track[] = [
     title: 'Mr Red Jacket',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    cover: '/audio/TalesFromTheCellar/Cover.png',
+    fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
     url: '/audio/TalesFromTheCellar/04 - Mr Red Jacket - Mastered.mp3',
     duration: '3:30'
   },
@@ -85,7 +88,7 @@ const defaultTracks: Track[] = [
     title: 'Witch Hunting',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    cover: '/audio/TalesFromTheCellar/Cover.png',
+    fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
     url: '/audio/TalesFromTheCellar/05 - Witch Hunting - Mastered.mp3',
     duration: '3:45'
   },
@@ -94,7 +97,7 @@ const defaultTracks: Track[] = [
     title: 'Suits',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    cover: '/audio/TalesFromTheCellar/Cover.png',
+    fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
     url: '/audio/TalesFromTheCellar/06 - Suits - Mastered.mp3',
     duration: '3:15'
   },
@@ -103,7 +106,7 @@ const defaultTracks: Track[] = [
     title: 'Ordinary Suspects',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    cover: '/audio/TalesFromTheCellar/Cover.png',
+    fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
     url: '/audio/TalesFromTheCellar/07 - Ordinary Suspects - Mastered.mp3',
     duration: '3:20'
   },
@@ -112,13 +115,31 @@ const defaultTracks: Track[] = [
     title: 'Solitude Etude',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    cover: '/audio/TalesFromTheCellar/Cover.png',
+    fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
     url: '/audio/TalesFromTheCellar/08 - Solitude Etude - Mastered.mp3',
     duration: '2:50'
   }
 ]
 
 const playlist = computed(() => (props.tracks.length > 0 ? props.tracks : defaultTracks))
+
+const getCoverImage = (track: Track): string => {
+  // Return only the track-specific cover
+  return track.cover || ''
+}
+
+const getHeaderCover = (track: Track): string => {
+  // Use track cover if available, otherwise fall back to album cover
+  if (track.cover) return track.cover
+  if (track.fallbackCover) return track.fallbackCover
+  return ''
+}
+
+const getDisplayIndex = (track: Track): string => {
+  const id = typeof track.id === 'string' ? parseInt(track.id) : track.id
+  return String(id).padStart(2, '0')
+}
+
 const currentTrack = computed<Track>(() => {
   const track = playlist.value[currentTrackIndex.value]
   if (track) return track
@@ -126,7 +147,6 @@ const currentTrack = computed<Track>(() => {
     id: -1,
     title: 'No Track',
     artist: 'Unknown',
-    cover: '',
     url: '',
     duration: '0:00'
   }
@@ -236,7 +256,10 @@ watch(volume, (newVol) => {
       <!-- Header Section: Transitions between Large and Compact -->
       <div class="player-header">
         <div class="artwork-wrapper">
-          <img :src="currentTrack.cover" :alt="currentTrack.title" class="artwork" />
+          <img v-if="getHeaderCover(currentTrack)" :src="getHeaderCover(currentTrack)" :alt="currentTrack.title" class="artwork" />
+          <div v-else class="artwork-placeholder">
+            <span class="track-index">{{ getDisplayIndex(currentTrack) }}</span>
+          </div>
         </div>
         
         <div class="header-info">
@@ -341,8 +364,11 @@ watch(volume, (newVol) => {
           @click="currentTrackIndex = index; isPlaying = true"
         >
           <div class="thumb-container">
-            <img :src="track.cover" class="thumb" />
-            <div class="play-overlay">
+            <img v-if="!hidePlaylistCovers && getCoverImage(track)" :src="getCoverImage(track)" class="thumb" />
+            <div v-if="!hidePlaylistCovers && !getCoverImage(track)" class="thumb-placeholder">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M4.93 4.93l14.14 14.14"></path></svg>
+            </div>
+            <div v-if="!hidePlaylistCovers" class="play-overlay">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
             </div>
           </div>
@@ -412,6 +438,23 @@ watch(volume, (newVol) => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.artwork-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #333 0%, #222 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.track-index {
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--color-accent, #d4af37);
+  opacity: 0.6;
 }
 
 .header-info {
@@ -724,11 +767,32 @@ watch(volume, (newVol) => {
   flex-shrink: 0;
 }
 
+.thumb-container:empty {
+  display: none;
+  width: 0;
+  margin-right: 0;
+}
+
 .thumb {
   width: 100%;
   height: 100%;
   border-radius: 4px;
   object-fit: cover;
+}
+
+.thumb-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #333 0%, #222 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: var(--color-text-secondary, #888);
+}
+
+.thumb-placeholder svg {
+  opacity: 0.5;
 }
 
 .play-overlay {
