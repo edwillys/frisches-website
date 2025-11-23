@@ -108,6 +108,7 @@ defineExpose({
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
+  font-family: 'Orbitron', sans-serif;
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.05em;
