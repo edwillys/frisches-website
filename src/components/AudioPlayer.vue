@@ -450,6 +450,13 @@ watch(volume, (newVol) => {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.audio-player:not(.is-playlist-open) .artwork-wrapper {
+  width: 100%;
+  height: 100%;
+  margin-bottom: 24px;
+  border-radius: 16px;
+}
+
 .artwork {
   width: 100%;
   height: 100%;
@@ -664,8 +671,6 @@ watch(volume, (newVol) => {
   color: var(--color-accent, #d4af37);
   background: rgba(212, 175, 55, 0.1);
 }
-
-.spacer { flex: 1; }
 
 /* Volume Control - Refactored */
 .volume-control {
