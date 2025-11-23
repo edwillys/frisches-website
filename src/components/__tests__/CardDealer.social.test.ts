@@ -25,15 +25,15 @@ describe('CardDealer social links', () => {
     expect(anchors.length).toBe(3)
 
     // Instagram
-    expect(anchors[0].attributes('href')).toBe(socialLinks.instagram)
-    expect(anchors[0].attributes('aria-label')).toBe('Instagram')
+    expect(anchors[0]!.attributes('href')).toBe(socialLinks.instagram)
+    expect(anchors[0]!.attributes('aria-label')).toBe('Instagram')
 
     // Spotify
-    expect(anchors[1].attributes('href')).toBe(socialLinks.spotify)
-    expect(anchors[1].attributes('aria-label')).toBe('Spotify')
+    expect(anchors[1]!.attributes('href')).toBe(socialLinks.spotify)
+    expect(anchors[1]!.attributes('aria-label')).toBe('Spotify')
 
     // YouTube - empty URL should render '#' and have disabled state
-    expect(anchors[2].attributes('href')).toBe('#')
-    expect(anchors[2].attributes('aria-disabled')).toBe('true')
+    expect(anchors[2]!.attributes('href')).toBe('#')
+    expect(anchors[2]!.attributes('aria-disabled')).toBe('true')
   })
 })
