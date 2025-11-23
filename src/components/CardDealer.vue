@@ -43,41 +43,10 @@ const panelEase = CustomEase.create('deckPanelEase', 'M0,0 C0.4,0 0.15,1 1,1')
 const containerRef = ref<HTMLElement | null>(null)
 const bgRef = ref<HTMLElement | null>(null)
 const titleRef = ref<HTMLElement | null>(null)
-const subtitleRef = ref<HTMLElement | null>(null)
 const cardsRef = ref<(HTMLElement | null)[]>([])
 const cardsContainerRef = ref<HTMLElement | null>(null)
 const contentPanelRef = ref<HTMLElement | null>(null)
-const logoButtonRef = ref<any | null>(null)
-
-type StackState = {
-  x: number
-  y: number
-  rotation: number
-  scale: number
-  zIndex: number
-}
-
-const STACK_BASE_X = 140
-const STACK_BASE_Y = 20
-const STACK_X_STEP = 10
-const STACK_Y_STEP = -4
-const STACK_ROTATION_BASE = -12
-const STACK_ROTATION_STEP = 3.5
-const STACK_SCALE_BASE = 0.82
-const STACK_SCALE_STEP = 0.06
-
-const getStackState = (index: number, total: number): StackState => {
-  const order = index
-  return {
-    x: STACK_BASE_X + order * STACK_X_STEP,
-    y: STACK_BASE_Y + order * STACK_Y_STEP,
-    rotation: STACK_ROTATION_BASE + order * STACK_ROTATION_STEP,
-    scale: STACK_SCALE_BASE + order * STACK_SCALE_STEP,
-    zIndex: 40 + (total - order)
-  }
-}
-
-// View states: 'logo' | 'cards' | 'content'
+const logoButtonRef = ref<HTMLElement | Record<string, unknown> | null>(null)
 const currentView = ref<'logo' | 'cards' | 'content'>('logo')
 const selectedCard = ref<number | null>(null)
 const isAnimating = ref(false)
@@ -158,14 +127,27 @@ const handleLogoClick = () => {
   playLogoCloseAndCardOpen()
 }
 
-const setCardRef = (componentOrEl: any, index: number) => {
-  cardsRef.value[index] = componentOrEl?.cardEl ?? componentOrEl?.$el ?? componentOrEl ?? null
+const setCardRef = (componentOrEl: unknown, index: number) => {
+  let el: HTMLElement | null = null
+  if (componentOrEl && typeof componentOrEl === 'object') {
+    const asRec = componentOrEl as Record<string, unknown>
+    if ('cardEl' in asRec && asRec.cardEl) el = asRec.cardEl as HTMLElement
+    else if ('$el' in asRec && asRec.$el) el = asRec.$el as HTMLElement
+  } else if (componentOrEl instanceof HTMLElement) {
+    el = componentOrEl
+  }
+  cardsRef.value[index] = el
 }
 
 const getLogoElement = () => {
   const instance = logoButtonRef.value
   if (!instance) return null
-  return instance.rootEl ?? instance.$el ?? instance
+  if (typeof instance === 'object' && instance !== null) {
+    const asRecord = instance as Record<string, unknown>
+    if ('rootEl' in asRecord) return asRecord.rootEl as HTMLElement | null
+    if ('$el' in asRecord) return asRecord.$el as HTMLElement | null
+  }
+  return instance as unknown as HTMLElement | null
 }
 
 const getCardElements = () => cardsRef.value.filter((card): card is HTMLElement => Boolean(card))

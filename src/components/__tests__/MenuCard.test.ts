@@ -71,7 +71,6 @@ describe('MenuCard', () => {
     })
 
     const title = wrapper.find('.menu-card__title')
-    const computedStyle = window.getComputedStyle(title.element)
     // CSS text-transform won't be reflected in .text(), so we check the class exists
     expect(title.exists()).toBe(true)
   })

@@ -22,7 +22,7 @@ const gsapMocks = vi.hoisted(() => {
   const timelineFromTo = vi.fn().mockReturnThis()
   
   // We need to handle onStart/onComplete in timeline.to()
-  const timelineTo = vi.fn(function(this: any, _, vars: Record<string, unknown> = {}) {
+  const timelineTo = vi.fn(function(this: unknown, _, vars: Record<string, unknown> = {}) {
     if (vars && typeof vars.onStart === 'function') {
       vars.onStart()
     }

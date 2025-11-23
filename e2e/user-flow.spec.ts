@@ -16,7 +16,7 @@ test.describe('Frisches Website - Complete User Flow', () => {
     // Navigate to the website
     await page.goto('http://localhost:5174/')
     // Wait for page to load
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('load')
   })
 
   test('should display logo on initial load', async ({ page }) => {
@@ -29,8 +29,7 @@ test.describe('Frisches Website - Complete User Flow', () => {
     await expect(logoElement).toBeEnabled()
 
     // Cards should NOT be visible initially
-    const cardsContainer = page.locator('.card-dealer__cards')
-    await expect(cardsContainer).not.toBeVisible()
+    await expect(page.locator('.card-dealer__cards')).toBeHidden()
   })
 
   test('should reveal cards when clicking logo', async ({ page }) => {
@@ -38,12 +37,9 @@ test.describe('Frisches Website - Complete User Flow', () => {
     const logoButton = page.locator('.logo-button')
     await logoButton.click()
 
-    // Wait for animation to complete (1.5s logo close + 1.8s cards open)
-    await page.waitForTimeout(3500)
-
-    // Cards should now be visible
+    // Wait for cards to appear after animation
     const cardsContainer = page.locator('.card-dealer__cards')
-    await expect(cardsContainer).toBeVisible()
+    await expect(cardsContainer).toBeVisible({ timeout: 5000 })
 
     // All three menu cards should be present and visible
     const cards = page.locator('.menu-card')
@@ -60,73 +56,57 @@ test.describe('Frisches Website - Complete User Flow', () => {
     await expect(tourCard).toBeVisible()
 
     // Logo button should no longer be visible
-    await expect(logoButton).not.toBeVisible()
+    await expect(logoButton).toBeHidden()
   })
 
   test('should show content when clicking a card', async ({ page }) => {
     // First, click logo to reveal cards
     const logoButton = page.locator('.logo-button')
     await logoButton.click()
-    await page.waitForTimeout(3500)
+    const cardsContainer = page.locator('.card-dealer__cards')
+    await expect(cardsContainer).toBeVisible({ timeout: 5000 })
 
     // Click on the first card (Music)
     const firstCard = page.locator('.menu-card').first()
     await firstCard.click()
 
-    // Wait for card selection animation (1s)
-    await page.waitForTimeout(1200)
-
-    // Content view should be visible
+    // Wait for content view to appear after selecting card
     const contentView = page.locator('.card-dealer__content-view')
-    await expect(contentView).toBeVisible()
+    await expect(contentView).toBeVisible({ timeout: 3000 })
 
     // Content placeholder should show
     const contentPlaceholder = page.locator('.card-dealer__content-placeholder')
     await expect(contentPlaceholder).toBeVisible()
 
     // Cards container should not be visible anymore
-    const cardsContainer = page.locator('.card-dealer__cards')
-    await expect(cardsContainer).not.toBeVisible()
+    await expect(cardsContainer).toBeHidden()
   })
 
   test('should return to cards view when clicking outside content', async ({ page }) => {
     // Setup: click logo, then click a card
     const logoButton = page.locator('.logo-button')
     await logoButton.click()
-    await page.waitForTimeout(3500)
+    const cardsContainer = page.locator('.card-dealer__cards')
+    await expect(cardsContainer).toBeVisible({ timeout: 5000 })
 
     const firstCard = page.locator('.menu-card').first()
     await firstCard.click()
-    await page.waitForTimeout(1200)
-
-    // Verify we're in content view
     const contentView = page.locator('.card-dealer__content-view')
-    await expect(contentView).toBeVisible()
+    await expect(contentView).toBeVisible({ timeout: 3000 })
+
+    // verified content view above
 
     // Click on the click overlay (outside the content)
     const clickOverlay = page.locator('.card-dealer__click-overlay')
-    const overlayBox = await clickOverlay.boundingBox()
-    
-    if (overlayBox) {
-      // Click in the top-left corner of the overlay (away from content)
-      await page.click(
-        '.card-dealer__click-overlay',
-        { position: { x: 50, y: 50 } }
-      )
-    } else {
-      // Fallback: click the overlay element directly
-      await clickOverlay.click()
-    }
+    // Wait until overlay is visible then click a safe area (deterministic)
+    await clickOverlay.waitFor({ state: 'visible', timeout: 3000 })
+    await clickOverlay.click({ position: { x: 50, y: 50 } })
 
-    // Wait for animation (1s)
-    await page.waitForTimeout(1200)
-
-    // Cards should be visible again
-    const cardsContainer = page.locator('.card-dealer__cards')
-    await expect(cardsContainer).toBeVisible()
+    // Wait for cards to re-appear
+    await expect(cardsContainer).toBeVisible({ timeout: 3000 })
 
     // Content view should be hidden
-    await expect(contentView).not.toBeVisible()
+    await expect(contentView).toBeHidden()
 
     // All three cards should still be present
     const cards = page.locator('.menu-card')
@@ -138,35 +118,19 @@ test.describe('Frisches Website - Complete User Flow', () => {
     // Setup: click logo to reveal cards
     const logoButton = page.locator('.logo-button')
     await logoButton.click()
-    await page.waitForTimeout(3500)
-
-    // Verify cards are visible
     const cardsContainer = page.locator('.card-dealer__cards')
-    await expect(cardsContainer).toBeVisible()
+    await expect(cardsContainer).toBeVisible({ timeout: 5000 })
 
     // Click outside cards (on the background overlay)
     const clickOverlay = page.locator('.card-dealer__click-overlay')
-    const overlayBox = await clickOverlay.boundingBox()
+    await clickOverlay.waitFor({ state: 'visible', timeout: 3000 })
+    await clickOverlay.click({ position: { x: 50, y: 50 } })
 
-    if (overlayBox) {
-      // Click in the top-left corner of the overlay (away from cards)
-      await page.click(
-        '.card-dealer__click-overlay',
-        { position: { x: 50, y: 50 } }
-      )
-    } else {
-      // Fallback: click the overlay element
-      await clickOverlay.click()
-    }
-
-    // Wait for animation (1.5s collapse + 1.5s logo reappear)
-    await page.waitForTimeout(3200)
+    // Wait for logo to reappear
+    await expect(logoButton).toBeVisible({ timeout: 5000 })
 
     // Cards should be hidden
-    await expect(cardsContainer).not.toBeVisible()
-
-    // Logo button should be visible again
-    await expect(logoButton).toBeVisible()
+    await expect(cardsContainer).toBeHidden()
 
     // Logo button should be clickable
     await expect(logoButton).toBeEnabled()
@@ -179,16 +143,16 @@ test.describe('Frisches Website - Complete User Flow', () => {
     const contentView = page.locator('.card-dealer__content-view')
 
     await expect(logoButton).toBeVisible()
-    await expect(cardsContainer).not.toBeVisible()
-    await expect(contentView).not.toBeVisible()
+    await expect(cardsContainer).toBeHidden()
+    await expect(contentView).toBeHidden()
 
     // Step 2: Click logo → cards appear
     await logoButton.click()
-    await page.waitForTimeout(3500)
+    await expect(cardsContainer).toBeVisible({ timeout: 5000 })
 
-    await expect(logoButton).not.toBeVisible()
+    await expect(logoButton).toBeHidden()
     await expect(cardsContainer).toBeVisible()
-    await expect(contentView).not.toBeVisible()
+    await expect(contentView).toBeHidden()
 
     // Step 3: Click card → content appears
     const firstCard = page.locator('.menu-card').first()
@@ -196,10 +160,10 @@ test.describe('Frisches Website - Complete User Flow', () => {
     const selectedTitle = await cardTitle.textContent()
 
     await firstCard.click()
-    await page.waitForTimeout(1200)
+    await expect(contentView).toBeVisible({ timeout: 3000 })
 
-    await expect(logoButton).not.toBeVisible()
-    await expect(cardsContainer).not.toBeVisible()
+    await expect(logoButton).toBeHidden()
+    await expect(cardsContainer).toBeHidden()
     await expect(contentView).toBeVisible()
 
     // Verify content shows selected card title
@@ -209,19 +173,14 @@ test.describe('Frisches Website - Complete User Flow', () => {
 
     // Step 4: Click outside content → cards return
     const clickOverlay = page.locator('.card-dealer__click-overlay')
-    const overlayBox = await clickOverlay.boundingBox()
+    await clickOverlay.waitFor({ state: 'visible', timeout: 3000 })
+    await clickOverlay.click({ position: { x: 50, y: 50 } })
 
-    if (overlayBox) {
-      await page.click('.card-dealer__click-overlay', { position: { x: 50, y: 50 } })
-    } else {
-      await clickOverlay.click()
-    }
+    await expect(cardsContainer).toBeVisible({ timeout: 3000 })
 
-    await page.waitForTimeout(1200)
-
-    await expect(logoButton).not.toBeVisible()
+    await expect(logoButton).toBeHidden()
     await expect(cardsContainer).toBeVisible()
-    await expect(contentView).not.toBeVisible()
+    await expect(contentView).toBeHidden()
 
     // Verify all three cards are back
     const cards = page.locator('.menu-card')
@@ -229,18 +188,17 @@ test.describe('Frisches Website - Complete User Flow', () => {
 
     // Step 5: Click outside cards → logo returns
     await clickOverlay.click()
-    await page.waitForTimeout(3200)
+    await expect(logoButton).toBeVisible({ timeout: 5000 })
 
-    await expect(logoButton).toBeVisible()
-    await expect(cardsContainer).not.toBeVisible()
-    await expect(contentView).not.toBeVisible()
+    await expect(cardsContainer).toBeHidden()
+    await expect(contentView).toBeHidden()
   })
 
   test('should handle multiple card clicks in sequence', async ({ page }) => {
     // Click logo to reveal cards
     const logoButton = page.locator('.logo-button')
     await logoButton.click()
-    await page.waitForTimeout(3500)
+    await expect(page.locator('.card-dealer__cards')).toBeVisible({ timeout: 5000 })
 
     const cards = page.locator('.menu-card')
     const cardCount = await cards.count()
@@ -250,24 +208,17 @@ test.describe('Frisches Website - Complete User Flow', () => {
       const card = cards.nth(i)
       const cardTitle = await card.locator('.menu-card__title').textContent()
 
-      // Click card
+      // Click card and wait for content to appear
       await card.click()
-      await page.waitForTimeout(1200)
-
-      // Verify content is shown with correct title
       const contentPlaceholder = page.locator('.card-dealer__content-placeholder')
-      await expect(contentPlaceholder).toBeVisible()
+      await expect(contentPlaceholder).toBeVisible({ timeout: 3000 })
       const contentText = await contentPlaceholder.textContent()
       expect(contentText).toContain(cardTitle)
 
       // Click overlay to return to cards
       const clickOverlay = page.locator('.card-dealer__click-overlay')
       await clickOverlay.click()
-      await page.waitForTimeout(1200)
-
-      // Verify back to cards view
-      const cardsContainer = page.locator('.card-dealer__cards')
-      await expect(cardsContainer).toBeVisible()
+      await expect(page.locator('.card-dealer__cards')).toBeVisible({ timeout: 3000 })
     }
   })
 
@@ -275,7 +226,7 @@ test.describe('Frisches Website - Complete User Flow', () => {
     // Click logo to reveal cards
     const logoButton = page.locator('.logo-button')
     await logoButton.click()
-    await page.waitForTimeout(3500)
+    await expect(page.locator('.card-dealer__cards')).toBeVisible({ timeout: 5000 })
 
     // Verify click overlay is present and has correct z-index
     const clickOverlay = page.locator('.card-dealer__click-overlay')
@@ -302,7 +253,7 @@ test.describe('Frisches Website - Complete User Flow', () => {
     // Click logo to reveal cards
     const logoButton = page.locator('.logo-button')
     await logoButton.click()
-    await page.waitForTimeout(3500)
+    await expect(page.locator('.card-dealer__cards')).toBeVisible({ timeout: 5000 })
 
     // Get cards container
     const cardsContainer = page.locator('.card-dealer__cards')
