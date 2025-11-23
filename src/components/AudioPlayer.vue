@@ -374,7 +374,7 @@ watch(volume, (newVol) => {
           </div>
           <div class="info">
             <div class="track-title" :class="{ active: index === currentTrackIndex }">
-              <svg v-if="index === currentTrackIndex" class="visualizer" xmlns="http://www.w3.org/2000/svg" width="16" height="14" viewBox="0 0 16 14" fill="currentColor">
+              <svg v-if="(index === currentTrackIndex) && isPlaying" class="visualizer" xmlns="http://www.w3.org/2000/svg" width="16" height="14" viewBox="0 0 16 14" fill="currentColor">
                 <rect x="2" y="4" width="2" height="10" rx="1">
                   <animate attributeName="height" values="10;6;10" dur="0.5s" repeatCount="indefinite" />
                   <animate attributeName="y" values="4;7;4" dur="0.5s" repeatCount="indefinite" />
