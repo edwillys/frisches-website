@@ -25,7 +25,7 @@
  *    - No stagger: cards disappear as one unified deck
  *    - Duration: 0.8s with power2.inOut easing
  */
-import { ref, onMounted, nextTick, onBeforeUnmount } from 'vue'
+import { ref, onMounted, nextTick, onBeforeUnmount, watch } from 'vue'
 import MenuCard from './MenuCard.vue'
 import LogoButton from './LogoButton.vue'
 import AudioPlayer from './AudioPlayer.vue'
@@ -390,12 +390,18 @@ const playCardCloseAndLogoReappear = () => {
   })
 
   // Phase 1: Gather cards to center (inverse of spread)
+  // Apply per-card z-index immediately so stacking is deterministic (middle card on top)
+  cards.forEach((card, i) => {
+    const distance = Math.abs(i - deckLeadIndex)
+    const z = i === deckLeadIndex ? 80 : 60 - distance
+    gsap.set(card, { zIndex: z })
+  })
+
   tl.to(cards, {
     x: (i: number) => cardOffsets[i]?.x || 0,
     y: (i: number) => cardOffsets[i]?.y || 0,
     rotation: 0,
     scale: 1,
-    zIndex: 50,
     duration: 1.0,
     ease: deckGatherEase,
     stagger: {
@@ -405,7 +411,8 @@ const playCardCloseAndLogoReappear = () => {
     onComplete: () => setDeckMask(cards, true)
   })
 
-  // Phase 2: Shrink to point (all together, no stagger)
+  // Phase 2: Shrink to point (middle/lead card should definitely be on top)
+  gsap.set(leadCard, { zIndex: 120 })
   tl.to(leadCard, {
     scale: 0.01,
     duration: 0.85,
@@ -507,16 +514,17 @@ const playContentCloseAndCardsReturn = () => {
     tl.to(container, { x: 0 }, 0)
   }
 
-  cards.forEach(card => {
-    tl.to(card, {
-      opacity: 1,
-      scale: 1,
-      x: 0,
-      y: 0,
-      rotation: 0,
-      zIndex: 1
-    }, 0)
-  })
+    // Ensure z-index is set before tweening to avoid flicker
+    gsap.set(cards, { zIndex: 1 })
+    cards.forEach(card => {
+      tl.to(card, {
+        opacity: 1,
+        scale: 1,
+        x: 0,
+        y: 0,
+        rotation: 0
+      }, 0)
+    })
 }
 
 const playCardSelection = (cardIndex: number) => {
@@ -558,6 +566,12 @@ const playCardSelection = (cardIndex: number) => {
       }, 0)
     }
 
+    // Set final stacking order immediately to avoid z-index animation conflicts
+    cards.forEach((card, index) => {
+      const z = index === cardIndex ? 50 : 40 - Math.abs(index - cardIndex)
+      gsap.set(card, { zIndex: z })
+    })
+
     cards.forEach((card, index) => {
       const rect = cardRects[index]
       if (!rect) return
@@ -574,7 +588,6 @@ const playCardSelection = (cardIndex: number) => {
         scale: index === cardIndex ? 1.05 : 0.95,
         opacity: 1, // Keep visible so we see the stack edges
         rotation: (index - cardIndex) * 1.5, // Very slight rotation
-        zIndex: index === cardIndex ? 50 : 40 - Math.abs(index - cardIndex),
         force3D: true // Force hardware acceleration
       }, 0)
     })
@@ -597,6 +610,14 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('pointerdown', handleGlobalPointerDown)
+})
+
+// Toggle a class on the root container while GSAP animations are running
+watch(isAnimating, (val) => {
+  const el = containerRef.value
+  if (!el) return
+  if (val) el.classList.add('is-animating')
+  else el.classList.remove('is-animating')
 })
 </script>
 
@@ -939,6 +960,17 @@ onBeforeUnmount(() => {
   backface-visibility: hidden;
   transform-style: preserve-3d;
   will-change: transform, opacity;
+}
+
+/* Disable CSS transitions on cards while JS/GSAP animations run to avoid conflicts */
+.card-dealer.is-animating .menu-card,
+.card-dealer.is-animating .card-dealer__card {
+  transition: none !important;
+}
+
+/* Ensure hovered transform doesn't fight animations when animating */
+.card-dealer.is-animating .menu-card--hovered {
+  transform: none !important;
 }
 
 /* Tablet responsiveness */
