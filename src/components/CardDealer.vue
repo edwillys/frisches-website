@@ -815,9 +815,8 @@ watch(isAnimating, (val) => {
   gap: var(--spacing-lg, 28px);
   align-items: center;
   justify-content: center;
-  width: 100%;
-  max-width: 1100px;
-  margin: 0 auto;
+  /* size to content so clicks just outside the visible cards register as outside */
+  width: auto;
 }
 
 .card-dealer__title {
