@@ -41,3 +41,5 @@ playwright-report/
 # Large media files (compress before committing)
 public/videos/*.mp4
 resources/*.mp4
+
+.vercel

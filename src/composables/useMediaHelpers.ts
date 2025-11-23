@@ -123,7 +123,7 @@ export function useTouchDevice() {
     isTouchDevice.value =
       'ontouchstart' in window ||
       navigator.maxTouchPoints > 0 ||
-      // @ts-ignore - MS specific
+      // @ts-expect-error - MS specific
       navigator.msMaxTouchPoints > 0
   })
 
