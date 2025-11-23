@@ -105,6 +105,16 @@ const menuItems = [
 
 const deckLeadIndex = Math.floor(menuItems.length / 2)
 
+// Component props
+const props = withDefaults(
+  defineProps<{
+    socialLinks?: { instagram?: string; spotify?: string; youtube?: string }
+  }>(),
+  {
+    socialLinks: () => ({})
+  }
+)
+
 const handleCardClick = (route: string) => {
   if (isAnimating.value) return
   
@@ -561,7 +571,6 @@ const playCardSelection = (cardIndex: number) => {
 
       tl.to(card, {
         x: offsetToTarget + stackOffset,
-        y: 0,
         scale: index === cardIndex ? 1.05 : 0.95,
         opacity: 1, // Keep visible so we see the stack edges
         rotation: (index - cardIndex) * 1.5, // Very slight rotation
@@ -593,6 +602,65 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="containerRef" class="card-dealer">
+    <!-- Social links (top center) -->
+    <div class="card-dealer__social" role="navigation" aria-label="Social links">
+      <a
+        :href="props.socialLinks?.instagram || '#'
+        "
+        class="card-dealer__social-link"
+        :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.instagram }"
+        :aria-disabled="!props.socialLinks?.instagram"
+        aria-label="Instagram"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <!-- Instagram (outline) -->
+        <svg width="28" height="28" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" stroke-width="1.6" fill="none" />
+          <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.6" fill="none" />
+          <circle cx="17.5" cy="6.5" r="0.8" stroke="currentColor" stroke-width="1.6" fill="none" />
+        </svg>
+      </a>
+
+      <a
+        :href="props.socialLinks?.spotify || '#'
+        "
+        class="card-dealer__social-link"
+        :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.spotify }"
+        :aria-disabled="!props.socialLinks?.spotify"
+        aria-label="Spotify"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <!-- Spotify (three stepped arcs: top thicker, middle slightly thinner, bottom thinnest) -->
+        <svg width="28" height="28" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6" fill="none" />
+          <!-- Top arc: longest, thickest -->
+          <path d="M6.2 9.1 C9.4 7.2 14.6 7.2 17.8 9.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none" />
+          <!-- Middle arc: slightly shorter, medium thickness -->
+          <path d="M6.6 11.8 C9.4 10.4 14.6 10.4 17.2 11.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none" />
+          <!-- Bottom arc: shortest, thinnest -->
+          <path d="M7.4 14.7 C9.3 13.7 14.4 13.7 16.3 14.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none" />
+        </svg>
+      </a>
+
+      <a
+        :href="props.socialLinks?.youtube || '#'
+        "
+        class="card-dealer__social-link"
+        :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.youtube }"
+        :aria-disabled="!props.socialLinks?.youtube"
+        aria-label="YouTube"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <!-- YouTube (outline only) -->
+        <svg width="28" height="28" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect x="2" y="3" width="20" height="18" rx="3" stroke="currentColor" stroke-width="1.6" fill="none" />
+          <polygon points="10,9 16,12 10,15" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" fill="none" />
+        </svg>
+      </a>
+    </div>
     <div ref="bgRef" class="card-dealer__background">
       <img
         src="../assets/images/card-dealer-main.jpg"
@@ -720,6 +788,17 @@ onBeforeUnmount(() => {
   text-align: center;
 }
 
+/* Cards container: horizontal layout by default */
+.card-dealer__cards {
+  display: flex;
+  gap: var(--spacing-lg, 28px);
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
 .card-dealer__title {
   font-size: var(--font-size-5xl);
   font-weight: var(--font-weight-bold);
@@ -752,42 +831,71 @@ onBeforeUnmount(() => {
   justify-content: center;
 }
 
-.card-dealer__cards {
+/* Social links at top center */
+.card-dealer__social {
+  position: fixed;
+  top: var(--spacing-lg, 18px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
   display: flex;
-  gap: var(--spacing-xl);
-  justify-content: center;
+  gap: 12px;
   align-items: center;
-  position: relative;
-  z-index: 3;
-  flex-wrap: nowrap;
-  width: auto;
-  perspective: 1000px; /* Add perspective for 3D transforms */
 }
-
-.card-dealer__cards--content {
-  pointer-events: none;
-}
-
-.card-dealer__card {
-  /* Cards will be animated with GSAP */
-  opacity: 0;
-  position: relative;
-  z-index: 4;
-  flex-shrink: 0;
-  /* Improve rendering performance and reduce glitching */
-  backface-visibility: hidden;
-  transform-style: preserve-3d;
-  will-change: transform, opacity;
-}
-
-.card-dealer__content-view {
-  position: absolute;
-  inset: 0;
-  display: flex;
+.card-dealer__social-link {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  z-index: 4;
+  color: var(--color-text-secondary, #ccc);
+  padding: 8px;
+  border-radius: 8px;
+  min-width: 40px;
+  min-height: 40px;
+  transition: color 0.12s ease, transform 0.12s ease;
+}
+.card-dealer__social-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary, #ccc);
+  padding: 8px;
+  border-radius: 8px;
+  min-width: 40px;
+  min-height: 40px;
+  transition: color 0.12s ease, transform 0.12s ease;
+}
+.card-dealer__social {
+  position: fixed;
+  top: var(--spacing-lg, 18px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.card-dealer__social-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary, #ccc);
+  padding: 10px;
+  border-radius: 10px;
+  min-width: 44px;
+  min-height: 44px;
+  transition: color 0.12s ease, transform 0.12s ease;
+}
+.card-dealer__social-link:hover {
+  color: var(--color-accent, #d4af37);
+  transform: translateY(-3px);
+}
+.card-dealer__social-link:focus-visible {
+  outline: 2px solid rgba(212,175,55,0.18);
+  outline-offset: 2px;
+}
+.card-dealer__social-link--disabled {
   pointer-events: none;
+  opacity: 0.5;
 }
 
 .card-dealer__content-panel {
@@ -806,6 +914,31 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   width: 100%;
+}
+
+/* When a card is selected, show the content panel centered while keeping cards visible */
+.card-dealer__content-view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.card-dealer__cards--content {
+  pointer-events: none;
+}
+
+.card-dealer__card {
+  opacity: 1;
+  position: relative;
+  z-index: 4;
+  flex-shrink: 0;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
 }
 
 /* Tablet responsiveness */
