@@ -411,12 +411,20 @@ const playCardCloseAndLogoReappear = () => {
     onComplete: () => setDeckMask(cards, true)
   })
 
-  // Phase 2: Shrink to point (middle/lead card should definitely be on top)
+  // Phase 2: Shrink to point with rotation (zoom-out + rotate)
+  // Keep middle/lead card on top during the shrink
   gsap.set(leadCard, { zIndex: 120 })
-  tl.to(leadCard, {
+  tl.to(cards, {
     scale: 0.01,
+    rotation: (i: number) => 360 + (i - deckLeadIndex) * 22,
+    opacity: 0,
+    transformOrigin: 'center center',
     duration: 0.85,
     ease: deckGrowEase,
+    stagger: {
+      from: 'center',
+      amount: 0.12
+    },
     onComplete: () => {
       cards.forEach(card => {
         if (!card) return
