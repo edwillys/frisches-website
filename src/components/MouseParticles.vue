@@ -156,8 +156,6 @@ function onMove(e: MouseEvent) {
     if (!el) return
 
     const rect = el.getBoundingClientRect()
-    lastMouseX = mouseX
-    lastMouseY = mouseY
     mouseX = e.clientX - rect.left
     mouseY = e.clientY - rect.top
     mouseMoving = true
