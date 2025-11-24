@@ -12,6 +12,97 @@ We are building a dynamic website for the rock band **Frisches** using Vue.js. T
   - (Other typical band site sections)
 - The cards will be interactive and visually styled to match the mood of the media resources.
 
+## Visual Effects
+
+### Luminescent Dust Particles (MouseParticles Component)
+The website features an ambient particle system that creates a luminescent dust effect inspired by the floating particles from Stranger Things, adding a mystical atmosphere to the entire experience.
+
+**Core Behavior:**
+- **Ambient Floating**: 100 particles continuously float across the screen with physics-based motion
+  - Gravity pulls particles down subtly (0.01)
+  - Buoyancy pushes them up (0.015), creating a natural floating effect
+  - Air resistance (0.99) and turbulence (0.02) simulate realistic air currents
+  - Particles wrap around screen edges for seamless, infinite floating
+
+**Visual Characteristics:**
+- **Size**: Random sizes between 0.4px and 2.0px for depth variation
+- **Shape**: Slightly irregular shapes (not perfect circles) with 6-sided polygons and 0.35 irregularity factor
+- **Color**: Red theme matching band aesthetic (RGB: 220, 40, 40) with ±10 variance for subtle variation
+- **Glow**: Pulsing glow effect with:
+  - Alpha oscillating between 0.1 and 0.5
+  - Blur oscillating between 4px and 12px
+  - Independent phase for each particle creating organic, random pulsing
+
+**Mouse Interaction:**
+- **Speed-Based Attraction**: Particles near the cursor (within 180px radius) are attracted when the mouse moves
+  - Attraction strength is proportional to cursor speed (faster movement = stronger pull)
+  - Only particles close to the mouse path are affected
+  - Spawning rate proportional to cursor speed
+  
+- **Dust Trace Effect**: Fast cursor movements create a visible trail of accumulated particles
+  - New particles spawn at cursor position during movement
+  - Attracted particles follow the cursor path
+  - Creates a dynamic, responsive dust cloud effect
+
+- **Dispersion**: When cursor stops moving, attracted particles gradually disperse
+  - Particles slow down with dispersion rate of 0.96
+  - Return to natural floating behavior after attraction time expires
+  - Ensures most particles remain freely floating in the background
+
+**Logo Button Interaction:**
+- **Hover Attraction**: When the user hovers over the logo button, 30% of particles are attracted to orbit around it
+  - Particles smoothly transition to circular orbit paths around the button
+  - Orbit radius: 100px ± 20px variance for natural, layered effect
+  - Fast transition duration (10 frames) creates immediate, responsive feel
+  - Each particle maintains its own orbital angle and speed (0.005-0.008 radians/frame)
+  - Particles closest to the button are selected first for attraction
+  
+- **Automatic Dispersion**: When the logo button is clicked or becomes invisible
+  - `hideLogoButton()` method is called via CardDealer → App → MouseParticles
+  - All attracted particles immediately begin dispersing
+  - Particles transition back to natural floating physics with gradual deceleration
+  - Creates a magical effect where particles scatter as the logo disappears
+  
+- **State Management**: 
+  - Tracks `logoButtonVisible` and `logoButtonHovered` states independently
+  - Only attracts particles when button is both visible AND hovered
+  - Ensures particles disperse when either condition becomes false
+
+**Implementation Details:**
+- Canvas-based rendering with device pixel ratio optimization (max 2x)
+- Fixed position overlay with `pointer-events: none` for non-intrusive interaction
+- `mix-blend-mode: screen` for additive glow effect
+- Z-index 9999 to overlay card dealer area while remaining subtle
+- Public API methods exposed via `defineExpose`:
+  - `setLogoButtonState(hovered, x, y)` - Updates hover state and button position
+  - `hideLogoButton()` - Triggers particle dispersion when button disappears
+- All parameters exposed as tweakable constants at the top of the component:
+  - `PARTICLE_COUNT`, `PARTICLE_SIZE_MIN/MAX`, `PARTICLE_SPEED_MIN/MAX`
+  - `GRAVITY`, `BUOYANCY`, `AIR_RESISTANCE`, `TURBULENCE`
+  - `MOUSE_ATTRACTION_STRENGTH`, `MOUSE_ATTRACTION_RADIUS`, `DISPERSION_RATE`
+  - `LOGO_ATTRACTION_PERCENTAGE`, `LOGO_ATTRACTION_STRENGTH`, `LOGO_ORBIT_RADIUS`, `LOGO_ORBIT_VARIANCE`, `LOGO_TRANSITION_DURATION`
+  - `GLOW_FREQUENCY`, `GLOW_MIN/MAX_ALPHA`, `GLOW_BLUR_MIN/MAX`
+  - `SHAPE_SEGMENTS`, `SHAPE_IRREGULARITY`
+  - `COLOR` (RGB), `COLOR_VARIANCE`
+
+**Testing:**
+- Comprehensive unit tests in `src/components/__tests__/MouseParticles.test.ts`
+- Tests cover:
+  - Component rendering and canvas element presence
+  - Exposed public API methods (`setLogoButtonState`, `hideLogoButton`)
+  - Logo button hover state management
+  - Particle attraction and dispersion behavior
+  - Position updates and state transitions
+  - Accessibility attributes (aria-hidden)
+
+**Design Philosophy:**
+The effect maintains a balance between ambient atmosphere and interactive feedback:
+- Particles freely float to create consistent ambient atmosphere
+- Responsive to both mouse movement and logo button interactions
+- Logo hover creates a focused, magical gathering effect
+- Automatic dispersion when logo disappears reinforces the mystical theme
+- Subtle enough not to distract from main content but noticeable enough to enhance the mysterious, magical atmosphere
+
 ## Website User Flow
 
 ### Initial State (Logo View)

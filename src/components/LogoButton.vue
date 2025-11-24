@@ -9,6 +9,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'click'): void
+  (e: 'hover', value: boolean): void
 }>()
 
 const size = props.size ?? 200
@@ -23,6 +24,14 @@ let glowTween: gsap.core.Tween | null = null
 
 function onClick() {
   emit('click')
+}
+
+function onMouseEnter() {
+  emit('hover', true)
+}
+
+function onMouseLeave() {
+  emit('hover', false)
 }
 
 onMounted(() => {
@@ -49,7 +58,8 @@ defineExpose({
 
 <template>
   <div ref="wrapperRef" class="logo-button" :style="{ width: size + 'px', height: size + 'px' }" role="button"
-    tabindex="0" aria-label="Frisches - Click to reveal menu" @click="onClick" @keydown.enter="onClick">
+    tabindex="0" aria-label="Frisches - Click to reveal menu" @click="onClick" @keydown.enter="onClick"
+    @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
     <div ref="glowRef" class="logo-button__glow" :style="{ width: GLOW_SIZE + 'px', height: GLOW_SIZE + 'px' }"></div>
 
     <div class="logo-button__circle" :style="{ width: CIRCLE_SIZE + 'px', height: CIRCLE_SIZE + 'px' }"></div>

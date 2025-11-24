@@ -115,6 +115,25 @@ const props = withDefaults(
   }
 )
 
+const emit = defineEmits<{
+  (e: 'logo-hover', hovered: boolean, x: number, y: number): void
+  (e: 'logo-hide'): void
+}>()
+
+const handleLogoHover = (hovered: boolean) => {
+  const instance = logoButtonRef.value
+  if (!instance || typeof instance !== 'object' || !('rootEl' in instance)) return
+  
+  const element = instance.rootEl as HTMLElement | null
+  if (!element) return
+  
+  const rect = element.getBoundingClientRect()
+  const centerX = rect.left + rect.width / 2
+  const centerY = rect.top + rect.height / 2
+  
+  emit('logo-hover', hovered, centerX, centerY)
+}
+
 const handleCardClick = (route: string) => {
   if (isAnimating.value) return
   
@@ -132,6 +151,9 @@ const handleLogoClick = () => {
   if (isAnimating.value || currentView.value !== 'logo') return
   console.log('Logo clicked! Starting animation sequence...')
   isAnimating.value = true
+  
+  // Notify that logo will be hidden
+  emit('logo-hide')
   
   // Trigger logo close animation, then card open
   playLogoCloseAndCardOpen()
@@ -706,6 +728,7 @@ watch(isAnimating, (val) => {
           ref="logoButtonRef"
           :size="240"
           @click="handleLogoClick"
+          @hover="handleLogoHover"
         />
       </div>
 

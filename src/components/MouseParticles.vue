@@ -27,6 +27,13 @@ const CONSTANTS = {
     MOUSE_ATTRACTION_RADIUS: 180,
     DISPERSION_RATE: 0.96,
 
+    // Logo button attraction
+    LOGO_ATTRACTION_PERCENTAGE: 0.3,
+    LOGO_ATTRACTION_STRENGTH: 0.003,
+    LOGO_ORBIT_RADIUS: 100,
+    LOGO_ORBIT_VARIANCE: 20,
+    LOGO_TRANSITION_DURATION: 10,
+
     // Glow effect
     GLOW_FREQUENCY: 0.01,
     GLOW_MIN_ALPHA: 0.1,
@@ -56,6 +63,10 @@ type Particle = {
     shapeOffsets: number[]
     isAttracted: boolean
     attractionTime: number
+    isLogoAttracted: boolean
+    logoOrbitAngle: number
+    logoOrbitRadius: number
+    logoTransition: number
 }
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
@@ -73,6 +84,12 @@ let lastMouseX = -1000
 let lastMouseY = -1000
 let mouseMoving = false
 let mouseMoveTimeout: number | null = null
+
+// Logo button state
+let logoButtonVisible = false
+let logoButtonHovered = false
+let logoButtonX = 0
+let logoButtonY = 0
 
 // ============================================
 // CANVAS SETUP
@@ -119,7 +136,11 @@ function createParticle(): Particle {
         glowPhase: Math.random() * Math.PI * 2,
         shapeOffsets,
         isAttracted: false,
-        attractionTime: 0
+        attractionTime: 0,
+        isLogoAttracted: false,
+        logoOrbitAngle: Math.random() * Math.PI * 2,
+        logoOrbitRadius: CONSTANTS.LOGO_ORBIT_RADIUS + (Math.random() - 0.5) * CONSTANTS.LOGO_ORBIT_VARIANCE,
+        logoTransition: 0
     }
 }
 
@@ -157,49 +178,125 @@ function onMove(e: MouseEvent) {
 // ANIMATION LOOP
 // ============================================
 function updateParticles() {
-    for (const p of particles) {
-        // Physics-based floating
-        // Gravity pulls down
-        p.vy += CONSTANTS.GRAVITY
-
-        // Buoyancy pushes up (like dust floating in air)
-        p.vy -= CONSTANTS.BUOYANCY
-
-        // Air resistance
-        p.vx *= CONSTANTS.AIR_RESISTANCE
-        p.vy *= CONSTANTS.AIR_RESISTANCE
-
-        // Subtle turbulence (air currents)
-        p.vx += (Math.random() - 0.5) * CONSTANTS.TURBULENCE
-        p.vy += (Math.random() - 0.5) * CONSTANTS.TURBULENCE
-
-        // Mouse attraction when cursor is moving
-        const dx = mouseX - p.x
-        const dy = mouseY - p.y
-        const dist = Math.hypot(dx, dy)
-
-        if (mouseMoving && dist < CONSTANTS.MOUSE_ATTRACTION_RADIUS) {
-            const force = (1 - dist / CONSTANTS.MOUSE_ATTRACTION_RADIUS) *
-                CONSTANTS.MOUSE_ATTRACTION_STRENGTH
-            p.vx += dx * force
-            p.vy += dy * force
-            p.isAttracted = true
-            p.attractionTime = 60
-        }
-
-        // Disperse attracted particles when mouse stops
-        if (p.isAttracted && !mouseMoving && p.attractionTime > 0) {
-            p.attractionTime--
-            p.vx *= CONSTANTS.DISPERSION_RATE
-            p.vy *= CONSTANTS.DISPERSION_RATE
-            if (p.attractionTime <= 0) {
-                p.isAttracted = false
+    // Select particles for logo attraction if button is visible and hovered
+    if (logoButtonVisible && logoButtonHovered) {
+        const nonLogoAttracted = particles.filter(p => !p.isLogoAttracted)
+        const targetCount = Math.floor(particles.length * CONSTANTS.LOGO_ATTRACTION_PERCENTAGE)
+        const currentCount = particles.filter(p => p.isLogoAttracted).length
+        
+        if (currentCount < targetCount) {
+            // Sort by distance to logo and attract closest ones
+            nonLogoAttracted.sort((a, b) => {
+                const distA = Math.hypot(a.x - logoButtonX, a.y - logoButtonY)
+                const distB = Math.hypot(b.x - logoButtonX, b.y - logoButtonY)
+                return distA - distB
+            })
+            
+            const toAttract = targetCount - currentCount
+            for (let i = 0; i < Math.min(toAttract, nonLogoAttracted.length); i++) {
+                const particle = nonLogoAttracted[i]
+                if (particle) {
+                    particle.isLogoAttracted = true
+                    particle.logoTransition = 0
+                }
             }
         }
+    } else {
+        // Release all logo-attracted particles
+        particles.forEach(p => {
+            if (p.isLogoAttracted) {
+                p.isLogoAttracted = false
+                p.logoTransition = 0
+            }
+        })
+    }
+    
+    for (const p of particles) {
+        if (p.isLogoAttracted) {
+            // Transition to orbit
+            if (p.logoTransition < CONSTANTS.LOGO_TRANSITION_DURATION) {
+                p.logoTransition++
+            }
+            
+            const t = Math.min(1, p.logoTransition / CONSTANTS.LOGO_TRANSITION_DURATION)
+            const easedT = t * t * (3 - 2 * t) // smoothstep easing
+            
+            // Calculate target orbit position
+            p.logoOrbitAngle += 0.005 + Math.random() * 0.003
+            const targetX = logoButtonX + Math.cos(p.logoOrbitAngle) * p.logoOrbitRadius
+            const targetY = logoButtonY + Math.sin(p.logoOrbitAngle) * p.logoOrbitRadius
+            
+            // Interpolate to orbit position
+            const dx = targetX - p.x
+            const dy = targetY - p.y
+            p.vx = dx * CONSTANTS.LOGO_ATTRACTION_STRENGTH * easedT
+            p.vy = dy * CONSTANTS.LOGO_ATTRACTION_STRENGTH * easedT
+            
+            p.x += p.vx
+            p.y += p.vy
+        } else if (p.logoTransition > 0) {
+            // Transitioning away from logo orbit
+            p.logoTransition = Math.max(0, p.logoTransition - 2)
+            
+            // Apply dispersion
+            p.vx *= CONSTANTS.DISPERSION_RATE
+            p.vy *= CONSTANTS.DISPERSION_RATE
+            
+            // Resume normal physics
+            p.vy += CONSTANTS.GRAVITY
+            p.vy -= CONSTANTS.BUOYANCY
+            p.vx *= CONSTANTS.AIR_RESISTANCE
+            p.vy *= CONSTANTS.AIR_RESISTANCE
+            p.vx += (Math.random() - 0.5) * CONSTANTS.TURBULENCE
+            p.vy += (Math.random() - 0.5) * CONSTANTS.TURBULENCE
+            
+            p.x += p.vx
+            p.y += p.vy
+        } else {
+            // Normal floating behavior
+            // Physics-based floating
+            // Gravity pulls down
+            p.vy += CONSTANTS.GRAVITY
 
-        // Update position
-        p.x += p.vx
-        p.y += p.vy
+            // Buoyancy pushes up (like dust floating in air)
+            p.vy -= CONSTANTS.BUOYANCY
+
+            // Air resistance
+            p.vx *= CONSTANTS.AIR_RESISTANCE
+            p.vy *= CONSTANTS.AIR_RESISTANCE
+
+            // Subtle turbulence (air currents)
+            p.vx += (Math.random() - 0.5) * CONSTANTS.TURBULENCE
+            p.vy += (Math.random() - 0.5) * CONSTANTS.TURBULENCE
+
+            // Mouse attraction when cursor is moving
+            const dx = mouseX - p.x
+            const dy = mouseY - p.y
+            const dist = Math.hypot(dx, dy)
+
+            if (mouseMoving && dist < CONSTANTS.MOUSE_ATTRACTION_RADIUS) {
+                const force = (1 - dist / CONSTANTS.MOUSE_ATTRACTION_RADIUS) *
+                    CONSTANTS.MOUSE_ATTRACTION_STRENGTH
+                p.vx += dx * force
+                p.vy += dy * force
+                p.isAttracted = true
+                p.attractionTime = 60
+            }
+
+            // Disperse attracted particles when mouse stops
+            if (p.isAttracted && !mouseMoving && p.attractionTime > 0) {
+                p.attractionTime--
+                p.vx *= CONSTANTS.DISPERSION_RATE
+                p.vy *= CONSTANTS.DISPERSION_RATE
+                if (p.attractionTime <= 0) {
+                    p.isAttracted = false
+                }
+            }
+
+            // Update position
+            p.x += p.vx
+            p.y += p.vy
+        }
 
         // Wrap around edges
         if (p.x < -50) p.x = w + 50
@@ -291,6 +388,31 @@ onBeforeUnmount(() => {
     window.removeEventListener('resize', resize)
     window.removeEventListener('mousemove', onMove)
     cancelAnimationFrame(rafId)
+})
+
+// ============================================
+// PUBLIC API
+// ============================================
+function setLogoButtonState(hovered: boolean, x: number, y: number) {
+    const wasVisible = logoButtonVisible
+    logoButtonVisible = true
+    logoButtonHovered = hovered
+    logoButtonX = x
+    logoButtonY = y
+    
+    // If button just became visible, no need to do anything special
+    // Particles will be attracted based on hover state
+}
+
+function hideLogoButton() {
+    logoButtonVisible = false
+    logoButtonHovered = false
+    // Particles will naturally disperse in the next update cycle
+}
+
+defineExpose({
+    setLogoButtonState,
+    hideLogoButton
 })
 </script>
 
