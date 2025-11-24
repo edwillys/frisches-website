@@ -10,9 +10,9 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 // ============================================
 const CONSTANTS = {
     // Particle behavior
-    PARTICLE_COUNT: 60,
+    PARTICLE_COUNT: 100,
     PARTICLE_SIZE_MIN: 0.4,
-    PARTICLE_SIZE_MAX: 1.2,
+    PARTICLE_SIZE_MAX: 2.0,
     PARTICLE_SPEED_MIN: 0.05,
     PARTICLE_SPEED_MAX: 0.15,
 
