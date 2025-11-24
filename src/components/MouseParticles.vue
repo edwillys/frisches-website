@@ -5,133 +5,285 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 
-const canvasRef = ref<HTMLCanvasElement | null>(null)
+// ============================================
+// TWEAKABLE CONSTANTS
+// ============================================
+const CONSTANTS = {
+    // Particle behavior
+    PARTICLE_COUNT: 60,
+    PARTICLE_SIZE_MIN: 0.4,
+    PARTICLE_SIZE_MAX: 1.2,
+    PARTICLE_SPEED_MIN: 0.05,
+    PARTICLE_SPEED_MAX: 0.15,
 
+    // Floating behavior (physics-based)
+    GRAVITY: 0.01,
+    BUOYANCY: 0.015,
+    AIR_RESISTANCE: 0.99,
+    TURBULENCE: 0.02,
+
+    // Mouse attraction
+    MOUSE_ATTRACTION_STRENGTH: 0.002,
+    MOUSE_ATTRACTION_RADIUS: 180,
+    DISPERSION_RATE: 0.96,
+
+    // Glow effect
+    GLOW_FREQUENCY: 0.01,
+    GLOW_MIN_ALPHA: 0.1,
+    GLOW_MAX_ALPHA: 0.5,
+    GLOW_BLUR_MIN: 4,
+    GLOW_BLUR_MAX: 12,
+
+    // Shape randomness (0 = very irregular, 1 = perfect circle)
+    SHAPE_SEGMENTS: 6,
+    SHAPE_IRREGULARITY: 0.35,
+
+    // Colors (RGB) - red theme
+    COLOR: { r: 220, g: 40, b: 40 },
+    COLOR_VARIANCE: 10
+}
+
+// ============================================
+// TYPES & STATE
+// ============================================
+type Particle = {
+    x: number
+    y: number
+    vx: number
+    vy: number
+    size: number
+    glowPhase: number
+    shapeOffsets: number[]
+    isAttracted: boolean
+    attractionTime: number
+}
+
+const canvasRef = ref<HTMLCanvasElement | null>(null)
 let ctx: CanvasRenderingContext2D | null = null
 let w = 0
 let h = 0
 let dpr = 1
 let rafId = 0
+let time = 0
 
-type Particle = { x: number; y: number; vx: number; vy: number; life: number; r: number }
 const particles: Particle[] = []
-const MAX_PARTICLES = 80
-
 let mouseX = -1000
 let mouseY = -1000
+let lastMouseX = -1000
+let lastMouseY = -1000
+let mouseMoving = false
+let mouseMoveTimeout: number | null = null
 
+// ============================================
+// CANVAS SETUP
+// ============================================
 function resize() {
     const el = canvasRef.value
     if (!el) return
+
     dpr = Math.min(window.devicePixelRatio || 1, 2)
     w = el.clientWidth
     h = el.clientHeight
     el.width = Math.max(1, Math.floor(w * dpr))
     el.height = Math.max(1, Math.floor(h * dpr))
+
     ctx = el.getContext('2d')
     if (!ctx) return
     ctx.scale(dpr, dpr)
 }
 
-function addParticle(x: number, y: number) {
-    if (particles.length >= MAX_PARTICLES) {
-        particles.shift()
-    }
+// ============================================
+// PARTICLE CREATION
+// ============================================
+function createParticle(): Particle {
     const angle = Math.random() * Math.PI * 2
-    const speed = 0.3 + Math.random() * 0.6
-    particles.push({
-        x,
-        y,
+    const speed = CONSTANTS.PARTICLE_SPEED_MIN +
+        Math.random() * (CONSTANTS.PARTICLE_SPEED_MAX - CONSTANTS.PARTICLE_SPEED_MIN)
+
+    // Create random shape offsets for irregular edges
+    const shapeOffsets: number[] = []
+    for (let i = 0; i < CONSTANTS.SHAPE_SEGMENTS; i++) {
+        shapeOffsets.push(
+            1 - CONSTANTS.SHAPE_IRREGULARITY +
+            Math.random() * CONSTANTS.SHAPE_IRREGULARITY * 2
+        )
+    }
+
+    return {
+        x: Math.random() * w,
+        y: Math.random() * h,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        life: 60 + Math.random() * 60,
-        r: 0.4 + Math.random() * 0.9
-    })
+        size: CONSTANTS.PARTICLE_SIZE_MIN +
+            Math.random() * (CONSTANTS.PARTICLE_SIZE_MAX - CONSTANTS.PARTICLE_SIZE_MIN),
+        glowPhase: Math.random() * Math.PI * 2,
+        shapeOffsets,
+        isAttracted: false,
+        attractionTime: 0
+    }
 }
 
+function initializeParticles() {
+    particles.length = 0
+    for (let i = 0; i < CONSTANTS.PARTICLE_COUNT; i++) {
+        particles.push(createParticle())
+    }
+}
+
+// ============================================
+// MOUSE TRACKING
+// ============================================
 function onMove(e: MouseEvent) {
     const el = canvasRef.value
     if (!el) return
+
     const rect = el.getBoundingClientRect()
+    lastMouseX = mouseX
+    lastMouseY = mouseY
     mouseX = e.clientX - rect.left
     mouseY = e.clientY - rect.top
-    // add a small burst of very subtle particles
-    addParticle(mouseX, mouseY)
-    if (Math.random() > 0.6) addParticle(mouseX + (Math.random() - 0.5) * 6, mouseY + (Math.random() - 0.5) * 6)
+    mouseMoving = true
+
+    // Reset mouse movement timeout
+    if (mouseMoveTimeout !== null) {
+        clearTimeout(mouseMoveTimeout)
+    }
+    mouseMoveTimeout = window.setTimeout(() => {
+        mouseMoving = false
+    }, 100)
+}
+
+// ============================================
+// ANIMATION LOOP
+// ============================================
+function updateParticles() {
+    for (const p of particles) {
+        // Physics-based floating
+        // Gravity pulls down
+        p.vy += CONSTANTS.GRAVITY
+
+        // Buoyancy pushes up (like dust floating in air)
+        p.vy -= CONSTANTS.BUOYANCY
+
+        // Air resistance
+        p.vx *= CONSTANTS.AIR_RESISTANCE
+        p.vy *= CONSTANTS.AIR_RESISTANCE
+
+        // Subtle turbulence (air currents)
+        p.vx += (Math.random() - 0.5) * CONSTANTS.TURBULENCE
+        p.vy += (Math.random() - 0.5) * CONSTANTS.TURBULENCE
+
+        // Mouse attraction when cursor is moving
+        const dx = mouseX - p.x
+        const dy = mouseY - p.y
+        const dist = Math.hypot(dx, dy)
+
+        if (mouseMoving && dist < CONSTANTS.MOUSE_ATTRACTION_RADIUS) {
+            const force = (1 - dist / CONSTANTS.MOUSE_ATTRACTION_RADIUS) *
+                CONSTANTS.MOUSE_ATTRACTION_STRENGTH
+            p.vx += dx * force
+            p.vy += dy * force
+            p.isAttracted = true
+            p.attractionTime = 60
+        }
+
+        // Disperse attracted particles when mouse stops
+        if (p.isAttracted && !mouseMoving && p.attractionTime > 0) {
+            p.attractionTime--
+            p.vx *= CONSTANTS.DISPERSION_RATE
+            p.vy *= CONSTANTS.DISPERSION_RATE
+            if (p.attractionTime <= 0) {
+                p.isAttracted = false
+            }
+        }
+
+        // Update position
+        p.x += p.vx
+        p.y += p.vy
+
+        // Wrap around edges
+        if (p.x < -50) p.x = w + 50
+        if (p.x > w + 50) p.x = -50
+        if (p.y < -50) p.y = h + 50
+        if (p.y > h + 50) p.y = -50
+
+        // Update glow phase
+        p.glowPhase += CONSTANTS.GLOW_FREQUENCY
+    }
+}
+
+function drawParticles() {
+    if (!ctx) return
+
+    for (const p of particles) {
+        // Calculate pulsing glow
+        const glowIntensity = 0.5 + 0.5 * Math.sin(p.glowPhase)
+        const alpha = CONSTANTS.GLOW_MIN_ALPHA +
+            glowIntensity * (CONSTANTS.GLOW_MAX_ALPHA - CONSTANTS.GLOW_MIN_ALPHA)
+        const blur = CONSTANTS.GLOW_BLUR_MIN +
+            glowIntensity * (CONSTANTS.GLOW_BLUR_MAX - CONSTANTS.GLOW_BLUR_MIN)
+
+        // Color variation
+        const r = CONSTANTS.COLOR.r + (Math.random() - 0.5) * CONSTANTS.COLOR_VARIANCE
+        const g = CONSTANTS.COLOR.g + (Math.random() - 0.5) * CONSTANTS.COLOR_VARIANCE
+        const b = CONSTANTS.COLOR.b + (Math.random() - 0.5) * CONSTANTS.COLOR_VARIANCE
+
+        // Draw particle with irregular shape
+        ctx.save()
+        ctx.translate(p.x, p.y)
+
+        ctx.beginPath()
+        for (let i = 0; i <= p.shapeOffsets.length; i++) {
+            const angle = (i / p.shapeOffsets.length) * Math.PI * 2
+            const offset = p.shapeOffsets[i % p.shapeOffsets.length] || 1
+            const x = Math.cos(angle) * p.size * offset
+            const y = Math.sin(angle) * p.size * offset
+
+            if (i === 0) {
+                ctx.moveTo(x, y)
+            } else {
+                ctx.lineTo(x, y)
+            }
+        }
+        ctx.closePath()
+
+        // Glow effect
+        ctx.shadowBlur = blur
+        ctx.shadowColor = `rgba(${r}, ${g}, ${b}, ${alpha})`
+        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`
+        ctx.fill()
+
+        ctx.restore()
+    }
 }
 
 function draw() {
     if (!ctx || !canvasRef.value) return
-    // subtle darkened clear to create a thin trailing effect
+
+    // Clear canvas
     ctx.clearRect(0, 0, w, h)
 
-    // drawing style: thin glowing red lines, very low opacity
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
+    // Update and draw
+    updateParticles()
+    drawParticles()
 
-    for (let i = 0; i < particles.length; i++) {
-        const p = particles[i]
-        // simple physics
-        p.vx *= 0.98
-        p.vy *= 0.98
-        // gentle attraction to mouse for a following feeling
-        const dx = mouseX - p.x
-        const dy = mouseY - p.y
-        p.vx += dx * 0.0008
-        p.vy += dy * 0.0008
-        p.x += p.vx
-        p.y += p.vy
-        p.life -= 1
-    }
-
-    // draw connecting lines and tiny points
-    for (let i = 0; i < particles.length; i++) {
-        const p = particles[i]
-        const alpha = Math.max(0, Math.min(1, p.life / 80)) * 0.9
-
-        // connect to previous particle for a thin strand
-        if (i > 0) {
-            const p2 = particles[i - 1]
-            const dist = Math.hypot(p.x - p2.x, p.y - p2.y)
-            if (dist < 100) {
-                ctx.beginPath()
-                ctx.moveTo(p.x, p.y)
-                ctx.lineTo(p2.x, p2.y)
-                ctx.strokeStyle = `rgba(220,40,40,${(alpha * 0.06).toFixed(3)})`
-                ctx.lineWidth = 0.9
-                // slight glow
-                ctx.shadowBlur = 6
-                ctx.shadowColor = `rgba(200,40,40,${(alpha * 0.06).toFixed(3)})`
-                ctx.stroke()
-                ctx.shadowBlur = 0
-            }
-        }
-
-        // small dot for each particle
-        ctx.beginPath()
-        ctx.fillStyle = `rgba(255,60,60,${(alpha * 0.12).toFixed(3)})`
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-        ctx.fill()
-    }
-
-    // remove dead
-    for (let i = particles.length - 1; i >= 0; i--) {
-        if (particles[i].life <= 0) particles.splice(i, 1)
-    }
-
+    time++
     rafId = requestAnimationFrame(draw)
 }
 
+// ============================================
+// LIFECYCLE
+// ============================================
 onMounted(() => {
     const el = canvasRef.value
     if (!el) return
+
     resize()
+    initializeParticles()
+
     window.addEventListener('resize', resize)
     window.addEventListener('mousemove', onMove)
-    // fill the canvas with a few initial stationary faint particles
-    for (let i = 0; i < 6; i++) {
-        addParticle((el.clientWidth / 2) + (Math.random() - 0.5) * el.clientWidth * 0.5, (el.clientHeight / 2) + (Math.random() - 0.5) * el.clientHeight * 0.5)
-    }
+
     rafId = requestAnimationFrame(draw)
 })
 
