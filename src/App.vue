@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CardDealer from './components/CardDealer.vue'
+import MouseParticles from './components/MouseParticles.vue'
 </script>
 
 <template>
@@ -9,6 +10,7 @@ import CardDealer from './components/CardDealer.vue'
       spotify: 'https://open.spotify.com/artist/3GkLzwg7QBN5fRoCDcI1pW?si=YoFaY--kTPWO-G1bRsnLdA',
       youtube: 'https://www.youtube.com/@frischestheband'
     }" />
+    <MouseParticles />
   </div>
 </template>
 
@@ -16,5 +18,7 @@ import CardDealer from './components/CardDealer.vue'
 #app {
   width: 100%;
   min-height: 100vh;
+  position: relative;
+  z-index: 1;
 }
 </style>
