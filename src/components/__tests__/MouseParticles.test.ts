@@ -12,7 +12,7 @@ describe('MouseParticles', () => {
 
   beforeEach(() => {
     // Mock canvas context
-    HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
+    const mockContext = {
       scale: vi.fn(),
       clearRect: vi.fn(),
       save: vi.fn(),
@@ -26,7 +26,10 @@ describe('MouseParticles', () => {
       fillStyle: '',
       shadowBlur: 0,
       shadowColor: ''
-    })) as any
+    } as unknown as CanvasRenderingContext2D
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ; (HTMLCanvasElement.prototype.getContext as any) = vi.fn(() => mockContext)
 
     wrapper = mount(MouseParticles)
   })

@@ -75,13 +75,10 @@ let w = 0
 let h = 0
 let dpr = 1
 let rafId = 0
-let time = 0
 
 const particles: Particle[] = []
 let mouseX = -1000
 let mouseY = -1000
-let lastMouseX = -1000
-let lastMouseY = -1000
 let mouseMoving = false
 let mouseMoveTimeout: number | null = null
 
@@ -183,7 +180,7 @@ function updateParticles() {
         const nonLogoAttracted = particles.filter(p => !p.isLogoAttracted)
         const targetCount = Math.floor(particles.length * CONSTANTS.LOGO_ATTRACTION_PERCENTAGE)
         const currentCount = particles.filter(p => p.isLogoAttracted).length
-        
+
         if (currentCount < targetCount) {
             // Sort by distance to logo and attract closest ones
             nonLogoAttracted.sort((a, b) => {
@@ -191,7 +188,7 @@ function updateParticles() {
                 const distB = Math.hypot(b.x - logoButtonX, b.y - logoButtonY)
                 return distA - distB
             })
-            
+
             const toAttract = targetCount - currentCount
             for (let i = 0; i < Math.min(toAttract, nonLogoAttracted.length); i++) {
                 const particle = nonLogoAttracted[i]
@@ -210,38 +207,38 @@ function updateParticles() {
             }
         })
     }
-    
+
     for (const p of particles) {
         if (p.isLogoAttracted) {
             // Transition to orbit
             if (p.logoTransition < CONSTANTS.LOGO_TRANSITION_DURATION) {
                 p.logoTransition++
             }
-            
+
             const t = Math.min(1, p.logoTransition / CONSTANTS.LOGO_TRANSITION_DURATION)
             const easedT = t * t * (3 - 2 * t) // smoothstep easing
-            
+
             // Calculate target orbit position
             p.logoOrbitAngle += 0.005 + Math.random() * 0.003
             const targetX = logoButtonX + Math.cos(p.logoOrbitAngle) * p.logoOrbitRadius
             const targetY = logoButtonY + Math.sin(p.logoOrbitAngle) * p.logoOrbitRadius
-            
+
             // Interpolate to orbit position
             const dx = targetX - p.x
             const dy = targetY - p.y
             p.vx = dx * CONSTANTS.LOGO_ATTRACTION_STRENGTH * easedT
             p.vy = dy * CONSTANTS.LOGO_ATTRACTION_STRENGTH * easedT
-            
+
             p.x += p.vx
             p.y += p.vy
         } else if (p.logoTransition > 0) {
             // Transitioning away from logo orbit
             p.logoTransition = Math.max(0, p.logoTransition - 2)
-            
+
             // Apply dispersion
             p.vx *= CONSTANTS.DISPERSION_RATE
             p.vy *= CONSTANTS.DISPERSION_RATE
-            
+
             // Resume normal physics
             p.vy += CONSTANTS.GRAVITY
             p.vy -= CONSTANTS.BUOYANCY
@@ -249,7 +246,7 @@ function updateParticles() {
             p.vy *= CONSTANTS.AIR_RESISTANCE
             p.vx += (Math.random() - 0.5) * CONSTANTS.TURBULENCE
             p.vy += (Math.random() - 0.5) * CONSTANTS.TURBULENCE
-            
+
             p.x += p.vx
             p.y += p.vy
         } else {
@@ -364,7 +361,6 @@ function draw() {
     updateParticles()
     drawParticles()
 
-    time++
     rafId = requestAnimationFrame(draw)
 }
 
@@ -394,12 +390,11 @@ onBeforeUnmount(() => {
 // PUBLIC API
 // ============================================
 function setLogoButtonState(hovered: boolean, x: number, y: number) {
-    const wasVisible = logoButtonVisible
     logoButtonVisible = true
     logoButtonHovered = hovered
     logoButtonX = x
     logoButtonY = y
-    
+
     // If button just became visible, no need to do anything special
     // Particles will be attracted based on hover state
 }
