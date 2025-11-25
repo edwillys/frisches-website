@@ -819,9 +819,9 @@ watch(isAnimating, (val) => {
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(10, 10, 18, 0.3) 0%,
-    rgba(10, 10, 18, 0.7) 50%,
-    rgba(10, 10, 18, 0.9) 100%
+    var(--overlay-top) 0%,
+    var(--overlay-middle) 50%,
+    var(--overlay-bottom) 100%
   );
 }
 
@@ -856,7 +856,7 @@ watch(isAnimating, (val) => {
   color: var(--color-text);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.8);
+  text-shadow: var(--text-shadow-strong);
   margin-bottom: var(--spacing-sm);
 }
 
@@ -919,15 +919,15 @@ watch(isAnimating, (val) => {
 }
 
 .card-dealer__social-link:hover {
-  color: var(--color-text);
+  color: var(--color-social-hover);
   opacity: 1;
   transform: translateY(-3px) scale(1.03);
-  background: rgba(220,40,40,0.06);
-  box-shadow: var(--shadow-glow);
+  background: var(--color-social-hover-bg);
+  box-shadow: var(--color-social-glow);
 }
 
 .card-dealer__social-link:focus-visible {
-  outline: 2px solid rgba(220,40,40,0.18);
+  outline: 2px solid var(--color-social-focus-outline);
   outline-offset: 2px;
 }
 
@@ -937,7 +937,7 @@ watch(isAnimating, (val) => {
 }
 
 .card-dealer__content-panel {
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--panel-bg);
   border: 2px solid var(--color-primary);
   border-radius: 16px;
   padding: var(--spacing-3xl);
