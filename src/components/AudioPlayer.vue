@@ -191,6 +191,11 @@ const prevTrack = () => {
   isPlaying.value = true
 }
 
+const selectTrack = (index: number) => {
+  currentTrackIndex.value = index
+  isPlaying.value = true
+}
+
 const seek = (e: Event) => {
   const target = e.target as HTMLInputElement
   const time = parseFloat(target.value)
@@ -512,10 +517,7 @@ watch(volume, (newVol) => {
           :key="track.id"
           class="playlist-item"
           :class="{ active: index === currentTrackIndex }"
-          @click="
-            currentTrackIndex = index
-            isPlaying = true
-          "
+          @click="selectTrack(index)"
         >
           <div class="thumb-container">
             <img
