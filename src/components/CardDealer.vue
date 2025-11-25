@@ -42,6 +42,9 @@ const panelEase = CustomEase.create('deckPanelEase', 'M0,0 C0.4,0 0.15,1 1,1')
 
 const containerRef = ref<HTMLElement | null>(null)
 const bgRef = ref<HTMLElement | null>(null)
+const bgMainRef = ref<HTMLImageElement | null>(null)
+const bgCoverRef = ref<HTMLImageElement | null>(null)
+const coverDimRef = ref<HTMLElement | null>(null)
 const titleRef = ref<HTMLElement | null>(null)
 const cardsRef = ref<(HTMLElement | null)[]>([])
 const cardsContainerRef = ref<HTMLElement | null>(null)
@@ -118,6 +121,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   (e: 'logo-hover', hovered: boolean, x: number, y: number): void
   (e: 'logo-hide'): void
+  (e: 'palette-change', payload: number[] | null): void
 }>()
 
 const handleLogoHover = (hovered: boolean) => {
@@ -527,6 +531,27 @@ const playContentCloseAndCardsReturn = () => {
       }
       selectedCard.value = null
       currentView.value = 'cards'
+      // Revert background and particle palette when closing content
+      transitionToCover(false)
+      try {
+        const styles = getComputedStyle(document.documentElement)
+        const rawMain = styles.getPropertyValue('--bg-main-particles') || ''
+        const arrMain = rawMain.split(',').map(s => parseInt(s.trim(), 10)).filter(n => Number.isFinite(n))
+        if (arrMain.length >= 3) {
+          emit('palette-change', [arrMain[0]!, arrMain[1]!, arrMain[2]!])
+        } else {
+          const r = parseInt(styles.getPropertyValue('--bg-cover-particles-r') || '0', 10)
+          const g = parseInt(styles.getPropertyValue('--bg-cover-particles-g') || '0', 10)
+          const b = parseInt(styles.getPropertyValue('--bg-cover-particles-b') || '0', 10)
+          if (Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)) {
+            emit('palette-change', [r, g, b])
+          } else {
+            emit('palette-change', null)
+          }
+        }
+      } catch (err) {
+        emit('palette-change', null)
+      }
       isAnimating.value = false
     }
   })
@@ -576,6 +601,57 @@ const playCardSelection = (cardIndex: number) => {
   if (!middleRect) return
 
   currentView.value = 'content'
+
+    // If About was selected, trigger background transition and emit palette
+    const selectedItem = menuItems[cardIndex]
+    if (selectedItem?.title === 'About') {
+      const coverKey = (selectedItem.title || '').toString().toLowerCase().replace(/\s+/g, '-');
+      transitionToCover(true, coverKey)
+
+      // Read composite RGB palette from CSS (comma-separated), fallback to per-channel vars
+      try {
+        const styles = getComputedStyle(document.documentElement)
+        const raw = styles.getPropertyValue('--bg-cover-particles') || ''
+        const arr = raw.split(',').map(s => parseInt(s.trim(), 10)).filter(n => Number.isFinite(n))
+        if (arr.length >= 3) {
+          emit('palette-change', [arr[0]!, arr[1]!, arr[2]!])
+        } else {
+          const r = parseInt(styles.getPropertyValue('--bg-cover-particles-r') || '0', 10)
+          const g = parseInt(styles.getPropertyValue('--bg-cover-particles-g') || '0', 10)
+          const b = parseInt(styles.getPropertyValue('--bg-cover-particles-b') || '0', 10)
+          if (Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)) {
+            emit('palette-change', [r, g, b])
+          } else {
+            emit('palette-change', null)
+          }
+        }
+      } catch (err) {
+        emit('palette-change', null)
+      }
+    } else {
+      // Reset cover if any and emit main/home palette as RGB array
+      transitionToCover(false)
+      try {
+        const styles = getComputedStyle(document.documentElement)
+        const rawMain = styles.getPropertyValue('--bg-main-particles') || ''
+        const arrMain = rawMain.split(',').map(s => parseInt(s.trim(), 10)).filter(n => Number.isFinite(n))
+        if (arrMain.length >= 3) {
+          emit('palette-change', [arrMain[0]!, arrMain[1]!, arrMain[2]!])
+        } else {
+          // Fallback to cover defaults or null
+          const r = parseInt(styles.getPropertyValue('--bg-cover-particles-r') || '0', 10)
+          const g = parseInt(styles.getPropertyValue('--bg-cover-particles-g') || '0', 10)
+          const b = parseInt(styles.getPropertyValue('--bg-cover-particles-b') || '0', 10)
+          if (Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)) {
+            emit('palette-change', [r, g, b])
+          } else {
+            emit('palette-change', null)
+          }
+        }
+      } catch (err) {
+        emit('palette-change', null)
+      }
+    }
 
   nextTick(() => {
     const container = cardsContainerRef.value
@@ -632,6 +708,66 @@ const playCardSelection = (cardIndex: number) => {
     }
   })
 }
+
+// Smoothly crossfade to the cover image (enter = true) or back to main (enter = false)
+const transitionToCover = (enter: boolean, coverKey?: string) => {
+  const cover = bgCoverRef.value
+  if (!cover) return
+
+  const styles = getComputedStyle(document.documentElement)
+  const durationStr = styles.getPropertyValue('--bg-cover-transition-duration') || '1.6s'
+  const duration = parseFloat(durationStr) || 1.6
+
+  const dimEl = coverDimRef.value
+  const mainBg = bgMainRef.value
+  if (enter) {
+    // Determine per-cover dim (overlay darkness) first; if set, prefer dim overlay
+    const key = (coverKey || '').toString().toLowerCase().replace(/\s+/g, '-')
+    const dimVar = key ? `--bg-cover-${key}-dim` : '--bg-cover-dim'
+    let dim = parseFloat(styles.getPropertyValue(dimVar) || '')
+    if (!Number.isFinite(dim)) dim = parseFloat(styles.getPropertyValue('--bg-cover-dim') || '')
+
+    // Determine desired main background opacity while cover is active
+    let mainOpacity = parseFloat(styles.getPropertyValue('--bg-main-opacity') || '')
+    if (!Number.isFinite(mainOpacity)) mainOpacity = 1
+
+    // Build a single timeline to animate cover, dim overlay, and main background in sync
+    const tl = gsap.timeline()
+
+    if (Number.isFinite(dim)) {
+      // Show cover and dim overlay together
+      gsap.set(cover, { opacity: 0, visibility: 'visible' })
+      if (dimEl) gsap.set(dimEl, { opacity: 0, visibility: 'visible' })
+      tl.to(cover, { opacity: 1, duration, ease: 'power2.inOut' }, 0)
+      if (dimEl) tl.to(dimEl, { opacity: Math.max(0, Math.min(1, dim)), duration, ease: 'power2.inOut' }, 0)
+      if (mainBg) tl.to(mainBg, { opacity: mainOpacity, duration, ease: 'power2.inOut' }, 0)
+    } else {
+      // Fallback: animate cover opacity (no dim available)
+      const varName = key ? `--bg-cover-${key}-opacity` : '--bg-cover-target-opacity'
+      let targetOpacity = parseFloat(styles.getPropertyValue(varName) || '')
+      if (!Number.isFinite(targetOpacity)) {
+        targetOpacity = parseFloat(styles.getPropertyValue('--bg-cover-target-opacity') || '1') || 1
+      }
+      gsap.set(cover, { opacity: 0, visibility: 'visible' })
+      if (mainBg) gsap.set(mainBg, { opacity: 1, visibility: 'visible' })
+      tl.to(cover, { opacity: targetOpacity, duration, ease: 'power2.inOut' }, 0)
+      if (mainBg) tl.to(mainBg, { opacity: mainOpacity, duration, ease: 'power2.inOut' }, 0)
+    }
+  } else {
+    // Animate dim overlay and cover out together
+    const tl = gsap.timeline({ onComplete: () => {
+      if (dimEl) gsap.set(dimEl, { visibility: 'hidden' })
+      gsap.set(cover, { visibility: 'hidden' })
+      if (mainBg) gsap.set(mainBg, { opacity: 1 })
+    }})
+    if (dimEl) tl.to(dimEl, { opacity: 0, duration, ease: 'power2.inOut' }, 0)
+    tl.to(cover, { opacity: 0, duration, ease: 'power2.inOut' }, 0)
+    if (mainBg) tl.to(mainBg, { opacity: 1, duration, ease: 'power2.inOut' }, 0)
+  }
+}
+
+// NOTE: color extraction from image removed. Palette should be declared
+// in CSS variables (see `--bg-cover-particles-r/g/b` in `variables.css`).
 
 onMounted(() => {
   window.addEventListener('pointerdown', handleGlobalPointerDown)
@@ -714,10 +850,19 @@ watch(isAnimating, (val) => {
     </div>
     <div ref="bgRef" class="card-dealer__background">
       <img
+        ref="bgMainRef"
         src="../assets/images/card-dealer-main.jpg"
         alt="Mysterious card dealer"
-        class="card-dealer__bg-image"
+        class="card-dealer__bg-image card-dealer__bg-main"
       />
+      <img
+        ref="bgCoverRef"
+        src="../assets/images/cover.png"
+        alt="Cover"
+        class="card-dealer__bg-image card-dealer__bg-cover"
+        style="opacity:0; visibility:hidden"
+      />
+      <div ref="coverDimRef" class="card-dealer__cover-dim" style="opacity:0; visibility:hidden; pointer-events:none"></div>
       <div class="card-dealer__overlay"></div>
     </div>
 
@@ -808,10 +953,28 @@ watch(isAnimating, (val) => {
 }
 
 .card-dealer__bg-image {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center;
+}
+
+.card-dealer__bg-main {
+  z-index: 0;
+}
+
+.card-dealer__bg-cover {
+  z-index: 1;
+}
+
+.card-dealer__cover-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,1);
+  z-index: 2;
+  pointer-events: none;
 }
 
 .card-dealer__overlay {

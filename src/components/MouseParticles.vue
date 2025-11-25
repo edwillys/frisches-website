@@ -45,9 +45,17 @@ const CONSTANTS = {
     SHAPE_SEGMENTS: 6,
     SHAPE_IRREGULARITY: 0.35,
 
-    // Colors (RGB) - red theme
+    // Colors (RGB) - red theme (mutable)
     COLOR: { r: 220, g: 40, b: 40 },
     COLOR_VARIANCE: 10
+}
+
+// Allow external control of particle base color
+function setParticleColor(r: number, g: number, b: number) {
+    // Clamp values
+    CONSTANTS.COLOR.r = Math.max(0, Math.min(255, Math.round(r)))
+    CONSTANTS.COLOR.g = Math.max(0, Math.min(255, Math.round(g)))
+    CONSTANTS.COLOR.b = Math.max(0, Math.min(255, Math.round(b)))
 }
 
 // ============================================
@@ -403,9 +411,11 @@ function hideLogoButton() {
     // Particles will naturally disperse in the next update cycle
 }
 
+// Expose color setter to parent components
 defineExpose({
     setLogoButtonState,
-    hideLogoButton
+    hideLogoButton,
+    setParticleColor
 })
 </script>
 

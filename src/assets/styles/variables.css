@@ -46,6 +46,36 @@
   --overlay-bottom: rgba(10, 10, 18, 0.9);
   --text-shadow-strong: 0 4px 8px rgba(0, 0, 0, 0.8);
   --panel-bg: rgba(0, 0, 0, 0.7);
+  /* Per-background tweakable parameters */
+  /* Cover (about) background target opacity when shown */
+  --bg-cover-target-opacity: 0.8;
+    /* Per-cover dim (overlay darkness applied on top of the cover image)
+      Use a value between 0 (no dim) and 1 (fully black). These are preferred
+      over lowering cover opacity to avoid the previous image showing through. */
+    --bg-cover-dim: 0.36;
+    --bg-cover-about-dim: 0.36;
+    --bg-cover-music-dim: 0.28;
+    --bg-cover-tour-dim: 0.30;
+  /* Per-cover opacity overrides (0.0 - 1.0) */
+  --bg-cover-about-opacity: 0.5;
+  /* About cover default */
+  --bg-cover-music-opacity: 0.9;
+  /* Music cover example */
+  --bg-cover-tour-opacity: 0.92;
+  /* Tour cover example */
+  /* Main/home background opacity (if needed) */
+  --bg-main-opacity: 1;
+  /* Particle color to use when cover is active (integer RGB) */
+  --bg-cover-particles-r: 220;
+  --bg-cover-particles-g: 40;
+  --bg-cover-particles-b: 40;
+  /* Composite RGB array form (comma separated) for easier JS parsing */
+  --bg-cover-particles: 220, 40, 40;
+  /* Main (home) background particle color as an RGB array (falls back to text color)
+      Use integer values: R, G, B */
+  --bg-main-particles: 232, 232, 240;
+  /* Optionally tweak cover transition duration (seconds) */
+  --bg-cover-transition-duration: 1.6s;
 
   /* Typography Scale */
   --font-size-xs: 0.75rem;
