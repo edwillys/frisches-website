@@ -9,14 +9,14 @@ export interface MenuCardProps {
 }
 
 const props = withDefaults(defineProps<MenuCardProps>(), {
-  index: 0
+  index: 0,
 })
 
 const cardRef = ref<HTMLElement | null>(null)
 const isHovered = ref(false)
 
 const cardStyle = computed(() => ({
-  backgroundImage: `url(${props.image})`
+  backgroundImage: `url(${props.image})`,
 }))
 
 const emit = defineEmits<{
@@ -28,7 +28,7 @@ const handleClick = () => {
 }
 
 defineExpose({
-  cardEl: cardRef
+  cardEl: cardRef,
 })
 </script>
 
@@ -67,12 +67,7 @@ defineExpose({
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    transparent 50%,
-    rgba(0, 0, 0, 0.8) 100%
-  );
+  background: linear-gradient(180deg, transparent 0%, transparent 50%, rgba(0, 0, 0, 0.8) 100%);
   z-index: 1;
 }
 

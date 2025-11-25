@@ -8,7 +8,15 @@ vi.mock('gsap', () => {
     default: {
       registerPlugin: () => {},
       timeline: () => {
-        const t: any = {}
+        type TimelineObj = {
+          to: (t: TimelineObj) => TimelineObj
+          fromTo: (t: TimelineObj) => TimelineObj
+          from: (t: TimelineObj) => TimelineObj
+          add: (t: TimelineObj) => TimelineObj
+          kill: () => void
+          set: (t: TimelineObj) => TimelineObj
+        }
+        const t: TimelineObj = {} as TimelineObj
         const noop = () => t
         t.to = noop
         t.fromTo = noop
@@ -21,16 +29,26 @@ vi.mock('gsap', () => {
       to: () => {},
       set: () => {},
       killTweensOf: () => {},
-      context: (fn: () => void) => { fn(); return { revert: () => {} } },
-      matchMedia: () => ({ add: (_q: any, cb: any) => { cb({ conditions: {} }) } })
-    }
+      context: (fn: () => void) => {
+        fn()
+        return { revert: () => {} }
+      },
+      matchMedia: () => ({
+        add: (
+          _q: Record<string, unknown>,
+          cb: (obj: { conditions: Record<string, unknown> }) => void
+        ) => {
+          cb({ conditions: {} })
+        },
+      }),
+    },
   }
 })
 vi.mock('gsap/CustomEase', () => {
   return {
     CustomEase: {
-      create: () => ({})
-    }
+      create: () => ({}),
+    },
   }
 })
 
@@ -45,16 +63,16 @@ describe('CardDealer cover behavior', () => {
         socialLinks: {
           instagram: '#',
           spotify: '#',
-          youtube: '#'
-        }
-      }
+          youtube: '#',
+        },
+      },
     })
 
     // Find the MenuCard element that contains the title 'About'
     const cards = wrapper.findAll('.menu-card')
     expect(cards.length).toBeGreaterThan(0)
 
-    const aboutCard = cards.find(c => c.text().includes('About'))
+    const aboutCard = cards.find((c) => c.text().includes('About'))
     expect(aboutCard).toBeTruthy()
 
     await aboutCard!.trigger('click')

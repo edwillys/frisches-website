@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import CardDealer from './components/CardDealer.vue'
 import MouseParticles from './components/MouseParticles.vue'
 
-const mouseParticlesRef = ref<{ 
+const mouseParticlesRef = ref<{
   setLogoButtonState: (hovered: boolean, x: number, y: number) => void
   hideLogoButton: () => void
   setParticleColor?: (r: number, g: number, b: number) => void
@@ -25,7 +25,10 @@ function handlePaletteChange(payload: number[] | null) {
     try {
       const styles = getComputedStyle(document.documentElement)
       const rawMain = styles.getPropertyValue('--bg-main-particles') || ''
-      const arrMain = rawMain.split(',').map(s => parseInt(s.trim(), 10)).filter(n => Number.isFinite(n))
+      const arrMain = rawMain
+        .split(',')
+        .map((s) => parseInt(s.trim(), 10))
+        .filter((n) => Number.isFinite(n))
       if (arrMain.length >= 3) {
         mouseParticlesRef.value.setParticleColor?.(arrMain[0]!, arrMain[1]!, arrMain[2]!)
       } else {
@@ -42,11 +45,12 @@ function handlePaletteChange(payload: number[] | null) {
 
 <template>
   <div id="app">
-    <CardDealer :socialLinks="{
-      instagram: 'https://www.instagram.com/frischestheband/',
-      spotify: 'https://open.spotify.com/artist/3GkLzwg7QBN5fRoCDcI1pW?si=YoFaY--kTPWO-G1bRsnLdA',
-      youtube: 'https://www.youtube.com/@frischestheband'
-    }"
+    <CardDealer
+      :socialLinks="{
+        instagram: 'https://www.instagram.com/frischestheband/',
+        spotify: 'https://open.spotify.com/artist/3GkLzwg7QBN5fRoCDcI1pW?si=YoFaY--kTPWO-G1bRsnLdA',
+        youtube: 'https://www.youtube.com/@frischestheband',
+      }"
       @logo-hover="handleLogoHover"
       @logo-hide="handleLogoHide"
       @palette-change="handlePaletteChange"

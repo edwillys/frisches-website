@@ -19,7 +19,7 @@ const props = withDefaults(
   }>(),
   {
     tracks: () => [],
-    hidePlaylistCovers: true
+    hidePlaylistCovers: true,
   }
 )
 
@@ -45,7 +45,7 @@ const defaultTracks: Track[] = [
     album: 'Tales From The Cellar',
     fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
     url: '/audio/TalesFromTheCellar/00 - Intro - Mastered.mp3',
-    duration: '0:45'
+    duration: '0:45',
   },
   {
     id: 1,
@@ -54,7 +54,7 @@ const defaultTracks: Track[] = [
     album: 'Tales From The Cellar',
     fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
     url: '/audio/TalesFromTheCellar/01 - Misled - Mastered.mp3',
-    duration: '3:12'
+    duration: '3:12',
   },
   {
     id: 2,
@@ -63,7 +63,7 @@ const defaultTracks: Track[] = [
     album: 'Tales From The Cellar',
     fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
     url: '/audio/TalesFromTheCellar/02 - TOJD - Mastered.mp3',
-    duration: '2:58'
+    duration: '2:58',
   },
   {
     id: 3,
@@ -72,7 +72,7 @@ const defaultTracks: Track[] = [
     album: 'Tales From The Cellar',
     fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
     url: '/audio/TalesFromTheCellar/03 - Etiquette - Mastered.mp3',
-    duration: '3:05'
+    duration: '3:05',
   },
   {
     id: 4,
@@ -81,7 +81,7 @@ const defaultTracks: Track[] = [
     album: 'Tales From The Cellar',
     fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
     url: '/audio/TalesFromTheCellar/04 - Mr Red Jacket - Mastered.mp3',
-    duration: '3:30'
+    duration: '3:30',
   },
   {
     id: 5,
@@ -90,7 +90,7 @@ const defaultTracks: Track[] = [
     album: 'Tales From The Cellar',
     fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
     url: '/audio/TalesFromTheCellar/05 - Witch Hunting - Mastered.mp3',
-    duration: '3:45'
+    duration: '3:45',
   },
   {
     id: 6,
@@ -99,7 +99,7 @@ const defaultTracks: Track[] = [
     album: 'Tales From The Cellar',
     fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
     url: '/audio/TalesFromTheCellar/06 - Suits - Mastered.mp3',
-    duration: '3:15'
+    duration: '3:15',
   },
   {
     id: 7,
@@ -108,7 +108,7 @@ const defaultTracks: Track[] = [
     album: 'Tales From The Cellar',
     fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
     url: '/audio/TalesFromTheCellar/07 - Ordinary Suspects - Mastered.mp3',
-    duration: '3:20'
+    duration: '3:20',
   },
   {
     id: 8,
@@ -117,8 +117,8 @@ const defaultTracks: Track[] = [
     album: 'Tales From The Cellar',
     fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
     url: '/audio/TalesFromTheCellar/08 - Solitude Etude - Mastered.mp3',
-    duration: '2:50'
-  }
+    duration: '2:50',
+  },
 ]
 
 const playlist = computed(() => (props.tracks.length > 0 ? props.tracks : defaultTracks))
@@ -143,13 +143,15 @@ const getDisplayIndex = (track: Track): string => {
 const currentTrack = computed<Track>(() => {
   const track = playlist.value[currentTrackIndex.value]
   if (track) return track
-  return playlist.value[0] || {
-    id: -1,
-    title: 'No Track',
-    artist: 'Unknown',
-    url: '',
-    duration: '0:00'
-  }
+  return (
+    playlist.value[0] || {
+      id: -1,
+      title: 'No Track',
+      artist: 'Unknown',
+      url: '',
+      duration: '0:00',
+    }
+  )
 })
 
 // Formatting
@@ -252,16 +254,20 @@ watch(volume, (newVol) => {
   <div class="audio-player" :class="{ 'is-playlist-open': isPlaylistOpen }">
     <!-- Main Player View -->
     <div class="player-main">
-      
       <!-- Header Section: Transitions between Large and Compact -->
       <div class="player-header">
         <div class="artwork-wrapper">
-          <img v-if="getHeaderCover(currentTrack)" :src="getHeaderCover(currentTrack)" :alt="currentTrack.title" class="artwork" />
+          <img
+            v-if="getHeaderCover(currentTrack)"
+            :src="getHeaderCover(currentTrack)"
+            :alt="currentTrack.title"
+            class="artwork"
+          />
           <div v-else class="artwork-placeholder">
             <span class="track-index">{{ getDisplayIndex(currentTrack) }}</span>
           </div>
         </div>
-        
+
         <div class="header-info">
           <h2 class="title">{{ currentTrack.title }}</h2>
           <p class="artist">{{ currentTrack.artist }}</p>
@@ -284,61 +290,189 @@ watch(volume, (newVol) => {
       <div class="controls-layout">
         <!-- Secondary Left -->
         <div class="controls-group left">
-          <button 
-            class="btn-icon small" 
-            :class="{ active: isShuffle }" 
+          <button
+            class="btn-icon small"
+            :class="{ active: isShuffle }"
             @click="isShuffle = !isShuffle"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="16 3 21 3 21 8"></polyline>
+              <line x1="4" y1="20" x2="21" y2="3"></line>
+              <polyline points="21 16 21 21 16 21"></polyline>
+              <line x1="15" y1="15" x2="21" y2="21"></line>
+              <line x1="4" y1="4" x2="9" y2="9"></line>
+            </svg>
           </button>
-          
-          <button 
-            class="btn-icon small" 
-            :class="{ active: repeatMode !== 'off' }" 
-            @click="repeatMode = repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off'"
+
+          <button
+            class="btn-icon small"
+            :class="{ active: repeatMode !== 'off' }"
+            @click="
+              repeatMode = repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off'
+            "
           >
-            <svg v-if="repeatMode === 'one'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path><text x="10" y="15" font-size="8" fill="currentColor" font-weight="bold">1</text></svg>
-            <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+            <svg
+              v-if="repeatMode === 'one'"
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="17 1 21 5 17 9"></polyline>
+              <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+              <polyline points="7 23 3 19 7 15"></polyline>
+              <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+              <text x="10" y="15" font-size="8" fill="currentColor" font-weight="bold">1</text>
+            </svg>
+            <svg
+              v-else
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="17 1 21 5 17 9"></polyline>
+              <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+              <polyline points="7 23 3 19 7 15"></polyline>
+              <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+            </svg>
           </button>
         </div>
 
         <!-- Main Controls -->
         <div class="controls-main">
           <button class="btn-icon" @click="prevTrack">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M11 19V5l-7 7 7 7zm9 0V5l-7 7 7 7z"/></svg>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M11 19V5l-7 7 7 7zm9 0V5l-7 7 7 7z" />
+            </svg>
           </button>
-          
+
           <button class="btn-icon btn-play" @click="togglePlay">
-            <svg v-if="!isPlaying" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-            <svg v-else xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            <svg
+              v-if="!isPlaying"
+              xmlns="http://www.w3.org/2000/svg"
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M8 5v14l11-7z" />
+            </svg>
+            <svg
+              v-else
+              xmlns="http://www.w3.org/2000/svg"
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+            </svg>
           </button>
-          
+
           <button class="btn-icon" @click="nextTrack">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M4 19V5l7 7-7 7zm9 0V5l7 7-7 7z"/></svg>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M4 19V5l7 7-7 7zm9 0V5l7 7-7 7z" />
+            </svg>
           </button>
         </div>
 
         <!-- Secondary Right -->
         <div class="controls-group right">
-          <div 
-            class="volume-control" 
-            @mouseenter="showVolume = true" 
+          <div
+            class="volume-control"
+            @mouseenter="showVolume = true"
             @mouseleave="showVolume = false"
           >
             <button class="btn-icon small" @click="toggleMute">
-              <svg v-if="volume > 0.5" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-              <svg v-else-if="volume > 0" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-              <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+              <svg
+                v-if="volume > 0.5"
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              </svg>
+              <svg
+                v-else-if="volume > 0"
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              </svg>
+              <svg
+                v-else
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <line x1="23" y1="9" x2="17" y2="15"></line>
+                <line x1="17" y1="9" x2="23" y2="15"></line>
+              </svg>
             </button>
             <transition name="fade">
               <div v-if="showVolume" class="volume-popup">
                 <div class="slider-wrapper">
-                  <input 
-                    type="range" 
-                    min="0" 
-                    max="1" 
-                    step="0.01" 
-                    v-model.number="volume" 
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    v-model.number="volume"
                     class="volume-slider vertical"
                   />
                 </div>
@@ -347,7 +481,24 @@ watch(volume, (newVol) => {
           </div>
 
           <button class="btn-icon small" @click="isPlaylistOpen = !isPlaylistOpen">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
           </button>
         </div>
       </div>
@@ -356,35 +507,86 @@ watch(volume, (newVol) => {
     <!-- Playlist View -->
     <div class="playlist-drawer">
       <div class="playlist-content">
-        <div 
-          v-for="(track, index) in playlist" 
+        <div
+          v-for="(track, index) in playlist"
           :key="track.id"
           class="playlist-item"
           :class="{ active: index === currentTrackIndex }"
-          @click="currentTrackIndex = index; isPlaying = true"
+          @click="
+            currentTrackIndex = index
+            isPlaying = true
+          "
         >
           <div class="thumb-container">
-            <img v-if="!hidePlaylistCovers && getCoverImage(track)" :src="getCoverImage(track)" class="thumb" />
+            <img
+              v-if="!hidePlaylistCovers && getCoverImage(track)"
+              :src="getCoverImage(track)"
+              class="thumb"
+            />
             <div v-if="!hidePlaylistCovers && !getCoverImage(track)" class="thumb-placeholder">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M4.93 4.93l14.14 14.14"></path></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M4.93 4.93l14.14 14.14"></path>
+              </svg>
             </div>
             <div v-if="!hidePlaylistCovers" class="play-overlay">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M8 5v14l11-7z" />
+              </svg>
             </div>
           </div>
           <div class="info">
             <div class="track-title" :class="{ active: index === currentTrackIndex }">
-              <svg v-if="(index === currentTrackIndex) && isPlaying" class="visualizer" xmlns="http://www.w3.org/2000/svg" width="16" height="14" viewBox="0 0 16 14" fill="currentColor">
+              <svg
+                v-if="index === currentTrackIndex && isPlaying"
+                class="visualizer"
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="14"
+                viewBox="0 0 16 14"
+                fill="currentColor"
+              >
                 <rect x="2" y="4" width="2" height="10" rx="1">
-                  <animate attributeName="height" values="10;6;10" dur="0.5s" repeatCount="indefinite" />
+                  <animate
+                    attributeName="height"
+                    values="10;6;10"
+                    dur="0.5s"
+                    repeatCount="indefinite"
+                  />
                   <animate attributeName="y" values="4;7;4" dur="0.5s" repeatCount="indefinite" />
                 </rect>
                 <rect x="7" y="2" width="2" height="12" rx="1">
-                  <animate attributeName="height" values="12;8;12" dur="0.7s" repeatCount="indefinite" />
+                  <animate
+                    attributeName="height"
+                    values="12;8;12"
+                    dur="0.7s"
+                    repeatCount="indefinite"
+                  />
                   <animate attributeName="y" values="2;5;2" dur="0.7s" repeatCount="indefinite" />
                 </rect>
                 <rect x="12" y="5" width="2" height="9" rx="1">
-                  <animate attributeName="height" values="9;5;9" dur="1.1s" repeatCount="indefinite" />
+                  <animate
+                    attributeName="height"
+                    values="9;5;9"
+                    dur="1.1s"
+                    repeatCount="indefinite"
+                  />
                   <animate attributeName="y" values="5;8;5" dur="1.1s" repeatCount="indefinite" />
                 </rect>
               </svg>
@@ -397,8 +599,8 @@ watch(volume, (newVol) => {
       </div>
     </div>
 
-    <audio 
-      ref="audioRef" 
+    <audio
+      ref="audioRef"
       :src="currentTrack.url"
       @timeupdate="onTimeUpdate"
       @loadedmetadata="onLoadedMetadata"
@@ -413,7 +615,7 @@ watch(volume, (newVol) => {
   max-width: 320px;
   background: var(--color-background, #000);
   border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   font-family: 'Inter', sans-serif;
   color: var(--color-text, #fff);
@@ -444,7 +646,7 @@ watch(volume, (newVol) => {
   height: 180px;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
   margin-bottom: 20px;
   align-self: center; /* Keep artwork centered in large view */
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -542,7 +744,9 @@ watch(volume, (newVol) => {
   width: 35px;
 }
 
-.time.total { text-align: right; }
+.time.total {
+  text-align: right;
+}
 
 .progress-bar {
   flex: 1;
@@ -636,11 +840,13 @@ watch(volume, (newVol) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
 
 .btn-icon:hover {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .btn-play {
@@ -648,7 +854,7 @@ watch(volume, (newVol) => {
   height: 56px;
   background: var(--color-accent, #d4af37);
   color: #000; /* Contrast for play button */
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   transition: all 0.3s ease;
 }
 
@@ -664,7 +870,7 @@ watch(volume, (newVol) => {
 
 .btn-icon.small:hover {
   color: var(--color-text, #fff);
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .btn-icon.small.active {
@@ -688,10 +894,10 @@ watch(volume, (newVol) => {
   background: #222;
   padding: 12px 8px;
   border-radius: 20px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
   margin-bottom: 0px;
   z-index: 100;
-  pointer-events: auto; 
+  pointer-events: auto;
 }
 
 .slider-wrapper {
@@ -730,7 +936,7 @@ watch(volume, (newVol) => {
   border-radius: 50%;
   background: var(--color-accent, #d4af37);
   margin-top: -5px; /* Center thumb on track */
-  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 /* Playlist Drawer Animation */
@@ -772,7 +978,7 @@ watch(volume, (newVol) => {
 }
 
 .playlist-item:hover {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .playlist-item.active {
@@ -819,7 +1025,7 @@ watch(volume, (newVol) => {
 .play-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -877,7 +1083,9 @@ watch(volume, (newVol) => {
 /* Transitions */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
 .fade-enter-from,

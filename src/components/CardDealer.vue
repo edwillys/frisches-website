@@ -1,26 +1,26 @@
 <script setup lang="ts">
 /**
  * CardDealer Component
- * 
+ *
  * Manages the main card-based navigation interface with smooth animations.
- * 
+ *
  * Card Animation Behavior:
  * =========================
- * 
+ *
  * Opening Animation (Two-Phase):
  * 1. Deck Appearance: All cards grow together from a single center point as a unified deck
  *    - No stagger: cards appear as one solid entity
  *    - Duration: 0.8s with power2.inOut easing
- * 
+ *
  * 2. Card Distribution: Cards spread out to their final positions (left/right)
  *    - Stagger from center: creates symmetrical spread effect
  *    - Duration: 1.0s with power2.inOut easing
- * 
+ *
  * Closing Animation (Inverse Two-Phase):
  * 1. Card Gathering: Cards move from distributed positions back to center deck
  *    - Stagger from edges: cards gather from outside in
  *    - Duration: 1.0s with power2.inOut easing
- * 
+ *
  * 2. Deck Disappearance: All cards shrink together to a single point
  *    - No stagger: cards disappear as one unified deck
  *    - Duration: 0.8s with power2.inOut easing
@@ -79,7 +79,7 @@ useGSAP(() => {
         duration: 3,
         ease: 'sine.inOut',
         repeat: -1,
-        yoyo: true
+        yoyo: true,
       })
   })
 })
@@ -92,18 +92,18 @@ const menuItems = [
   {
     title: 'Music',
     image: new URL('../assets/images/menu-card-music.png', import.meta.url).href,
-    route: '/music'
+    route: '/music',
   },
   {
     title: 'About',
     image: new URL('../assets/images/menu-card-about.png', import.meta.url).href,
-    route: '/about'
+    route: '/about',
   },
   {
     title: 'Tour',
     image: new URL('../assets/images/menu-card-tour.png', import.meta.url).href,
-    route: '/tour'
-  }
+    route: '/tour',
+  },
 ]
 
 const deckLeadIndex = Math.floor(menuItems.length / 2)
@@ -114,7 +114,7 @@ const props = withDefaults(
     socialLinks?: { instagram?: string; spotify?: string; youtube?: string }
   }>(),
   {
-    socialLinks: () => ({})
+    socialLinks: () => ({}),
   }
 )
 
@@ -127,22 +127,22 @@ const emit = defineEmits<{
 const handleLogoHover = (hovered: boolean) => {
   const instance = logoButtonRef.value
   if (!instance || typeof instance !== 'object' || !('rootEl' in instance)) return
-  
+
   const element = instance.rootEl as HTMLElement | null
   if (!element) return
-  
+
   const rect = element.getBoundingClientRect()
   const centerX = rect.left + rect.width / 2
   const centerY = rect.top + rect.height / 2
-  
+
   emit('logo-hover', hovered, centerX, centerY)
 }
 
 const handleCardClick = (route: string) => {
   if (isAnimating.value) return
-  
+
   // Find the clicked card index
-  const cardIndex = menuItems.findIndex(item => item.route === route)
+  const cardIndex = menuItems.findIndex((item) => item.route === route)
   if (cardIndex === -1) return
 
   console.log('Card clicked:', route)
@@ -155,10 +155,10 @@ const handleLogoClick = () => {
   if (isAnimating.value || currentView.value !== 'logo') return
   console.log('Logo clicked! Starting animation sequence...')
   isAnimating.value = true
-  
+
   // Notify that logo will be hidden
   emit('logo-hide')
-  
+
   // Trigger logo close animation, then card open
   playLogoCloseAndCardOpen()
 }
@@ -199,7 +199,7 @@ const setCardMaskState = (card: HTMLElement, hidden: boolean) => {
 
   gsap.set(card, {
     opacity: hidden ? 0 : 1,
-    visibility: hidden ? 'hidden' : 'visible'
+    visibility: hidden ? 'hidden' : 'visible',
   })
 }
 
@@ -243,7 +243,7 @@ const playLogoCloseAndCardOpen = () => {
   const tl = gsap.timeline({
     onComplete: () => {
       // Animation complete
-    }
+    },
   })
 
   // Move to center of screen
@@ -256,27 +256,31 @@ const playLogoCloseAndCardOpen = () => {
   tl.to(logoEl, {
     y: moveY,
     duration: 0.8,
-    ease: deckSpreadEase
+    ease: deckSpreadEase,
   })
-  
+
   // Step 2: Logo close animation (360° rotation + scale shrink)
-  tl.to(logoEl, {
-    rotation: 360,
-    scale: 0.1,
-    opacity: 0,
-    duration: 0.8,
-    ease: deckGrowEase,
-    onStart: () => {
-      // Start showing cards slightly before logo disappears completely
-      // Overlap effect
-      setTimeout(() => {
-        currentView.value = 'cards'
-        nextTick(() => {
-          playCardOpen()
-        })
-      }, 400) // Start halfway through the 0.8s duration
-    }
-  }, '-=0.2')
+  tl.to(
+    logoEl,
+    {
+      rotation: 360,
+      scale: 0.1,
+      opacity: 0,
+      duration: 0.8,
+      ease: deckGrowEase,
+      onStart: () => {
+        // Start showing cards slightly before logo disappears completely
+        // Overlap effect
+        setTimeout(() => {
+          currentView.value = 'cards'
+          nextTick(() => {
+            playCardOpen()
+          })
+        }, 400) // Start halfway through the 0.8s duration
+      },
+    },
+    '-=0.2'
+  )
 }
 
 const playCardOpen = () => {
@@ -292,7 +296,7 @@ const playCardOpen = () => {
   const containerRect = container.getBoundingClientRect()
   const containerCenter = {
     x: containerRect.width / 2,
-    y: containerRect.height / 2
+    y: containerRect.height / 2,
   }
 
   const leadCard = cards[deckLeadIndex] ?? cards[0]
@@ -303,7 +307,7 @@ const playCardOpen = () => {
 
   const tl = gsap.timeline({
     onComplete: () => {
-      cards.forEach(card => {
+      cards.forEach((card) => {
         if (!card) return
         card.dataset.deckMasked = 'false'
         card.removeAttribute('aria-hidden')
@@ -311,17 +315,17 @@ const playCardOpen = () => {
         gsap.set(card, { clearProps: 'transform,visibility,zIndex' })
       })
       isAnimating.value = false
-    }
+    },
   })
 
   // Calculate how far each card needs to move to reach the center
-  const cardOffsets = cards.map(card => {
+  const cardOffsets = cards.map((card) => {
     const rect = card.getBoundingClientRect()
-    const cardCenterX = (rect.left - containerRect.left) + rect.width / 2
-    const cardCenterY = (rect.top - containerRect.top) + rect.height / 2
+    const cardCenterX = rect.left - containerRect.left + rect.width / 2
+    const cardCenterY = rect.top - containerRect.top + rect.height / 2
     return {
       x: containerCenter.x - cardCenterX,
-      y: containerCenter.y - cardCenterY
+      y: containerCenter.y - cardCenterY,
     }
   })
 
@@ -329,7 +333,7 @@ const playCardOpen = () => {
   cards.forEach((card, index) => {
     const offset = cardOffsets[index]
     if (!offset) return
-    
+
     // Calculate z-index based on distance from lead to ensure proper stacking
     const distanceFromLead = Math.abs(index - deckLeadIndex)
     const zIndex = index === deckLeadIndex ? 50 : 40 - distanceFromLead
@@ -341,7 +345,7 @@ const playCardOpen = () => {
       rotation: 0,
       zIndex: zIndex,
       transformOrigin: 'center center',
-      force3D: true
+      force3D: true,
     })
   })
 
@@ -352,7 +356,7 @@ const playCardOpen = () => {
   tl.to(cards, {
     scale: 1,
     duration: 0.9,
-    ease: deckGrowEase
+    ease: deckGrowEase,
   })
 
   // Phase 2: Slide cards out from behind the lead card
@@ -362,12 +366,16 @@ const playCardOpen = () => {
     const staggerStart = distanceFromLead * 0.14
     const slideDuration = 0.85 + distanceFromLead * 0.1
 
-    spreadTl.to(card, {
-      x: 0,
-      y: 0,
-      ease: deckSpreadEase,
-      duration: slideDuration
-    }, staggerStart)
+    spreadTl.to(
+      card,
+      {
+        x: 0,
+        y: 0,
+        ease: deckSpreadEase,
+        duration: slideDuration,
+      },
+      staggerStart
+    )
   })
 
   tl.add(spreadTl, '-=0.25')
@@ -394,24 +402,24 @@ const playCardCloseAndLogoReappear = () => {
   const containerRect = container.getBoundingClientRect()
   const containerCenter = {
     x: containerRect.width / 2,
-    y: containerRect.height / 2
+    y: containerRect.height / 2,
   }
 
   const tl = gsap.timeline({
     onComplete: () => {
       currentView.value = 'logo'
       nextTick(() => playLogoReappear())
-    }
+    },
   })
 
   // Calculate offsets to move each card to center
-  const cardOffsets = cards.map(card => {
+  const cardOffsets = cards.map((card) => {
     const rect = card.getBoundingClientRect()
-    const cardCenterX = (rect.left - containerRect.left) + rect.width / 2
-    const cardCenterY = (rect.top - containerRect.top) + rect.height / 2
+    const cardCenterX = rect.left - containerRect.left + rect.width / 2
+    const cardCenterY = rect.top - containerRect.top + rect.height / 2
     return {
       x: containerCenter.x - cardCenterX,
-      y: containerCenter.y - cardCenterY
+      y: containerCenter.y - cardCenterY,
     }
   })
 
@@ -432,9 +440,9 @@ const playCardCloseAndLogoReappear = () => {
     ease: deckGatherEase,
     stagger: {
       from: 'edges',
-      amount: 0.2
+      amount: 0.2,
     },
-    onComplete: () => setDeckMask(cards, true)
+    onComplete: () => setDeckMask(cards, true),
   })
 
   // Phase 2: Shrink to point with rotation (zoom-out + rotate)
@@ -449,16 +457,16 @@ const playCardCloseAndLogoReappear = () => {
     ease: deckGrowEase,
     stagger: {
       from: 'center',
-      amount: 0.12
+      amount: 0.12,
     },
     onComplete: () => {
-      cards.forEach(card => {
+      cards.forEach((card) => {
         if (!card) return
         card.dataset.deckMasked = 'false'
         card.removeAttribute('aria-hidden')
         gsap.set(card, { clearProps: 'transform,opacity,visibility,zIndex' })
       })
-    }
+    },
   })
 }
 
@@ -483,18 +491,18 @@ const playLogoReappear = () => {
     y: moveY,
     rotation: 360,
     scale: 0.1,
-    opacity: 0
+    opacity: 0,
   })
 
   const tl = gsap.timeline({
     onComplete: () => {
       isAnimating.value = false
-      // Clear props to return to CSS positioning if needed, 
-      // but we want it to stay at bottom. 
-      // Since we animated 'y' back to 0 (relative to original position), 
+      // Clear props to return to CSS positioning if needed,
+      // but we want it to stay at bottom.
+      // Since we animated 'y' back to 0 (relative to original position),
       // it should be fine.
       gsap.set(logoEl, { clearProps: 'transform,opacity' })
-    }
+    },
   })
 
   // Step 1: Spiral in at center (Reverse of disappear)
@@ -504,7 +512,7 @@ const playLogoReappear = () => {
     opacity: 1,
     duration: 0.8,
     ease: deckGrowEase,
-    force3D: true
+    force3D: true,
   })
 
   // Step 2: Move back to bottom (original position)
@@ -512,7 +520,7 @@ const playLogoReappear = () => {
     y: 0,
     duration: 0.8,
     ease: deckSpreadEase,
-    force3D: true
+    force3D: true,
   })
 }
 
@@ -525,7 +533,7 @@ const playContentCloseAndCardsReturn = () => {
     defaults: { ease: deckSpreadEase, duration: 0.6 },
     onComplete: () => {
       // Don't clear opacity as it defaults to 0 in CSS
-      cards.forEach(card => gsap.set(card, { clearProps: 'transform,visibility,zIndex' }))
+      cards.forEach((card) => gsap.set(card, { clearProps: 'transform,visibility,zIndex' }))
       if (container) {
         gsap.set(container, { clearProps: 'transform' })
       }
@@ -536,7 +544,10 @@ const playContentCloseAndCardsReturn = () => {
       try {
         const styles = getComputedStyle(document.documentElement)
         const rawMain = styles.getPropertyValue('--bg-main-particles') || ''
-        const arrMain = rawMain.split(',').map(s => parseInt(s.trim(), 10)).filter(n => Number.isFinite(n))
+        const arrMain = rawMain
+          .split(',')
+          .map((s) => parseInt(s.trim(), 10))
+          .filter((n) => Number.isFinite(n))
         if (arrMain.length >= 3) {
           emit('palette-change', [arrMain[0]!, arrMain[1]!, arrMain[2]!])
         } else {
@@ -553,33 +564,41 @@ const playContentCloseAndCardsReturn = () => {
         emit('palette-change', null)
       }
       isAnimating.value = false
-    }
+    },
   })
 
   if (panel) {
-    tl.to(panel, {
-      opacity: 0,
-      y: 30,
-      duration: 0.35,
-      ease: panelEase
-    }, 0)
+    tl.to(
+      panel,
+      {
+        opacity: 0,
+        y: 30,
+        duration: 0.35,
+        ease: panelEase,
+      },
+      0
+    )
   }
 
   if (container) {
     tl.to(container, { x: 0 }, 0)
   }
 
-    // Ensure z-index is set before tweening to avoid flicker
-    gsap.set(cards, { zIndex: 1 })
-    cards.forEach(card => {
-      tl.to(card, {
+  // Ensure z-index is set before tweening to avoid flicker
+  gsap.set(cards, { zIndex: 1 })
+  cards.forEach((card) => {
+    tl.to(
+      card,
+      {
         opacity: 1,
         scale: 1,
         x: 0,
         y: 0,
-        rotation: 0
-      }, 0)
-    })
+        rotation: 0,
+      },
+      0
+    )
+  })
 }
 
 const playCardSelection = (cardIndex: number) => {
@@ -590,68 +609,74 @@ const playCardSelection = (cardIndex: number) => {
   }
 
   // Get positions before changing view state (which might trigger layout changes)
-  const cardRects = cards.map(c => c.getBoundingClientRect())
-  
+  const cardRects = cards.map((c) => c.getBoundingClientRect())
+
   // We want all cards to move to the position where the middle card would be
   // if the container was shifted.
   // The middle card is index 1 (since we have 3 cards).
   const middleCardIndex = 1
   const middleRect = cardRects[middleCardIndex]
-  
+
   if (!middleRect) return
 
   currentView.value = 'content'
 
-    // If About was selected, trigger background transition and emit palette
-    const selectedItem = menuItems[cardIndex]
-    if (selectedItem?.title === 'About') {
-      const coverKey = (selectedItem.title || '').toString().toLowerCase().replace(/\s+/g, '-');
-      transitionToCover(true, coverKey)
+  // If About was selected, trigger background transition and emit palette
+  const selectedItem = menuItems[cardIndex]
+  if (selectedItem?.title === 'About') {
+    const coverKey = (selectedItem.title || '').toString().toLowerCase().replace(/\s+/g, '-')
+    transitionToCover(true, coverKey)
 
-      // Read composite RGB palette from CSS (comma-separated), fallback to per-channel vars
-      try {
-        const styles = getComputedStyle(document.documentElement)
-        const raw = styles.getPropertyValue('--bg-cover-particles') || ''
-        const arr = raw.split(',').map(s => parseInt(s.trim(), 10)).filter(n => Number.isFinite(n))
-        if (arr.length >= 3) {
-          emit('palette-change', [arr[0]!, arr[1]!, arr[2]!])
+    // Read composite RGB palette from CSS (comma-separated), fallback to per-channel vars
+    try {
+      const styles = getComputedStyle(document.documentElement)
+      const raw = styles.getPropertyValue('--bg-cover-particles') || ''
+      const arr = raw
+        .split(',')
+        .map((s) => parseInt(s.trim(), 10))
+        .filter((n) => Number.isFinite(n))
+      if (arr.length >= 3) {
+        emit('palette-change', [arr[0]!, arr[1]!, arr[2]!])
+      } else {
+        const r = parseInt(styles.getPropertyValue('--bg-cover-particles-r') || '0', 10)
+        const g = parseInt(styles.getPropertyValue('--bg-cover-particles-g') || '0', 10)
+        const b = parseInt(styles.getPropertyValue('--bg-cover-particles-b') || '0', 10)
+        if (Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)) {
+          emit('palette-change', [r, g, b])
         } else {
-          const r = parseInt(styles.getPropertyValue('--bg-cover-particles-r') || '0', 10)
-          const g = parseInt(styles.getPropertyValue('--bg-cover-particles-g') || '0', 10)
-          const b = parseInt(styles.getPropertyValue('--bg-cover-particles-b') || '0', 10)
-          if (Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)) {
-            emit('palette-change', [r, g, b])
-          } else {
-            emit('palette-change', null)
-          }
+          emit('palette-change', null)
         }
-      } catch {
-        emit('palette-change', null)
       }
-    } else {
-      // Reset cover if any and emit main/home palette as RGB array
-      transitionToCover(false)
-      try {
-        const styles = getComputedStyle(document.documentElement)
-        const rawMain = styles.getPropertyValue('--bg-main-particles') || ''
-        const arrMain = rawMain.split(',').map(s => parseInt(s.trim(), 10)).filter(n => Number.isFinite(n))
-        if (arrMain.length >= 3) {
-          emit('palette-change', [arrMain[0]!, arrMain[1]!, arrMain[2]!])
-        } else {
-          // Fallback to cover defaults or null
-          const r = parseInt(styles.getPropertyValue('--bg-cover-particles-r') || '0', 10)
-          const g = parseInt(styles.getPropertyValue('--bg-cover-particles-g') || '0', 10)
-          const b = parseInt(styles.getPropertyValue('--bg-cover-particles-b') || '0', 10)
-          if (Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)) {
-            emit('palette-change', [r, g, b])
-          } else {
-            emit('palette-change', null)
-          }
-        }
-      } catch {
-        emit('palette-change', null)
-      }
+    } catch {
+      emit('palette-change', null)
     }
+  } else {
+    // Reset cover if any and emit main/home palette as RGB array
+    transitionToCover(false)
+    try {
+      const styles = getComputedStyle(document.documentElement)
+      const rawMain = styles.getPropertyValue('--bg-main-particles') || ''
+      const arrMain = rawMain
+        .split(',')
+        .map((s) => parseInt(s.trim(), 10))
+        .filter((n) => Number.isFinite(n))
+      if (arrMain.length >= 3) {
+        emit('palette-change', [arrMain[0]!, arrMain[1]!, arrMain[2]!])
+      } else {
+        // Fallback to cover defaults or null
+        const r = parseInt(styles.getPropertyValue('--bg-cover-particles-r') || '0', 10)
+        const g = parseInt(styles.getPropertyValue('--bg-cover-particles-g') || '0', 10)
+        const b = parseInt(styles.getPropertyValue('--bg-cover-particles-b') || '0', 10)
+        if (Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)) {
+          emit('palette-change', [r, g, b])
+        } else {
+          emit('palette-change', null)
+        }
+      }
+    } catch {
+      emit('palette-change', null)
+    }
+  }
 
   nextTick(() => {
     const container = cardsContainerRef.value
@@ -661,15 +686,19 @@ const playCardSelection = (cardIndex: number) => {
       defaults: { ease: deckSpreadEase, duration: 0.8 },
       onComplete: () => {
         isAnimating.value = false
-      }
+      },
     })
 
     if (container) {
       // Move the whole container to the left
-      tl.to(container, {
-        x: -320, // Moved further left to give space for content
-        duration: 0.8
-      }, 0)
+      tl.to(
+        container,
+        {
+          x: -320, // Moved further left to give space for content
+          duration: 0.8,
+        },
+        0
+      )
     }
 
     // Set final stacking order immediately to avoid z-index animation conflicts
@@ -685,17 +714,21 @@ const playCardSelection = (cardIndex: number) => {
       // Calculate offset to move this card to the middle card's position
       // This ensures the stack always forms at the same visual location
       const offsetToTarget = middleRect.left - rect.left
-      
+
       // Tiny offset to show there are cards underneath (piling effect)
       const stackOffset = (index - cardIndex) * 3
 
-      tl.to(card, {
-        x: offsetToTarget + stackOffset,
-        scale: index === cardIndex ? 1.05 : 0.95,
-        opacity: 1, // Keep visible so we see the stack edges
-        rotation: (index - cardIndex) * 1.5, // Very slight rotation
-        force3D: true // Force hardware acceleration
-      }, 0)
+      tl.to(
+        card,
+        {
+          x: offsetToTarget + stackOffset,
+          scale: index === cardIndex ? 1.05 : 0.95,
+          opacity: 1, // Keep visible so we see the stack edges
+          rotation: (index - cardIndex) * 1.5, // Very slight rotation
+          force3D: true, // Force hardware acceleration
+        },
+        0
+      )
     })
 
     if (panel) {
@@ -739,7 +772,8 @@ const transitionToCover = (enter: boolean, coverKey?: string) => {
       gsap.set(cover, { opacity: 0, visibility: 'visible' })
       if (dimEl) gsap.set(dimEl, { opacity: 0, visibility: 'visible' })
       tl.to(cover, { opacity: 1, duration, ease: 'power2.inOut' }, 0)
-      if (dimEl) tl.to(dimEl, { opacity: Math.max(0, Math.min(1, dim)), duration, ease: 'power2.inOut' }, 0)
+      if (dimEl)
+        tl.to(dimEl, { opacity: Math.max(0, Math.min(1, dim)), duration, ease: 'power2.inOut' }, 0)
       if (mainBg) tl.to(mainBg, { opacity: mainOpacity, duration, ease: 'power2.inOut' }, 0)
     } else {
       // Fallback: animate cover opacity (no dim available)
@@ -755,11 +789,13 @@ const transitionToCover = (enter: boolean, coverKey?: string) => {
     }
   } else {
     // Animate dim overlay and cover out together
-    const tl = gsap.timeline({ onComplete: () => {
-      if (dimEl) gsap.set(dimEl, { visibility: 'hidden' })
-      gsap.set(cover, { visibility: 'hidden' })
-      if (mainBg) gsap.set(mainBg, { opacity: 1 })
-    }})
+    const tl = gsap.timeline({
+      onComplete: () => {
+        if (dimEl) gsap.set(dimEl, { visibility: 'hidden' })
+        gsap.set(cover, { visibility: 'hidden' })
+        if (mainBg) gsap.set(mainBg, { opacity: 1 })
+      },
+    })
     if (dimEl) tl.to(dimEl, { opacity: 0, duration, ease: 'power2.inOut' }, 0)
     tl.to(cover, { opacity: 0, duration, ease: 'power2.inOut' }, 0)
     if (mainBg) tl.to(mainBg, { opacity: 1, duration, ease: 'power2.inOut' }, 0)
@@ -792,8 +828,7 @@ watch(isAnimating, (val) => {
     <!-- Social links (top center) -->
     <div class="card-dealer__social" role="navigation" aria-label="Social links">
       <a
-        :href="props.socialLinks?.instagram || '#'
-        "
+        :href="props.socialLinks?.instagram || '#'"
         class="card-dealer__social-link"
         :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.instagram }"
         :aria-disabled="!props.socialLinks?.instagram"
@@ -802,16 +837,31 @@ watch(isAnimating, (val) => {
         rel="noopener noreferrer"
       >
         <!-- Instagram (outline) -->
-        <svg width="28" height="28" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" stroke-width="1.6" fill="none" />
+        <svg
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          preserveAspectRatio="xMidYMid meet"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+        >
+          <rect
+            x="3"
+            y="3"
+            width="18"
+            height="18"
+            rx="5"
+            stroke="currentColor"
+            stroke-width="1.6"
+            fill="none"
+          />
           <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.6" fill="none" />
           <circle cx="17.5" cy="6.5" r="0.8" stroke="currentColor" stroke-width="1.6" fill="none" />
         </svg>
       </a>
 
       <a
-        :href="props.socialLinks?.spotify || '#'
-        "
+        :href="props.socialLinks?.spotify || '#'"
         class="card-dealer__social-link"
         :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.spotify }"
         :aria-disabled="!props.socialLinks?.spotify"
@@ -820,20 +870,44 @@ watch(isAnimating, (val) => {
         rel="noopener noreferrer"
       >
         <!-- Spotify (three stepped arcs: top thicker, middle slightly thinner, bottom thinnest) -->
-        <svg width="28" height="28" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <svg
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          preserveAspectRatio="xMidYMid meet"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+        >
           <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6" fill="none" />
           <!-- Top arc: longest, thickest -->
-          <path d="M6.2 9.1 C9.4 7.2 14.6 7.2 17.8 9.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none" />
+          <path
+            d="M6.2 9.1 C9.4 7.2 14.6 7.2 17.8 9.1"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            fill="none"
+          />
           <!-- Middle arc: slightly shorter, medium thickness -->
-          <path d="M6.6 11.8 C9.4 10.4 14.6 10.4 17.2 11.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none" />
+          <path
+            d="M6.6 11.8 C9.4 10.4 14.6 10.4 17.2 11.8"
+            stroke="currentColor"
+            stroke-width="1.4"
+            stroke-linecap="round"
+            fill="none"
+          />
           <!-- Bottom arc: shortest, thinnest -->
-          <path d="M7.4 14.7 C9.3 13.7 14.4 13.7 16.3 14.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none" />
+          <path
+            d="M7.4 14.7 C9.3 13.7 14.4 13.7 16.3 14.7"
+            stroke="currentColor"
+            stroke-width="1.3"
+            stroke-linecap="round"
+            fill="none"
+          />
         </svg>
       </a>
 
       <a
-        :href="props.socialLinks?.youtube || '#'
-        "
+        :href="props.socialLinks?.youtube || '#'"
         class="card-dealer__social-link"
         :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.youtube }"
         :aria-disabled="!props.socialLinks?.youtube"
@@ -842,9 +916,32 @@ watch(isAnimating, (val) => {
         rel="noopener noreferrer"
       >
         <!-- YouTube (outline only) -->
-        <svg width="28" height="28" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect x="2" y="3" width="20" height="18" rx="3" stroke="currentColor" stroke-width="1.6" fill="none" />
-          <polygon points="10,9 16,12 10,15" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" fill="none" />
+        <svg
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          preserveAspectRatio="xMidYMid meet"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+        >
+          <rect
+            x="2"
+            y="3"
+            width="20"
+            height="18"
+            rx="3"
+            stroke="currentColor"
+            stroke-width="1.6"
+            fill="none"
+          />
+          <polygon
+            points="10,9 16,12 10,15"
+            stroke="currentColor"
+            stroke-width="1.4"
+            stroke-linejoin="round"
+            stroke-linecap="round"
+            fill="none"
+          />
         </svg>
       </a>
     </div>
@@ -860,9 +957,13 @@ watch(isAnimating, (val) => {
         src="../assets/images/cover.png"
         alt="Cover"
         class="card-dealer__bg-image card-dealer__bg-cover"
-        style="opacity:0; visibility:hidden"
+        style="opacity: 0; visibility: hidden"
       />
-      <div ref="coverDimRef" class="card-dealer__cover-dim" style="opacity:0; visibility:hidden; pointer-events:none"></div>
+      <div
+        ref="coverDimRef"
+        class="card-dealer__cover-dim"
+        style="opacity: 0; visibility: hidden; pointer-events: none"
+      ></div>
       <div class="card-dealer__overlay"></div>
     </div>
 
@@ -883,13 +984,13 @@ watch(isAnimating, (val) => {
         ref="cardsContainerRef"
         :class="[
           'card-dealer__cards',
-          { 'card-dealer__cards--content': currentView === 'content' }
+          { 'card-dealer__cards--content': currentView === 'content' },
         ]"
       >
         <MenuCard
           v-for="(item, index) in menuItems"
           :key="item.route"
-          :ref="el => setCardRef(el, index)"
+          :ref="(el) => setCardRef(el, index)"
           :title="item.title"
           :image="item.image"
           :route="item.route"
@@ -900,23 +1001,28 @@ watch(isAnimating, (val) => {
       </div>
 
       <!-- Content view (shown after card click) -->
-      <div
-        v-if="currentView === 'content'"
-        class="card-dealer__content-view"
-      >
+      <div v-if="currentView === 'content'" class="card-dealer__content-view">
         <div ref="contentPanelRef" class="card-dealer__content-panel">
           <!-- Music Player -->
-          <div v-if="selectedCard !== null && menuItems[selectedCard]?.title === 'Music'" class="card-dealer__music-content">
+          <div
+            v-if="selectedCard !== null && menuItems[selectedCard]?.title === 'Music'"
+            class="card-dealer__music-content"
+          >
             <AudioPlayer />
           </div>
-          
+
           <!-- Other content -->
           <div v-else>
             <h2 v-if="selectedCard !== null && selectedCard < menuItems.length">
               {{ menuItems[selectedCard]?.title }}
             </h2>
             <p>
-              Content for {{ selectedCard !== null && selectedCard < menuItems.length ? menuItems[selectedCard]?.title : '' }}
+              Content for
+              {{
+                selectedCard !== null && selectedCard < menuItems.length
+                  ? menuItems[selectedCard]?.title
+                  : ''
+              }}
             </p>
           </div>
         </div>
@@ -972,7 +1078,7 @@ watch(isAnimating, (val) => {
 .card-dealer__cover-dim {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,1);
+  background: rgba(0, 0, 0, 1);
   z-index: 2;
   pointer-events: none;
 }
@@ -1078,7 +1184,10 @@ watch(isAnimating, (val) => {
   border-radius: 10px;
   min-width: 44px;
   min-height: 44px;
-  transition: color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .card-dealer__social-link:hover {
@@ -1170,7 +1279,6 @@ watch(isAnimating, (val) => {
   .card-dealer__cards {
     gap: var(--spacing-lg);
   }
-
 }
 
 /* Mobile responsiveness */

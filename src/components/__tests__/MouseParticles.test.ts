@@ -25,11 +25,11 @@ describe('MouseParticles', () => {
       fill: vi.fn(),
       fillStyle: '',
       shadowBlur: 0,
-      shadowColor: ''
+      shadowColor: '',
     } as unknown as CanvasRenderingContext2D
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ; (HTMLCanvasElement.prototype.getContext as any) = vi.fn(() => mockContext)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(HTMLCanvasElement.prototype.getContext as any) = vi.fn(() => mockContext)
 
     wrapper = mount(MouseParticles)
   })

@@ -30,7 +30,7 @@ useGSAP(() => {
     duration: 0.8,
     repeat: -1,
     yoyo: true,
-    ease: 'sine.inOut'
+    ease: 'sine.inOut',
   })
 
   // Glowing effect (opacity/filter pulse)
@@ -39,7 +39,7 @@ useGSAP(() => {
     duration: 1.5,
     repeat: -1,
     yoyo: true,
-    ease: 'sine.inOut'
+    ease: 'sine.inOut',
   })
 })
 
@@ -51,28 +51,28 @@ function onClick() {
 <template>
   <div
     class="logo-effect"
-    :style="{ width: size + 'px', height: (size * 0.25) + 'px' }"
+    :style="{ width: size + 'px', height: size * 0.25 + 'px' }"
     ref="wrapperRef"
     role="img"
     aria-label="Frisches"
     @click="onClick"
   >
-    <svg 
-      :width="size" 
-      :height="size * 0.25" 
+    <svg
+      :width="size"
+      :height="size * 0.25"
       :viewBox="`0 0 ${size * 4} ${size}`"
-      xmlns="http://www.w3.org/2000/svg" 
+      xmlns="http://www.w3.org/2000/svg"
       preserveAspectRatio="xMidYMid meet"
-      style="width: 100%; height: 100%; display: block; overflow: visible;"
+      style="width: 100%; height: 100%; display: block; overflow: visible"
     >
-      <image 
+      <image
         ref="imageRef"
-        :href="logoHref" 
-        x="0" 
-        y="0" 
-        :width="size * 4" 
-        :height="size" 
-        preserveAspectRatio="xMidYMid meet" 
+        :href="logoHref"
+        x="0"
+        y="0"
+        :width="size * 4"
+        :height="size"
+        preserveAspectRatio="xMidYMid meet"
       />
     </svg>
   </div>

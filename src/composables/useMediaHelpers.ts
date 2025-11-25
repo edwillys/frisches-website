@@ -17,7 +17,7 @@ export function useLazyLoad(
     root: null,
     rootMargin: '50px',
     threshold: 0.1,
-    ...options
+    ...options,
   }
 
   onMounted(() => {
@@ -43,7 +43,7 @@ export function useLazyLoad(
 
   return {
     isVisible,
-    hasLoaded
+    hasLoaded,
   }
 }
 
@@ -83,7 +83,7 @@ export function useMediaQuery() {
   return {
     isMobile,
     isTablet,
-    isDesktop
+    isDesktop,
   }
 }
 
@@ -109,7 +109,7 @@ export function useReducedMotion() {
   })
 
   return {
-    prefersReducedMotion
+    prefersReducedMotion,
   }
 }
 
@@ -128,6 +128,6 @@ export function useTouchDevice() {
   })
 
   return {
-    isTouchDevice
+    isTouchDevice,
   }
 }

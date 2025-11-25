@@ -6,12 +6,12 @@ import MenuCard from '../MenuCard.vue'
 
 /**
  * CardDealer Component Tests
- * 
+ *
  * Card Animation Behavior:
  * - Opening: Two-phase animation
  *   1. All cards grow together from a single center point as a unified deck (no stagger)
  *   2. Cards then distribute to their left/right positions (with stagger from center)
- * 
+ *
  * - Closing: Inverse two-phase animation
  *   1. Cards gather from distributed positions back to center deck (stagger from edges)
  *   2. All cards shrink together to a single point (no stagger)
@@ -20,9 +20,9 @@ import MenuCard from '../MenuCard.vue'
 // Mock GSAP to avoid animation issues in tests
 const gsapMocks = vi.hoisted(() => {
   const timelineFromTo = vi.fn().mockReturnThis()
-  
+
   // We need to handle onStart/onComplete in timeline.to()
-  const timelineTo = vi.fn(function(this: unknown, _, vars: Record<string, unknown> = {}) {
+  const timelineTo = vi.fn(function (this: unknown, _, vars: Record<string, unknown> = {}) {
     if (vars && typeof vars.onStart === 'function') {
       vars.onStart()
     }
@@ -59,7 +59,7 @@ const gsapMocks = vi.hoisted(() => {
         fromTo: timelineFromTo,
         to: timelineTo,
         add: vi.fn().mockReturnThis(),
-        kill: vi.fn()
+        kill: vi.fn(),
       }
       // Bind timelineTo to this object so 'return this' works
       tl.to = timelineTo.bind(tl)
@@ -71,11 +71,10 @@ const gsapMocks = vi.hoisted(() => {
       return { revert: vi.fn() }
     }),
     matchMedia: vi.fn(() => ({
-      add: vi.fn()
-    }))
+      add: vi.fn(),
+    })),
   }
 })
-
 
 vi.mock('gsap', () => ({
   default: {
@@ -86,23 +85,23 @@ vi.mock('gsap', () => ({
     timeline: gsapMocks.timeline,
     context: gsapMocks.context,
     matchMedia: gsapMocks.matchMedia,
-    registerPlugin: gsapMocks.registerPlugin
-  }
+    registerPlugin: gsapMocks.registerPlugin,
+  },
 }))
 
 const customEaseMocks = vi.hoisted(() => ({
-  create: vi.fn(() => 'custom-ease')
+  create: vi.fn(() => 'custom-ease'),
 }))
 
 vi.mock('gsap/CustomEase', () => ({
   CustomEase: {
-    create: customEaseMocks.create
-  }
+    create: customEaseMocks.create,
+  },
 }))
 
 // Mock Vue Router
 const mockRouter = {
-  push: vi.fn()
+  push: vi.fn(),
 }
 
 describe('CardDealer', () => {
@@ -121,12 +120,12 @@ describe('CardDealer', () => {
         stubs: {
           MenuCard: true,
           LogoButton: true,
-          LogoEffect: true
+          LogoEffect: true,
         },
         mocks: {
-          $router: mockRouter
-        }
-      }
+          $router: mockRouter,
+        },
+      },
     })
 
     expect(wrapper.exists()).toBe(true)
@@ -138,12 +137,12 @@ describe('CardDealer', () => {
         stubs: {
           MenuCard: true,
           LogoButton: true,
-          LogoEffect: true
+          LogoEffect: true,
         },
         mocks: {
-          $router: mockRouter
-        }
-      }
+          $router: mockRouter,
+        },
+      },
     })
 
     // Frisches is in a hidden h1 inside a v-if div (only visible after moon click)
@@ -157,12 +156,12 @@ describe('CardDealer', () => {
         stubs: {
           MenuCard: true,
           LogoButton: true,
-          LogoEffect: true
+          LogoEffect: true,
         },
         mocks: {
-          $router: mockRouter
-        }
-      }
+          $router: mockRouter,
+        },
+      },
     })
 
     // Logo button wrapper should be visible initially
@@ -175,12 +174,12 @@ describe('CardDealer', () => {
     const wrapper = mount(CardDealer, {
       global: {
         stubs: {
-          MenuCard: true
+          MenuCard: true,
         },
         mocks: {
-          $router: mockRouter
-        }
-      }
+          $router: mockRouter,
+        },
+      },
     })
 
     const bgImage = wrapper.find('.card-dealer__bg-image')
@@ -192,9 +191,9 @@ describe('CardDealer', () => {
     const wrapper = mount(CardDealer, {
       global: {
         mocks: {
-          $router: mockRouter
-        }
-      }
+          $router: mockRouter,
+        },
+      },
     })
 
     // Cards are mounted but hidden until logo click
@@ -207,9 +206,9 @@ describe('CardDealer', () => {
     const wrapper = mount(CardDealer, {
       global: {
         mocks: {
-          $router: mockRouter
-        }
-      }
+          $router: mockRouter,
+        },
+      },
     })
 
     const cards = wrapper.findAllComponents(MenuCard)
@@ -233,9 +232,9 @@ describe('CardDealer', () => {
     const wrapper = mount(CardDealer, {
       global: {
         mocks: {
-          $router: mockRouter
-        }
-      }
+          $router: mockRouter,
+        },
+      },
     })
 
     expect(wrapper.find('.card-dealer').exists()).toBe(true)
@@ -249,12 +248,12 @@ describe('CardDealer', () => {
     const wrapper = mount(CardDealer, {
       global: {
         stubs: {
-          MenuCard: true
+          MenuCard: true,
         },
         mocks: {
-          $router: mockRouter
-        }
-      }
+          $router: mockRouter,
+        },
+      },
     })
 
     expect(wrapper.find('.card-dealer__overlay').exists()).toBe(true)
@@ -262,11 +261,11 @@ describe('CardDealer', () => {
 
   it('shows cards after clicking the logo with two-phase animation: deck grows from point, then cards distribute', async () => {
     const wrapper = mount(CardDealer, {
-      attachTo: document.body
+      attachTo: document.body,
     })
 
     await wrapper.find('.logo-button').trigger('click')
-    
+
     // Wait for the overlap timeout (400ms) + buffer
     await vi.advanceTimersByTimeAsync(1000)
     await nextTick()
@@ -279,7 +278,7 @@ describe('CardDealer', () => {
 
   it('stacks cards behind the lead card before spreading', async () => {
     const wrapper = mount(CardDealer, {
-      attachTo: document.body
+      attachTo: document.body,
     })
 
     await wrapper.find('.logo-button').trigger('click')
@@ -289,7 +288,7 @@ describe('CardDealer', () => {
     // Check z-index settings
     const setCalls = gsapMocks.set.mock.calls
     const zIndexCalls = setCalls.filter(([, vars]) => vars && typeof vars.zIndex === 'number')
-    
+
     // We expect calls setting zIndex. Lead card (index 1) should be 50. Others < 50.
     const leadCardZIndex = zIndexCalls.find(([, vars]) => vars.zIndex === 50)
     const otherCardZIndex = zIndexCalls.find(([, vars]) => vars.zIndex < 50)
@@ -302,7 +301,7 @@ describe('CardDealer', () => {
 
   it('ensures all cards are visible during the deck growth phase', async () => {
     const wrapper = mount(CardDealer, {
-      attachTo: document.body
+      attachTo: document.body,
     })
 
     await wrapper.find('.logo-button').trigger('click')
@@ -312,7 +311,7 @@ describe('CardDealer', () => {
     const visibilityCalls = gsapMocks.set.mock.calls.filter(([, vars]) =>
       Boolean(vars && Object.prototype.hasOwnProperty.call(vars, 'visibility'))
     )
-    
+
     // We expect visibility to be set to 'visible' (from setDeckMask(false))
     const visibleCalls = visibilityCalls.filter(([, vars]) => vars?.visibility === 'visible')
     const hiddenCalls = visibilityCalls.filter(([, vars]) => vars?.visibility === 'hidden')
@@ -325,7 +324,7 @@ describe('CardDealer', () => {
 
   it('keeps cards mounted while viewing content', async () => {
     const wrapper = mount(CardDealer, {
-      attachTo: document.body
+      attachTo: document.body,
     })
 
     await wrapper.find('.logo-button').trigger('click')
@@ -352,7 +351,7 @@ describe('CardDealer', () => {
 
   it('animates card stack and content fade when selecting a card', async () => {
     const wrapper = mount(CardDealer, {
-      attachTo: document.body
+      attachTo: document.body,
     })
 
     await wrapper.find('.logo-button').trigger('click')
@@ -381,7 +380,7 @@ describe('CardDealer', () => {
 
   it('clicking outside cards returns to logo view with inverse animation: cards gather to center, then shrink to point', async () => {
     const wrapper = mount(CardDealer, {
-      attachTo: document.body
+      attachTo: document.body,
     })
 
     await wrapper.find('.logo-button').trigger('click')
@@ -401,7 +400,7 @@ describe('CardDealer', () => {
 
   it('clicking overlay outside the content panel returns to cards view', async () => {
     const wrapper = mount(CardDealer, {
-      attachTo: document.body
+      attachTo: document.body,
     })
 
     await wrapper.find('.logo-button').trigger('click')
@@ -430,7 +429,7 @@ describe('CardDealer', () => {
 
   it('ignores inside-content pointer events while content is visible', async () => {
     const wrapper = mount(CardDealer, {
-      attachTo: document.body
+      attachTo: document.body,
     })
 
     await wrapper.find('.logo-button').trigger('click')

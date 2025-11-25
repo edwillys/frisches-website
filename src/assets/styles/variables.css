@@ -49,13 +49,13 @@
   /* Per-background tweakable parameters */
   /* Cover (about) background target opacity when shown */
   --bg-cover-target-opacity: 0.8;
-    /* Per-cover dim (overlay darkness applied on top of the cover image)
+  /* Per-cover dim (overlay darkness applied on top of the cover image)
       Use a value between 0 (no dim) and 1 (fully black). These are preferred
       over lowering cover opacity to avoid the previous image showing through. */
-    --bg-cover-dim: 0.36;
-    --bg-cover-about-dim: 0.36;
-    --bg-cover-music-dim: 0.28;
-    --bg-cover-tour-dim: 0.30;
+  --bg-cover-dim: 0.36;
+  --bg-cover-about-dim: 0.36;
+  --bg-cover-music-dim: 0.28;
+  --bg-cover-tour-dim: 0.3;
   /* Per-cover opacity overrides (0.0 - 1.0) */
   --bg-cover-about-opacity: 0.5;
   /* About cover default */

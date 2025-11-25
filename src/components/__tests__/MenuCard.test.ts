@@ -7,12 +7,12 @@ describe('MenuCard', () => {
     title: 'Music',
     image: '/test-image.jpg',
     route: '/music',
-    index: 0
+    index: 0,
   }
 
   it('renders properly with required props', () => {
     const wrapper = mount(MenuCard, {
-      props: defaultProps
+      props: defaultProps,
     })
 
     expect(wrapper.exists()).toBe(true)
@@ -21,7 +21,7 @@ describe('MenuCard', () => {
 
   it('applies background image style', () => {
     const wrapper = mount(MenuCard, {
-      props: defaultProps
+      props: defaultProps,
     })
 
     const cardElement = wrapper.find('.menu-card')
@@ -32,7 +32,7 @@ describe('MenuCard', () => {
 
   it('emits click event with route when clicked', async () => {
     const wrapper = mount(MenuCard, {
-      props: defaultProps
+      props: defaultProps,
     })
 
     await wrapper.find('.menu-card').trigger('click')
@@ -43,7 +43,7 @@ describe('MenuCard', () => {
 
   it('adds hover class on mouse enter', async () => {
     const wrapper = mount(MenuCard, {
-      props: defaultProps
+      props: defaultProps,
     })
 
     const card = wrapper.find('.menu-card')
@@ -54,7 +54,7 @@ describe('MenuCard', () => {
 
   it('removes hover class on mouse leave', async () => {
     const wrapper = mount(MenuCard, {
-      props: defaultProps
+      props: defaultProps,
     })
 
     const card = wrapper.find('.menu-card')
@@ -67,7 +67,7 @@ describe('MenuCard', () => {
 
   it('displays title in uppercase', () => {
     const wrapper = mount(MenuCard, {
-      props: defaultProps
+      props: defaultProps,
     })
 
     const title = wrapper.find('.menu-card__title')
@@ -80,8 +80,8 @@ describe('MenuCard', () => {
       props: {
         title: 'About',
         image: '/about.jpg',
-        route: '/about'
-      }
+        route: '/about',
+      },
     })
 
     expect(wrapper.props('index')).toBe(0)

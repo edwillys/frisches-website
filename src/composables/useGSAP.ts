@@ -20,7 +20,7 @@ export function useGSAP(animationFn: () => void) {
   })
 
   return {
-    context: ctx
+    context: ctx,
   }
 }
 
@@ -47,7 +47,7 @@ export function useCardDealAnimation(
       opacity: 0,
       y: 100,
       rotation: -15,
-      scale: 0.8
+      scale: 0.8,
     })
 
     // Deal cards animation
@@ -59,7 +59,7 @@ export function useCardDealAnimation(
       duration,
       stagger,
       delay,
-      ease: 'back.out(1.4)'
+      ease: 'back.out(1.4)',
     })
   })
 }
@@ -79,7 +79,7 @@ export function useCardHoverAnimation(cardElement: Ref<HTMLElement | null>) {
       scale: 1.05,
       rotation: 2,
       duration: 0.3,
-      ease: 'power2.out'
+      ease: 'power2.out',
     })
   }
 
@@ -92,7 +92,7 @@ export function useCardHoverAnimation(cardElement: Ref<HTMLElement | null>) {
       scale: 1,
       rotation: 0,
       duration: 0.3,
-      ease: 'power2.out'
+      ease: 'power2.out',
     })
   }
 
@@ -102,7 +102,7 @@ export function useCardHoverAnimation(cardElement: Ref<HTMLElement | null>) {
 
   return {
     onMouseEnter,
-    onMouseLeave
+    onMouseLeave,
   }
 }
 
@@ -122,7 +122,7 @@ export function useResponsiveGSAP(animations: {
       {
         mobile: '(max-width: 767px)',
         tablet: '(min-width: 768px) and (max-width: 1023px)',
-        desktop: '(min-width: 1024px)'
+        desktop: '(min-width: 1024px)',
       },
       (context) => {
         const { mobile, tablet, desktop } = context.conditions as {
@@ -166,7 +166,7 @@ export function useFadeIn(
       y,
       duration,
       delay,
-      ease: 'power2.out'
+      ease: 'power2.out',
     })
   })
 }

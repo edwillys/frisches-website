@@ -275,20 +275,23 @@ npm install --save-dev husky lint-staged
 npx husky init
 ```
 
-2. Add the pre-commit hook:
+The `.husky/pre-commit` hook is already included in the repository and configured to run `npx lint-staged`.
 
-```powershell
-npx husky add .husky/pre-commit "npx lint-staged"
-```
-
-3. The repository includes a `lint-staged` configuration in `package.json` that will run on staged files.
-
-4. What the hook does:
+2. What the hook does:
 
 - Runs `eslint --fix` and `prettier --write` on staged JS/TS/Vue files.
 - Runs `prettier --write` on staged CSS/SCSS/Markdown/JSON files.
 
-5. Note about editor settings:
+3. Test the hook:
+
+```powershell
+git add src/somefile.ts
+git commit -m "test"
+```
+
+The pre-commit hook should run automatically and auto-fix any lint/format issues.
+
+4. Note about editor settings:
 
 - Do not enable `formatOnSave` in your editor for this project (we prefer hooking formatting via `pre-commit`), but you may enable ESLint auto-fix on save if desired. The repo already includes `prettier` and ESLint rules to maintain consistent style.
 

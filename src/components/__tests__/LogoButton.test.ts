@@ -8,7 +8,7 @@ const gsapMocks = vi.hoisted(() => {
   const timelineInstance = {
     to: timelineStep,
     fromTo: timelineStep,
-    kill: vi.fn()
+    kill: vi.fn(),
   }
   const timeline = vi.fn(() => timelineInstance)
 
@@ -19,7 +19,7 @@ const gsapMocks = vi.hoisted(() => {
     context: vi.fn((fn?: () => void) => {
       fn?.()
       return { revert: vi.fn() }
-    })
+    }),
   }
 })
 
@@ -27,8 +27,8 @@ vi.mock('gsap', () => ({
   default: {
     to: gsapMocks.to,
     timeline: gsapMocks.timeline,
-    context: gsapMocks.context
-  }
+    context: gsapMocks.context,
+  },
 }))
 
 describe('LogoButton', () => {

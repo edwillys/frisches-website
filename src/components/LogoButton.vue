@@ -43,7 +43,7 @@ onMounted(() => {
     duration: 2.5, // Slower duration
     ease: 'sine.inOut',
     repeat: -1,
-    yoyo: true
+    yoyo: true,
   })
 })
 
@@ -52,17 +52,33 @@ onBeforeUnmount(() => {
 })
 
 defineExpose({
-  rootEl: wrapperRef
+  rootEl: wrapperRef,
 })
 </script>
 
 <template>
-  <div ref="wrapperRef" class="logo-button" :style="{ width: size + 'px', height: size + 'px' }" role="button"
-    tabindex="0" aria-label="Frisches - Click to reveal menu" @click="onClick" @keydown.enter="onClick"
-    @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
-    <div ref="glowRef" class="logo-button__glow" :style="{ width: GLOW_SIZE + 'px', height: GLOW_SIZE + 'px' }"></div>
+  <div
+    ref="wrapperRef"
+    class="logo-button"
+    :style="{ width: size + 'px', height: size + 'px' }"
+    role="button"
+    tabindex="0"
+    aria-label="Frisches - Click to reveal menu"
+    @click="onClick"
+    @keydown.enter="onClick"
+    @mouseenter="onMouseEnter"
+    @mouseleave="onMouseLeave"
+  >
+    <div
+      ref="glowRef"
+      class="logo-button__glow"
+      :style="{ width: GLOW_SIZE + 'px', height: GLOW_SIZE + 'px' }"
+    ></div>
 
-    <div class="logo-button__circle" :style="{ width: CIRCLE_SIZE + 'px', height: CIRCLE_SIZE + 'px' }"></div>
+    <div
+      class="logo-button__circle"
+      :style="{ width: CIRCLE_SIZE + 'px', height: CIRCLE_SIZE + 'px' }"
+    ></div>
 
     <!-- Logo inside circle -->
     <div class="logo-button__content">
@@ -95,7 +111,12 @@ defineExpose({
 }
 
 .logo-button__glow {
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, rgba(220, 20, 60, 0.4) 50%, transparent 100%);
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.6) 0%,
+    rgba(220, 20, 60, 0.4) 50%,
+    transparent 100%
+  );
   filter: blur(16px);
   opacity: 0.4;
 }

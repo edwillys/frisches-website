@@ -7,7 +7,7 @@ describe('CardDealer social links', () => {
     const socialLinks = {
       instagram: 'https://instagram.com/frisches',
       spotify: 'https://open.spotify.com/artist/example',
-      youtube: ''
+      youtube: '',
     }
 
     const wrapper = mount(CardDealer, {
@@ -16,9 +16,9 @@ describe('CardDealer social links', () => {
         stubs: {
           MenuCard: true,
           LogoButton: true,
-          AudioPlayer: true
-        }
-      }
+          AudioPlayer: true,
+        },
+      },
     })
 
     const anchors = wrapper.findAll('.card-dealer__social-link')

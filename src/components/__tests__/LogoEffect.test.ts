@@ -7,8 +7,8 @@ vi.mock('gsap', () => ({
   default: {
     to: vi.fn(),
     from: vi.fn(),
-    context: vi.fn(() => ({ revert: vi.fn() }))
-  }
+    context: vi.fn(() => ({ revert: vi.fn() })),
+  },
 }))
 
 describe('LogoEffect', () => {
@@ -16,8 +16,8 @@ describe('LogoEffect', () => {
     const wrapper = mount(LogoEffect, {
       props: {
         size: 240,
-        mode: 'animated'
-      }
+        mode: 'animated',
+      },
     })
 
     expect(wrapper.exists()).toBe(true)
