@@ -245,6 +245,28 @@ frisches-website/
 - CI will run the same checks; ensure your branch is free of lint/type errors to avoid CI failures.
 - When adding new components or modifying existing ones, include a local run of these checks as part of your pre-commit routine.
 
+### Pre-commit hooks (Husky + lint-staged)
+We recommend using `husky` + `lint-staged` to automatically run linters and formatters on staged files.
+
+1. Install the tools locally (one-time):
+
+```powershell
+npm install --save-dev husky lint-staged
+npm run prepare
+# This will create the .husky/ directory and activate the hooks when you run it locally
+```
+
+2. The repository includes a `lint-staged` configuration in `package.json` and a `.husky/pre-commit` hook that runs `npx lint-staged`.
+
+3. What the hook does:
+- Runs `eslint --fix` and `prettier --write` on staged JS/TS/Vue files.
+- Runs `prettier --write` on staged CSS/SCSS/Markdown/JSON files.
+
+4. Note about editor settings:
+- Do not enable `formatOnSave` in your editor for this project (we prefer hooking formatting via `pre-commit`), but you may enable ESLint auto-fix on save if desired. The repo already includes `prettier` and ESLint rules to maintain consistent style.
+
+If you want me to add `husky` and `lint-staged` to `devDependencies` and fully enable the prepare step automatically in CI, say so and I will update `package.json` accordingly.
+
 ### Testing Guide
 
 #### Running Unit Tests Locally
