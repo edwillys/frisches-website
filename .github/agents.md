@@ -237,6 +237,14 @@ frisches-website/
 - Run with coverage: `npm run test:coverage`
 - Ensure tests pass before committing: tests verify functionality, props, events, and responsive behavior
 
+### Linting & Type Checking Requirement (CI parity)
+- Before merging, run linting and type checks locally and fix any issues to match CI expectations.
+- Commands to run locally:
+  - `npm run lint` (runs ESLint and applies `--fix` where safe)
+  - `npm run type-check` (runs `vue-tsc` to validate TypeScript across `.vue` files)
+- CI will run the same checks; ensure your branch is free of lint/type errors to avoid CI failures.
+- When adding new components or modifying existing ones, include a local run of these checks as part of your pre-commit routine.
+
 ### Testing Guide
 
 #### Running Unit Tests Locally

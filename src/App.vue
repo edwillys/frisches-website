@@ -31,7 +31,7 @@ function handlePaletteChange(payload: number[] | null) {
       } else {
         mouseParticlesRef.value.setParticleColor?.(220, 40, 40)
       }
-    } catch (err) {
+    } catch {
       mouseParticlesRef.value.setParticleColor?.(220, 40, 40)
     }
   } else {

@@ -549,7 +549,7 @@ const playContentCloseAndCardsReturn = () => {
             emit('palette-change', null)
           }
         }
-      } catch (err) {
+      } catch {
         emit('palette-change', null)
       }
       isAnimating.value = false
@@ -625,7 +625,7 @@ const playCardSelection = (cardIndex: number) => {
             emit('palette-change', null)
           }
         }
-      } catch (err) {
+      } catch {
         emit('palette-change', null)
       }
     } else {
@@ -648,7 +648,7 @@ const playCardSelection = (cardIndex: number) => {
             emit('palette-change', null)
           }
         }
-      } catch (err) {
+      } catch {
         emit('palette-change', null)
       }
     }
