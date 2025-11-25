@@ -16,7 +16,7 @@
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix --cache",
     "format": "prettier --write src/",
-    "prepare": "husky install"
+    "prepare": "husky"
   },
   "dependencies": {
     "gsap": "^3.13.0",

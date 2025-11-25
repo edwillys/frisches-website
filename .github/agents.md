@@ -1,9 +1,11 @@
 # Agents and Website Plan for Frisches
 
 ## Project Overview
+
 We are building a dynamic website for the rock band **Frisches** using Vue.js. The design and mood will be inspired by images and video snippets from the band's animated clip for the song "Witch Hunting." The color palette and atmosphere will be derived from these resources to create a mysterious and engaging experience.
 
 ## Home Screen Concept
+
 - The initial screen will feature the mysterious card dealer from `Intro_Voyante_00020.jpg` (also seen in the video clips).
 - The dealer will present a set of cards, each representing a menu option:
   - Music
@@ -15,9 +17,11 @@ We are building a dynamic website for the rock band **Frisches** using Vue.js. T
 ## Visual Effects
 
 ### Luminescent Dust Particles (MouseParticles Component)
+
 The website features an ambient particle system that creates a luminescent dust effect inspired by the floating particles from Stranger Things, adding a mystical atmosphere to the entire experience.
 
 **Core Behavior:**
+
 - **Ambient Floating**: 100 particles continuously float across the screen with physics-based motion
   - Gravity pulls particles down subtly (0.01)
   - Buoyancy pushes them up (0.015), creating a natural floating effect
@@ -25,6 +29,7 @@ The website features an ambient particle system that creates a luminescent dust 
   - Particles wrap around screen edges for seamless, infinite floating
 
 **Visual Characteristics:**
+
 - **Size**: Random sizes between 0.4px and 2.0px for depth variation
 - **Shape**: Slightly irregular shapes (not perfect circles) with 6-sided polygons and 0.35 irregularity factor
 - **Color**: Red theme matching band aesthetic (RGB: 220, 40, 40) with ±10 variance for subtle variation
@@ -34,11 +39,11 @@ The website features an ambient particle system that creates a luminescent dust 
   - Independent phase for each particle creating organic, random pulsing
 
 **Mouse Interaction:**
+
 - **Speed-Based Attraction**: Particles near the cursor (within 180px radius) are attracted when the mouse moves
   - Attraction strength is proportional to cursor speed (faster movement = stronger pull)
   - Only particles close to the mouse path are affected
   - Spawning rate proportional to cursor speed
-  
 - **Dust Trace Effect**: Fast cursor movements create a visible trail of accumulated particles
   - New particles spawn at cursor position during movement
   - Attracted particles follow the cursor path
@@ -50,25 +55,25 @@ The website features an ambient particle system that creates a luminescent dust 
   - Ensures most particles remain freely floating in the background
 
 **Logo Button Interaction:**
+
 - **Hover Attraction**: When the user hovers over the logo button, 30% of particles are attracted to orbit around it
   - Particles smoothly transition to circular orbit paths around the button
   - Orbit radius: 100px ± 20px variance for natural, layered effect
   - Fast transition duration (10 frames) creates immediate, responsive feel
   - Each particle maintains its own orbital angle and speed (0.005-0.008 radians/frame)
   - Particles closest to the button are selected first for attraction
-  
 - **Automatic Dispersion**: When the logo button is clicked or becomes invisible
   - `hideLogoButton()` method is called via CardDealer → App → MouseParticles
   - All attracted particles immediately begin dispersing
   - Particles transition back to natural floating physics with gradual deceleration
   - Creates a magical effect where particles scatter as the logo disappears
-  
-- **State Management**: 
+- **State Management**:
   - Tracks `logoButtonVisible` and `logoButtonHovered` states independently
   - Only attracts particles when button is both visible AND hovered
   - Ensures particles disperse when either condition becomes false
 
 **Implementation Details:**
+
 - Canvas-based rendering with device pixel ratio optimization (max 2x)
 - Fixed position overlay with `pointer-events: none` for non-intrusive interaction
 - `mix-blend-mode: screen` for additive glow effect
@@ -86,6 +91,7 @@ The website features an ambient particle system that creates a luminescent dust 
   - `COLOR` (RGB), `COLOR_VARIANCE`
 
 **Testing:**
+
 - Comprehensive unit tests in `src/components/__tests__/MouseParticles.test.ts`
 - Tests cover:
   - Component rendering and canvas element presence
@@ -97,6 +103,7 @@ The website features an ambient particle system that creates a luminescent dust 
 
 **Design Philosophy:**
 The effect maintains a balance between ambient atmosphere and interactive feedback:
+
 - Particles freely float to create consistent ambient atmosphere
 - Responsive to both mouse movement and logo button interactions
 - Logo hover creates a focused, magical gathering effect
@@ -106,6 +113,7 @@ The effect maintains a balance between ambient atmosphere and interactive feedba
 ## Website User Flow
 
 ### Initial State (Logo View)
+
 1. **User lands on the website**
    - Dark, mysterious background with gradient overlay
    - Background artwork gently pulses/zooms to create a breathing effect
@@ -116,6 +124,7 @@ The effect maintains a balance between ambient atmosphere and interactive feedba
    - Minimal, clean, mysterious aesthetic matching "Witch Hunting" theme
 
 ### Logo Click → Cards Reveal (Logo to Cards Transition)
+
 2. **User clicks the logo circle**
    - Logo animates: Moves to the center of the screen.
    - Logo animates: 360° rotation with scale shrink (fan closing effect)
@@ -128,6 +137,7 @@ The effect maintains a balance between ambient atmosphere and interactive feedba
    - All 3 cards are now visible and clickable
 
 ### Cards View (Exploration)
+
 3. **User explores the three menu cards**
    - Cards are positioned horizontally in center of screen
    - Each card shows title and background image with gradient overlay
@@ -136,6 +146,7 @@ The effect maintains a balance between ambient atmosphere and interactive feedba
    - Clicking outside cards returns to logo view (click-outside detection)
 
 ### Card Click → Content View (Card Selection)
+
 4. **User clicks a specific card (e.g., "Music")**
    - Selected card animates: glides to a fixed position on the left (aligned with where the middle card would be), regardless of which card was clicked.
    - Other cards smoothly close their gaps and stack behind the active card with progressively smaller offsets (opacity 0.4–0.6)
@@ -144,16 +155,18 @@ The effect maintains a balance between ambient atmosphere and interactive feedba
    - Now in "content" view showing information about selected section
 
 ### Content View (Information)
+
 5. **User views content in content view**
    - Content placeholder shows selected card's title and information
    - Background remains visible with overlay
-    - Selected card stack stays on the left so the user keeps context of their selection
-    - Full-screen overlay listens for outside clicks (while the content panel itself blocks propagation)
-    - Two ways to exit:
-       - Click outside content panel (on overlay/background) → returns cards to original grid
-     - Navigate to different section → replaces content
+   - Selected card stack stays on the left so the user keeps context of their selection
+   - Full-screen overlay listens for outside clicks (while the content panel itself blocks propagation)
+   - Two ways to exit:
+     - Click outside content panel (on overlay/background) → returns cards to original grid
+   - Navigate to different section → replaces content
 
 ### Return to Cards (Content Close)
+
 6. **User clicks outside the content area**
    - Content view fades/closes while the left-hand stack eases back toward center
    - Cards glide back to horizontal grid layout with reversing offsets
@@ -162,6 +175,7 @@ The effect maintains a balance between ambient atmosphere and interactive feedba
    - Back in "cards" view
 
 ### Return to Logo (Cards Close)
+
 7. **User clicks outside cards area (on background)**
    - **Phase 1 (Gather):** Cards animate back into a single deck at the center (Inverse of Distribution).
    - **Phase 2 (Disappear):** Once gathered, the deck shrinks and fades away as a single unit (Inverse of Appearance).
@@ -173,6 +187,7 @@ The effect maintains a balance between ambient atmosphere and interactive feedba
    - Back in "logo" view - cycle complete
 
 ### State Summary
+
 - **Logo View**: Only logo visible, user entry point
 - **Cards View**: Three menu cards side-by-side, user can explore or click outside to go back
 - **Content View**: Detailed content for selected card, can close to return to cards or click outside
@@ -180,6 +195,7 @@ The effect maintains a balance between ambient atmosphere and interactive feedba
 - **Click Detection**: Click-outside detection on semi-transparent overlay (z-index: 2) enables seamless navigation
 
 ### User Journey Visualization
+
 ```
 [Logo View]
     ↓ (Click Logo)
@@ -193,6 +209,7 @@ The effect maintains a balance between ambient atmosphere and interactive feedba
 ```
 
 ## Next Steps
+
 1. Analyze the colors and mood from the provided images and videos.
 2. Design and develop the home screen layout with the card dealer and menu cards as a proof of concept. Only proceed to further steps once the home screen meets expectations.
 3. Organize the folder tree structure as a typical Vue project, including configuration for GitHub Actions to enable CI/CD.
@@ -231,6 +248,7 @@ frisches-website/
 ## Development Guidelines
 
 ### Testing Requirements
+
 - **All features must have tests implemented before merging**
 - Component tests in `src/components/__tests__/`
 - Use Vitest for unit tests: `npm run test:unit`
@@ -238,6 +256,7 @@ frisches-website/
 - Ensure tests pass before committing: tests verify functionality, props, events, and responsive behavior
 
 ### Linting & Type Checking Requirement (CI parity)
+
 - Before merging, run linting and type checks locally and fix any issues to match CI expectations.
 - Commands to run locally:
   - `npm run lint` (runs ESLint and applies `--fix` where safe)
@@ -246,32 +265,39 @@ frisches-website/
 - When adding new components or modifying existing ones, include a local run of these checks as part of your pre-commit routine.
 
 ### Pre-commit hooks (Husky + lint-staged)
+
 We recommend using `husky` + `lint-staged` to automatically run linters and formatters on staged files.
 
 1. Install the tools locally (one-time):
 
 ```powershell
 npm install --save-dev husky lint-staged
-npm run prepare
-# This will create the .husky/ directory and activate the hooks when you run it locally
+npx husky init
 ```
 
-2. The repository includes a `lint-staged` configuration in `package.json` and a `.husky/pre-commit` hook that runs `npx lint-staged`.
+2. Add the pre-commit hook:
 
-3. What the hook does:
+```powershell
+npx husky add .husky/pre-commit "npx lint-staged"
+```
+
+3. The repository includes a `lint-staged` configuration in `package.json` that will run on staged files.
+
+4. What the hook does:
+
 - Runs `eslint --fix` and `prettier --write` on staged JS/TS/Vue files.
 - Runs `prettier --write` on staged CSS/SCSS/Markdown/JSON files.
 
-4. Note about editor settings:
-- Do not enable `formatOnSave` in your editor for this project (we prefer hooking formatting via `pre-commit`), but you may enable ESLint auto-fix on save if desired. The repo already includes `prettier` and ESLint rules to maintain consistent style.
+5. Note about editor settings:
 
-If you want me to add `husky` and `lint-staged` to `devDependencies` and fully enable the prepare step automatically in CI, say so and I will update `package.json` accordingly.
+- Do not enable `formatOnSave` in your editor for this project (we prefer hooking formatting via `pre-commit`), but you may enable ESLint auto-fix on save if desired. The repo already includes `prettier` and ESLint rules to maintain consistent style.
 
 ### Testing Guide
 
 #### Running Unit Tests Locally
 
 **Quick start:**
+
 ```powershell
 # Windows PowerShell - from project root
 cd C:\Users\Edgar\Documents\frischesweb\frisches-website
@@ -279,6 +305,7 @@ npm run test:unit
 ```
 
 **Command-line options:**
+
 ```sh
 # Run tests once and exit
 npm run test:unit -- --run
@@ -299,11 +326,13 @@ npx vitest --coverage
 #### Using VS Code Testing Interface (Recommended)
 
 **Setup:**
+
 1. Install **Vitest** extension: Search "Vitest" in Extensions sidebar
 2. Install **Vitest Explorer** extension for visual test runner
 3. Once installed, click the **Testing** icon (beaker/flask) in the left sidebar
 
 **Using the interface:**
+
 - Tests auto-discover from `src/**/__tests__/` and `src/**/*.test.ts`
 - Click ▶️ next to a test file or individual test to run
 - Watch mode: Click ▶️ with refresh icon at top of Test Explorer
@@ -311,6 +340,7 @@ npx vitest --coverage
 - Click on a failed test to jump to the error
 
 **Current test files:**
+
 - `src/components/__tests__/CardDealer.test.ts` - Main component (8 tests)
 - `src/components/__tests__/MenuCard.test.ts` - Menu card component (7 tests)
 - `src/components/__tests__/LogoEffect.test.ts` - Logo animation (1 test)
@@ -320,6 +350,7 @@ npx vitest --coverage
 #### Test Organization
 
 Tests follow Vue Test Utils best practices:
+
 - Use `mount()` to render components
 - Mock external dependencies (Router, GSAP)
 - Test props, events, DOM structure, and responsive layout
@@ -328,11 +359,13 @@ Tests follow Vue Test Utils best practices:
 #### E2E Testing with Playwright
 
 **Setup (first time):**
+
 ```sh
 npx playwright install
 ```
 
 **Running E2E tests:**
+
 ```sh
 npm run test:e2e                    # Run all tests
 npm run test:e2e -- --project=chromium  # Chromium only
@@ -341,6 +374,7 @@ npm run test:e2e -- tests/example.spec.ts  # Specific file
 ```
 
 **Using VS Code:**
+
 1. Install **Playwright Test for VS Code** extension
 2. Open Testing panel (beaker icon)
 3. Select "Playwright" from test provider dropdown
@@ -349,11 +383,13 @@ npm run test:e2e -- tests/example.spec.ts  # Specific file
 #### CI/CD Testing
 
 Tests run automatically on:
+
 - **Push to main**: GitHub Actions CI workflow
 - **Pull requests**: Validation before merge
 - See `.github/workflows/ci.yml` for details
 
 ### Code Quality
+
 - Mobile responsiveness is essential; the website must look and function well on all devices
 - The design should be creative and minimalistic, maintaining a unique and engaging experience inspired by the band's media resources
 - Use TypeScript for type safety
@@ -361,12 +397,15 @@ Tests run automatically on:
 - Write meaningful component and function names
 
 ### Git Workflow
+
 See `.github/prompts/git-workflow.prompt.md` for detailed git commands and workflow guidelines.
 
 ### Media Files
+
 - Videos (`.mp4`) are gitignored until compressed
 - Images are committed with descriptive names
 - Large media files should eventually use CDN (DigitalOcean Spaces)
 
 ---
+
 This file will be updated as the project progresses to document agents, features, and design decisions.
