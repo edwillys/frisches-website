@@ -34,6 +34,7 @@ const gsapMocks = vi.hoisted(() => {
 
   return {
     set: vi.fn(),
+    getProperty: vi.fn(() => 0),
     to: vi.fn((_, vars: Record<string, unknown> = {}) => {
       if (typeof vars.onStart === 'function') {
         vars.onStart()
@@ -51,7 +52,8 @@ const gsapMocks = vi.hoisted(() => {
     registerPlugin: vi.fn(),
     timelineFromTo,
     timelineTo,
-    timeline: vi.fn((config?: { onComplete?: () => void }) => {
+    timeline: vi.fn((config?: { onStart?: () => void; onComplete?: () => void }) => {
+      config?.onStart?.()
       config?.onComplete?.()
       // We need to return an object that has 'to' pointing to our enhanced timelineTo
       // And we need to ensure chaining works.
@@ -80,6 +82,7 @@ vi.mock('gsap', () => ({
   default: {
     set: gsapMocks.set,
     to: gsapMocks.to,
+    getProperty: gsapMocks.getProperty,
     from: vi.fn(),
     delayedCall: gsapMocks.delayedCall,
     timeline: gsapMocks.timeline,
@@ -366,14 +369,16 @@ describe('CardDealer', () => {
     await firstCard.trigger('click')
     await nextTick()
 
-    const containerEl = wrapper.find('.card-dealer__cards').element
-    const containerShiftCall = gsapMocks.timelineTo.mock.calls.find(([target, vars]) => {
-      const typedVars = vars as { x?: number }
-      return target === containerEl && typeof typedVars?.x === 'number' && typedVars.x === -320
+    // Current behavior: the selected card animates to the header avatar position (scaled down)
+    // and the content view becomes visible.
+    const hasScaledDownCardTween = gsapMocks.timelineTo.mock.calls.some(([, vars]) => {
+      const typedVars = vars as { scale?: number }
+      return typeof typedVars?.scale === 'number' && typedVars.scale > 0 && typedVars.scale < 0.3
     })
 
-    expect(containerShiftCall).toBeTruthy()
-    expect(wrapper.find('.card-dealer__content-panel').exists()).toBe(true)
+    expect(hasScaledDownCardTween).toBe(true)
+    expect(wrapper.find('.card-dealer__content-view').exists()).toBe(true)
+    expect(wrapper.find('.card-dealer__content-container').exists()).toBe(true)
 
     wrapper.unmount()
   })
@@ -444,7 +449,7 @@ describe('CardDealer', () => {
     await firstCard.trigger('click')
     await nextTick()
 
-    const content = wrapper.find('.card-dealer__content-panel')
+    const content = wrapper.find('.card-dealer__content-container')
     await content.trigger('pointerdown')
     await nextTick()
 

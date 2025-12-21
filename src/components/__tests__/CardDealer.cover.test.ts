@@ -7,7 +7,9 @@ vi.mock('gsap', () => {
   return {
     default: {
       registerPlugin: () => {},
-      timeline: () => {
+      timeline: (config?: { onStart?: () => void; onComplete?: () => void }) => {
+        config?.onStart?.()
+        config?.onComplete?.()
         type TimelineObj = {
           to: (t: TimelineObj) => TimelineObj
           fromTo: (t: TimelineObj) => TimelineObj
