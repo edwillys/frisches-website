@@ -31,6 +31,9 @@ import LogoButton from './LogoButton.vue'
 import AudioPlayer from './AudioPlayer.vue'
 import { useGSAP } from '../composables/useGSAP'
 import { readParticlesPaletteFromCss } from '../composables/useCardDealerPalette'
+import { getTargetXYToViewportCenter, getViewportCenter } from './cardDealer/viewportCenter'
+import { computeLeadStagger, distanceFromLead } from './cardDealer/leadStagger'
+import { getOffsetsToContainerCenter } from './cardDealer/containerOffsets'
 import gsap from 'gsap'
 import { CustomEase } from 'gsap/CustomEase'
 
@@ -51,15 +54,20 @@ const contentPanelRef = ref<HTMLElement | null>(null)
 const logoButtonRef = ref<HTMLElement | Record<string, unknown> | null>(null)
 const backButtonRef = ref<HTMLElement | null>(null)
 const miniCardRef = ref<HTMLElement | null>(null)
+const headerTitleRef = ref<HTMLElement | null>(null)
 const currentView = ref<'logo' | 'cards' | 'content'>('logo')
 const selectedCard = ref<number | null>(null)
 const isAnimating = ref(false)
 
+const selectedItem = computed(() =>
+  selectedCard.value !== null ? (menuItems[selectedCard.value] ?? null) : null
+)
+
 const miniCardStyle = computed(() => {
-  if (selectedCard.value !== null && menuItems[selectedCard.value]) {
-    const item = menuItems[selectedCard.value]
+  if (selectedItem.value) {
+    const item = selectedItem.value
     return {
-      backgroundImage: `url(${item!.image})`,
+      backgroundImage: `url(${item.image})`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
     }
@@ -315,18 +323,6 @@ const playCardOpen = () => {
   const container = cardsContainerRef.value
   if (!container) return
 
-  const containerRect = container.getBoundingClientRect()
-  const containerCenter = {
-    x: containerRect.width / 2,
-    y: containerRect.height / 2,
-  }
-
-  const leadCard = cards[deckLeadIndex] ?? cards[0]
-  if (!leadCard) {
-    isAnimating.value = false
-    return
-  }
-
   const tl = gsap.timeline({
     onComplete: () => {
       cards.forEach((card) => {
@@ -341,15 +337,7 @@ const playCardOpen = () => {
   })
 
   // Calculate how far each card needs to move to reach the center
-  const cardOffsets = cards.map((card) => {
-    const rect = card.getBoundingClientRect()
-    const cardCenterX = rect.left - containerRect.left + rect.width / 2
-    const cardCenterY = rect.top - containerRect.top + rect.height / 2
-    return {
-      x: containerCenter.x - cardCenterX,
-      y: containerCenter.y - cardCenterY,
-    }
-  })
+  const cardOffsets = getOffsetsToContainerCenter(cards, container)
 
   // Set initial state: All cards at center, stacked perfectly, tiny scale
   cards.forEach((card, index) => {
@@ -357,8 +345,8 @@ const playCardOpen = () => {
     if (!offset) return
 
     // Calculate z-index based on distance from lead to ensure proper stacking
-    const distanceFromLead = Math.abs(index - deckLeadIndex)
-    const zIndex = index === deckLeadIndex ? 50 : 40 - distanceFromLead
+    const dist = distanceFromLead(index, deckLeadIndex)
+    const zIndex = index === deckLeadIndex ? 50 : 40 - dist
 
     gsap.set(card, {
       x: offset.x,
@@ -384,9 +372,12 @@ const playCardOpen = () => {
   // Phase 2: Slide cards out from behind the lead card
   const spreadTl = gsap.timeline()
   cards.forEach((card, index) => {
-    const distanceFromLead = Math.abs(index - deckLeadIndex)
-    const staggerStart = distanceFromLead * 0.14
-    const slideDuration = 0.85 + distanceFromLead * 0.1
+    const { at, duration } = computeLeadStagger(index, deckLeadIndex, {
+      startBase: 0,
+      startStep: 0.14,
+      durationBase: 0.85,
+      durationStep: 0.1,
+    })
 
     spreadTl.to(
       card,
@@ -394,9 +385,9 @@ const playCardOpen = () => {
         x: 0,
         y: 0,
         ease: deckSpreadEase,
-        duration: slideDuration,
+        duration,
       },
-      staggerStart
+      at
     )
   })
 
@@ -421,12 +412,6 @@ const playCardCloseAndLogoReappear = () => {
     return
   }
 
-  const containerRect = container.getBoundingClientRect()
-  const containerCenter = {
-    x: containerRect.width / 2,
-    y: containerRect.height / 2,
-  }
-
   const tl = gsap.timeline({
     onComplete: () => {
       currentView.value = 'logo'
@@ -435,15 +420,7 @@ const playCardCloseAndLogoReappear = () => {
   })
 
   // Calculate offsets to move each card to center
-  const cardOffsets = cards.map((card) => {
-    const rect = card.getBoundingClientRect()
-    const cardCenterX = rect.left - containerRect.left + rect.width / 2
-    const cardCenterY = rect.top - containerRect.top + rect.height / 2
-    return {
-      x: containerCenter.x - cardCenterX,
-      y: containerCenter.y - cardCenterY,
-    }
-  })
+  const cardOffsets = getOffsetsToContainerCenter(cards, container)
 
   // Phase 1: Gather cards to center (inverse of spread)
   // Apply per-card z-index immediately so stacking is deterministic (middle card on top)
@@ -551,46 +528,14 @@ const playContentCloseAndCardsReturn = () => {
   const panel = contentPanelRef.value
   const backButton = backButtonRef.value
   const miniCard = miniCardRef.value
-  const headerTitle = document.querySelector('.card-dealer__header-title') as HTMLElement
+  const headerTitle = headerTitleRef.value
   const container = cardsContainerRef.value
 
   if (!container) return
 
   // We want the “gather to center” point to be the CENTER OF THE SCREEN (viewport),
   // not the center of the cards container (which is auto-sized and can be offset).
-  const viewportCenter = {
-    x: window.innerWidth / 2,
-    y: window.innerHeight / 2,
-  }
-
-  const getTargetXYToViewportCenter = (el: HTMLElement) => {
-    const rect = el.getBoundingClientRect()
-    const centerX = rect.left + rect.width / 2
-    const centerY = rect.top + rect.height / 2
-
-    // Current GSAP translate values (relative to the element’s original layout position).
-    // We compute a viewport delta and add it to the current translate so the element ends up
-    // at the viewport center regardless of parent/container coordinate space.
-    const currentXRaw = (
-      gsap as unknown as { getProperty?: (t: Element, p: string) => unknown }
-    ).getProperty?.(el, 'x')
-    const currentYRaw = (
-      gsap as unknown as { getProperty?: (t: Element, p: string) => unknown }
-    ).getProperty?.(el, 'y')
-
-    const currentX =
-      typeof currentXRaw === 'number' ? currentXRaw : parseFloat(String(currentXRaw || 0))
-    const currentY =
-      typeof currentYRaw === 'number' ? currentYRaw : parseFloat(String(currentYRaw || 0))
-
-    const deltaX = viewportCenter.x - centerX
-    const deltaY = viewportCenter.y - centerY
-
-    return {
-      x: currentX + deltaX,
-      y: currentY + deltaY,
-    }
-  }
+  const viewportCenter = getViewportCenter()
 
   const selectedIdx = selectedCard.value
 
@@ -686,7 +631,7 @@ const playContentCloseAndCardsReturn = () => {
   }
 
   // Compute per-card targets to gather at the viewport center.
-  const cardTargetsToCenter = cards.map((card) => getTargetXYToViewportCenter(card))
+  const cardTargetsToCenter = cards.map((card) => getTargetXYToViewportCenter(card, viewportCenter))
 
   // Animate selected card to center
   if (selectedIdx !== null && cards[selectedIdx]) {
@@ -734,18 +679,21 @@ const playContentCloseAndCardsReturn = () => {
   // Phase 5: Distribute all cards from center to their grid positions
   const deckLeadIndex = Math.floor(cards.length / 2)
   cards.forEach((card, index) => {
-    const distanceFromLead = Math.abs(index - deckLeadIndex)
-    const staggerStart = 1.0 + distanceFromLead * 0.14
-    const slideDuration = 0.7 + distanceFromLead * 0.1
+    const { at, duration } = computeLeadStagger(index, deckLeadIndex, {
+      startBase: 1.0,
+      startStep: 0.14,
+      durationBase: 0.7,
+      durationStep: 0.1,
+    })
 
     tl.to(
       card,
       {
         x: 0,
         y: 0,
-        duration: slideDuration,
+        duration,
       },
-      staggerStart
+      at
     )
   })
 }
@@ -769,15 +717,18 @@ const playCardSelection = (cardIndex: number) => {
     const panel = contentPanelRef.value
     const miniCard = miniCardRef.value
     const backButton = backButtonRef.value
-    const headerTitle = document.querySelector('.card-dealer__header-title') as HTMLElement
+    const headerTitle = headerTitleRef.value
 
     const tl = gsap.timeline({
       defaults: { ease: deckSpreadEase },
       onStart: () => {
         // Start background transition at the beginning
-        const selectedItem = menuItems[cardIndex]
-        if (selectedItem?.title === 'About') {
-          const coverKey = (selectedItem.title || '').toString().toLowerCase().replace(/\s+/g, '-')
+        const selectedMenuItem = menuItems[cardIndex]
+        if (selectedMenuItem?.title === 'About') {
+          const coverKey = (selectedMenuItem.title || '')
+            .toString()
+            .toLowerCase()
+            .replace(/\s+/g, '-')
           transitionToCover(true, coverKey)
 
           emit('palette-change', readParticlesPaletteFromCss('cover'))
@@ -1155,8 +1106,8 @@ onBeforeUnmount(() => {
         <div ref="miniCardRef" class="card-dealer__mini-card-wrapper" :style="miniCardStyle">
           <!-- Circular avatar shows selected card image as background -->
         </div>
-        <h2 v-if="selectedCard !== null" class="card-dealer__header-title">
-          {{ menuItems[selectedCard]?.title }}
+        <h2 v-if="selectedItem" ref="headerTitleRef" class="card-dealer__header-title">
+          {{ selectedItem.title }}
         </h2>
       </div>
 
@@ -1189,10 +1140,7 @@ onBeforeUnmount(() => {
         <!-- Actual content -->
         <div ref="contentPanelRef" class="card-dealer__content-container">
           <!-- Music Player -->
-          <div
-            v-if="selectedCard !== null && menuItems[selectedCard]?.title === 'Music'"
-            class="card-dealer__music-content"
-          >
+          <div v-if="selectedItem?.title === 'Music'" class="card-dealer__music-content">
             <AudioPlayer />
           </div>
 
@@ -1200,11 +1148,7 @@ onBeforeUnmount(() => {
           <div v-else class="card-dealer__generic-content">
             <p>
               Content for
-              {{
-                selectedCard !== null && selectedCard < menuItems.length
-                  ? menuItems[selectedCard]?.title
-                  : ''
-              }}
+              {{ selectedItem?.title || '' }}
             </p>
           </div>
         </div>
@@ -1213,356 +1157,4 @@ onBeforeUnmount(() => {
   </div>
 </template>
 
-<style scoped>
-.card-dealer {
-  position: relative;
-  width: 100%;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.card-dealer__background {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
-.card-dealer__bg-image {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-}
-
-.card-dealer__bg-main {
-  z-index: 0;
-}
-
-.card-dealer__bg-cover {
-  z-index: 1;
-}
-
-.card-dealer__cover-dim {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 1);
-  z-index: 2;
-  pointer-events: none;
-}
-
-.card-dealer__overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    var(--overlay-top) 0%,
-    var(--overlay-middle) 50%,
-    var(--overlay-bottom) 100%
-  );
-}
-
-.card-dealer__content {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-2xl);
-  text-align: center;
-}
-
-.card-dealer__cards-back-button-wrapper {
-  position: fixed;
-  top: var(--spacing-lg);
-  left: var(--spacing-lg);
-  z-index: 99;
-  pointer-events: auto;
-}
-
-/* Cards container: horizontal layout by default */
-.card-dealer__cards {
-  display: flex;
-  gap: var(--spacing-lg, 28px);
-  align-items: center;
-  justify-content: center;
-  /* size to content so clicks just outside the visible cards register as outside */
-  width: auto;
-}
-
-.card-dealer__logo-button-wrapper {
-  position: fixed;
-  bottom: var(--spacing-2xl);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Social links at top center */
-.card-dealer__social {
-  position: fixed;
-  top: var(--spacing-lg, 18px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 12;
-  display: flex;
-  gap: 14px;
-  align-items: center;
-}
-
-.card-dealer__social-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-secondary);
-  opacity: 0.9;
-  background: transparent;
-  padding: 10px;
-  border-radius: 10px;
-  min-width: 44px;
-  min-height: 44px;
-  transition:
-    color var(--transition-fast),
-    transform var(--transition-fast),
-    box-shadow var(--transition-fast);
-}
-
-.card-dealer__social-link:hover {
-  color: var(--color-social-hover);
-  opacity: 1;
-  transform: translateY(-3px) scale(1.03);
-  background: var(--color-social-hover-bg);
-  box-shadow: var(--color-social-glow);
-}
-
-.card-dealer__social-link:focus-visible {
-  outline: 2px solid var(--color-social-focus-outline);
-  outline-offset: 2px;
-}
-
-.card-dealer__social-link--disabled {
-  pointer-events: none;
-  opacity: 0.5;
-}
-
-.card-dealer__header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 100px;
-  z-index: 99;
-  display: flex;
-  align-items: center;
-  padding: var(--spacing-lg);
-  gap: var(--spacing-md);
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%);
-  backdrop-filter: blur(8px);
-}
-
-.card-dealer__back-button {
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.5);
-  border: 2px solid var(--color-primary);
-  border-radius: 50%;
-  color: var(--color-text);
-  cursor: pointer;
-  pointer-events: auto;
-  flex-shrink: 0;
-  transition:
-    background var(--transition-fast),
-    transform var(--transition-fast),
-    border-color var(--transition-fast);
-  backdrop-filter: blur(8px);
-}
-
-.card-dealer__back-button:hover {
-  background: rgba(0, 0, 0, 0.7);
-  border-color: var(--color-text);
-  transform: scale(1.1);
-}
-
-.card-dealer__back-button svg {
-  width: 24px;
-  height: 24px;
-}
-
-.card-dealer__mini-card-wrapper {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 2px solid var(--color-primary);
-  background: rgba(0, 0, 0, 0.3);
-  flex-shrink: 0;
-  pointer-events: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  position: relative;
-}
-
-.card-dealer__header-title {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
-  margin: 0;
-  pointer-events: none;
-  white-space: nowrap;
-}
-
-.card-dealer__content-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
-  z-index: 0;
-}
-
-.card-dealer__content-container {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-2xl);
-  pointer-events: auto;
-  overflow-y: auto;
-}
-
-.card-dealer__music-content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  max-width: 800px;
-}
-
-.card-dealer__generic-content {
-  text-align: center;
-  color: var(--color-text);
-  font-size: var(--font-size-xl);
-  max-width: 800px;
-  width: 100%;
-}
-
-/* When a card is selected, show the content full-screen */
-.card-dealer__content-view {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding-top: 100px;
-  z-index: 4;
-  pointer-events: none;
-}
-
-.card-dealer__cards--content {
-  pointer-events: none;
-}
-
-.card-dealer__card {
-  opacity: 1;
-  position: relative;
-  z-index: 4;
-  flex-shrink: 0;
-  backface-visibility: hidden;
-  transform-style: preserve-3d;
-  will-change: transform, opacity;
-}
-
-/* Disable CSS transitions on cards while JS/GSAP animations run to avoid conflicts */
-.card-dealer.is-animating .menu-card,
-.card-dealer.is-animating .card-dealer__card {
-  transition: none !important;
-}
-
-/* Ensure hovered transform doesn't fight animations when animating */
-.card-dealer.is-animating .menu-card--hovered {
-  transform: none !important;
-}
-
-/* Tablet responsiveness */
-@media (max-width: 1024px) {
-  .card-dealer__content {
-    gap: var(--spacing-2xl);
-  }
-
-  .card-dealer__cards {
-    gap: var(--spacing-lg);
-  }
-}
-
-/* Mobile responsiveness */
-@media (max-width: 768px) {
-  .card-dealer__content {
-    gap: var(--spacing-xl);
-    padding: var(--spacing-lg);
-  }
-
-  .card-dealer__cards {
-    gap: var(--spacing-md);
-  }
-
-  .card-dealer__content-container {
-    padding: var(--spacing-lg);
-  }
-
-  .card-dealer__content-view {
-    padding-top: 100px;
-  }
-
-  .card-dealer__header {
-    height: 80px;
-    gap: var(--spacing-sm);
-  }
-
-  .card-dealer__back-button {
-    width: 44px;
-    height: 44px;
-  }
-
-  .card-dealer__mini-card-wrapper {
-    width: 44px;
-    height: 44px;
-    border-width: 2px;
-  }
-
-  .card-dealer__header-title {
-    font-size: var(--font-size-xl);
-  }
-
-  .card-dealer__generic-content {
-    font-size: var(--font-size-lg);
-  }
-}
-
-/* Small mobile devices */
-@media (max-width: 480px) {
-  .card-dealer__cards {
-    flex-direction: column;
-  }
-}
-</style>
+<style scoped src="./cardDealer/CardDealer.css"></style>

@@ -1,0 +1,351 @@
+.card-dealer {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.card-dealer__background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.card-dealer__bg-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.card-dealer__bg-main {
+  z-index: 0;
+}
+
+.card-dealer__bg-cover {
+  z-index: 1;
+}
+
+.card-dealer__cover-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 1);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.card-dealer__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    var(--overlay-top) 0%,
+    var(--overlay-middle) 50%,
+    var(--overlay-bottom) 100%
+  );
+}
+
+.card-dealer__content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.card-dealer__cards-back-button-wrapper {
+  position: fixed;
+  top: var(--spacing-lg);
+  left: var(--spacing-lg);
+  z-index: 99;
+  pointer-events: auto;
+}
+
+/* Cards container: horizontal layout by default */
+.card-dealer__cards {
+  display: flex;
+  gap: var(--spacing-lg, 28px);
+  align-items: center;
+  justify-content: center;
+  /* size to content so clicks just outside the visible cards register as outside */
+  width: auto;
+}
+
+.card-dealer__logo-button-wrapper {
+  position: fixed;
+  bottom: var(--spacing-2xl);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Social links at top center */
+.card-dealer__social {
+  position: fixed;
+  top: var(--spacing-lg, 18px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.card-dealer__social-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  opacity: 0.9;
+  background: transparent;
+  padding: 10px;
+  border-radius: 10px;
+  min-width: 44px;
+  min-height: 44px;
+  transition:
+    color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.card-dealer__social-link:hover {
+  color: var(--color-social-hover);
+  opacity: 1;
+  transform: translateY(-3px) scale(1.03);
+  background: var(--color-social-hover-bg);
+  box-shadow: var(--color-social-glow);
+}
+
+.card-dealer__social-link:focus-visible {
+  outline: 2px solid var(--color-social-focus-outline);
+  outline-offset: 2px;
+}
+
+.card-dealer__social-link--disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.card-dealer__header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  z-index: 99;
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-lg);
+  gap: var(--spacing-md);
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%);
+  backdrop-filter: blur(8px);
+}
+
+.card-dealer__back-button {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid var(--color-primary);
+  border-radius: 50%;
+  color: var(--color-text);
+  cursor: pointer;
+  pointer-events: auto;
+  flex-shrink: 0;
+  transition:
+    background var(--transition-fast),
+    transform var(--transition-fast),
+    border-color var(--transition-fast);
+  backdrop-filter: blur(8px);
+}
+
+.card-dealer__back-button:hover {
+  background: rgba(0, 0, 0, 0.7);
+  border-color: var(--color-text);
+  transform: scale(1.1);
+}
+
+.card-dealer__back-button svg {
+  width: 24px;
+  height: 24px;
+}
+
+.card-dealer__mini-card-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--color-primary);
+  background: rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+.card-dealer__header-title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
+  margin: 0;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.card-dealer__content-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  z-index: 0;
+}
+
+.card-dealer__content-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  pointer-events: auto;
+  overflow-y: auto;
+}
+
+.card-dealer__music-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 800px;
+}
+
+.card-dealer__generic-content {
+  text-align: center;
+  color: var(--color-text);
+  font-size: var(--font-size-xl);
+  max-width: 800px;
+  width: 100%;
+}
+
+/* When a card is selected, show the content full-screen */
+.card-dealer__content-view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 100px;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.card-dealer__cards--content {
+  pointer-events: none;
+}
+
+.card-dealer__card {
+  opacity: 1;
+  position: relative;
+  z-index: 4;
+  flex-shrink: 0;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+}
+
+/* Disable CSS transitions on cards while JS/GSAP animations run to avoid conflicts */
+.card-dealer.is-animating .menu-card,
+.card-dealer.is-animating .card-dealer__card {
+  transition: none !important;
+}
+
+/* Ensure hovered transform doesn't fight animations when animating */
+.card-dealer.is-animating .menu-card--hovered {
+  transform: none !important;
+}
+
+/* Tablet responsiveness */
+@media (max-width: 1024px) {
+  .card-dealer__content {
+    gap: var(--spacing-2xl);
+  }
+
+  .card-dealer__cards {
+    gap: var(--spacing-lg);
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .card-dealer__content {
+    gap: var(--spacing-xl);
+    padding: var(--spacing-lg);
+  }
+
+  .card-dealer__cards {
+    gap: var(--spacing-md);
+  }
+
+  .card-dealer__content-container {
+    padding: var(--spacing-lg);
+  }
+
+  .card-dealer__content-view {
+    padding-top: 100px;
+  }
+
+  .card-dealer__header {
+    height: 80px;
+    gap: var(--spacing-sm);
+  }
+
+  .card-dealer__back-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .card-dealer__mini-card-wrapper {
+    width: 44px;
+    height: 44px;
+    border-width: 2px;
+  }
+
+  .card-dealer__header-title {
+    font-size: var(--font-size-xl);
+  }
+
+  .card-dealer__generic-content {
+    font-size: var(--font-size-lg);
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+  .card-dealer__cards {
+    flex-direction: column;
+  }
+}
