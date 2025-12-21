@@ -25,11 +25,12 @@
  *    - No stagger: cards disappear as one unified deck
  *    - Duration: 0.8s with power2.inOut easing
  */
-import { ref, onMounted, nextTick, onBeforeUnmount, watch, computed } from 'vue'
+import { ref, onMounted, nextTick, onBeforeUnmount, computed } from 'vue'
 import MenuCard from './MenuCard.vue'
 import LogoButton from './LogoButton.vue'
 import AudioPlayer from './AudioPlayer.vue'
-import { useGSAP, useFadeIn } from '../composables/useGSAP'
+import { useGSAP } from '../composables/useGSAP'
+import { readParticlesPaletteFromCss } from '../composables/useCardDealerPalette'
 import gsap from 'gsap'
 import { CustomEase } from 'gsap/CustomEase'
 
@@ -40,12 +41,10 @@ const deckSpreadEase = CustomEase.create('deckSpreadEase', 'M0,0 C0.18,0 0.05,1 
 const deckGatherEase = CustomEase.create('deckGatherEase', 'M0,0 C0.6,0 0.25,1 1,1')
 const panelEase = CustomEase.create('deckPanelEase', 'M0,0 C0.4,0 0.15,1 1,1')
 
-const containerRef = ref<HTMLElement | null>(null)
 const bgRef = ref<HTMLElement | null>(null)
 const bgMainRef = ref<HTMLImageElement | null>(null)
 const bgCoverRef = ref<HTMLImageElement | null>(null)
 const coverDimRef = ref<HTMLElement | null>(null)
-const titleRef = ref<HTMLElement | null>(null)
 const cardsRef = ref<(HTMLElement | null)[]>([])
 const cardsContainerRef = ref<HTMLElement | null>(null)
 const contentPanelRef = ref<HTMLElement | null>(null)
@@ -97,9 +96,6 @@ useGSAP(() => {
       })
   })
 })
-
-// Fade in animations for title and subtitle
-useFadeIn(titleRef, { duration: 1, delay: 0.3, y: 50 })
 
 // Menu items configuration
 const menuItems = [
@@ -159,7 +155,6 @@ const handleCardClick = (route: string) => {
   const cardIndex = menuItems.findIndex((item) => item.route === route)
   if (cardIndex === -1) return
 
-  console.log('Card clicked:', route)
   isAnimating.value = true
   selectedCard.value = cardIndex
   playCardSelection(cardIndex)
@@ -167,7 +162,6 @@ const handleCardClick = (route: string) => {
 
 const handleLogoClick = () => {
   if (isAnimating.value || currentView.value !== 'logo') return
-  console.log('Logo clicked! Starting animation sequence...')
   isAnimating.value = true
 
   // Notify that logo will be hidden
@@ -605,28 +599,7 @@ const playContentCloseAndCardsReturn = () => {
     onStart: () => {
       // Start background transition at the beginning
       transitionToCover(false)
-      try {
-        const styles = getComputedStyle(document.documentElement)
-        const rawMain = styles.getPropertyValue('--bg-main-particles') || ''
-        const arrMain = rawMain
-          .split(',')
-          .map((s) => parseInt(s.trim(), 10))
-          .filter((n) => Number.isFinite(n))
-        if (arrMain.length >= 3) {
-          emit('palette-change', [arrMain[0]!, arrMain[1]!, arrMain[2]!])
-        } else {
-          const r = parseInt(styles.getPropertyValue('--bg-cover-particles-r') || '0', 10)
-          const g = parseInt(styles.getPropertyValue('--bg-cover-particles-g') || '0', 10)
-          const b = parseInt(styles.getPropertyValue('--bg-cover-particles-b') || '0', 10)
-          if (Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)) {
-            emit('palette-change', [r, g, b])
-          } else {
-            emit('palette-change', null)
-          }
-        }
-      } catch {
-        emit('palette-change', null)
-      }
+      emit('palette-change', readParticlesPaletteFromCss('main'))
     },
     onComplete: () => {
       // Don't clear opacity as it defaults to 0 in CSS
@@ -807,55 +780,11 @@ const playCardSelection = (cardIndex: number) => {
           const coverKey = (selectedItem.title || '').toString().toLowerCase().replace(/\s+/g, '-')
           transitionToCover(true, coverKey)
 
-          // Read composite RGB palette from CSS (comma-separated), fallback to per-channel vars
-          try {
-            const styles = getComputedStyle(document.documentElement)
-            const raw = styles.getPropertyValue('--bg-cover-particles') || ''
-            const arr = raw
-              .split(',')
-              .map((s) => parseInt(s.trim(), 10))
-              .filter((n) => Number.isFinite(n))
-            if (arr.length >= 3) {
-              emit('palette-change', [arr[0]!, arr[1]!, arr[2]!])
-            } else {
-              const r = parseInt(styles.getPropertyValue('--bg-cover-particles-r') || '0', 10)
-              const g = parseInt(styles.getPropertyValue('--bg-cover-particles-g') || '0', 10)
-              const b = parseInt(styles.getPropertyValue('--bg-cover-particles-b') || '0', 10)
-              if (Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)) {
-                emit('palette-change', [r, g, b])
-              } else {
-                emit('palette-change', null)
-              }
-            }
-          } catch {
-            emit('palette-change', null)
-          }
+          emit('palette-change', readParticlesPaletteFromCss('cover'))
         } else {
           // Reset cover if any and emit main/home palette as RGB array
           transitionToCover(false)
-          try {
-            const styles = getComputedStyle(document.documentElement)
-            const rawMain = styles.getPropertyValue('--bg-main-particles') || ''
-            const arrMain = rawMain
-              .split(',')
-              .map((s) => parseInt(s.trim(), 10))
-              .filter((n) => Number.isFinite(n))
-            if (arrMain.length >= 3) {
-              emit('palette-change', [arrMain[0]!, arrMain[1]!, arrMain[2]!])
-            } else {
-              // Fallback to cover defaults or null
-              const r = parseInt(styles.getPropertyValue('--bg-cover-particles-r') || '0', 10)
-              const g = parseInt(styles.getPropertyValue('--bg-cover-particles-g') || '0', 10)
-              const b = parseInt(styles.getPropertyValue('--bg-cover-particles-b') || '0', 10)
-              if (Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)) {
-                emit('palette-change', [r, g, b])
-              } else {
-                emit('palette-change', null)
-              }
-            }
-          } catch {
-            emit('palette-change', null)
-          }
+          emit('palette-change', readParticlesPaletteFromCss('main'))
         }
       },
       onComplete: () => {
@@ -1009,34 +938,21 @@ onMounted(() => {
   const coverImg = new Image()
   coverImg.src = new URL('../assets/images/cover.png', import.meta.url).href
   coverImg.onload = () => {
-    console.log('Cover image preloaded successfully')
     // Set the src on the actual element to ensure browser caches it
     if (bgCoverRef.value) {
       bgCoverRef.value.src = coverImg.src
     }
   }
-  coverImg.onerror = () => {
-    console.error('Failed to preload cover image')
-  }
-
-  console.log('CardDealer mounted')
+  coverImg.onerror = () => {}
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('pointerdown', handleGlobalPointerDown)
 })
-
-// Toggle a class on the root container while GSAP animations are running
-watch(isAnimating, (val) => {
-  const el = containerRef.value
-  if (!el) return
-  if (val) el.classList.add('is-animating')
-  else el.classList.remove('is-animating')
-})
 </script>
 
 <template>
-  <div ref="containerRef" class="card-dealer">
+  <div :class="['card-dealer', { 'is-animating': isAnimating }]">
     <!-- Social links (top center) -->
     <div
       v-if="currentView !== 'content'"
@@ -1265,27 +1181,6 @@ watch(isAnimating, (val) => {
         </div>
       </div>
 
-      <!-- Back button for cards view -->
-      <div v-if="currentView === 'cards'" class="card-dealer__cards-back-button-wrapper">
-        <div class="card-dealer__back-button" @click="handleCardsBackClick">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M19 12H5M5 12L12 19M5 12L12 5"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </div>
-      </div>
-
       <!-- Content view (shown after card click) -->
       <div v-if="currentView === 'content'" class="card-dealer__content-view">
         <!-- Content overlay for transparency -->
@@ -1328,15 +1223,6 @@ watch(isAnimating, (val) => {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-}
-
-.card-dealer__top-logo {
-  position: fixed;
-  top: var(--spacing-lg);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
-  pointer-events: auto;
 }
 
 .card-dealer__background {
@@ -1414,27 +1300,6 @@ watch(isAnimating, (val) => {
   width: auto;
 }
 
-.card-dealer__title {
-  font-size: var(--font-size-5xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  text-shadow: var(--text-shadow-strong);
-  margin-bottom: var(--spacing-sm);
-}
-
-.card-dealer__moon-wrapper {
-  position: fixed;
-  bottom: var(--spacing-2xl);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .card-dealer__logo-button-wrapper {
   position: fixed;
   bottom: var(--spacing-2xl);
@@ -1447,16 +1312,6 @@ watch(isAnimating, (val) => {
 }
 
 /* Social links at top center */
-.card-dealer__social {
-  position: fixed;
-  top: var(--spacing-lg, 18px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 12;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
 .card-dealer__social {
   position: fixed;
   top: var(--spacing-lg, 18px);
@@ -1651,14 +1506,6 @@ watch(isAnimating, (val) => {
 
 /* Tablet responsiveness */
 @media (max-width: 1024px) {
-  .card-dealer__title {
-    font-size: var(--font-size-4xl);
-  }
-
-  .card-dealer__subtitle {
-    font-size: var(--font-size-lg);
-  }
-
   .card-dealer__content {
     gap: var(--spacing-2xl);
   }
@@ -1670,14 +1517,6 @@ watch(isAnimating, (val) => {
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {
-  .card-dealer__title {
-    font-size: var(--font-size-3xl);
-  }
-
-  .card-dealer__subtitle {
-    font-size: var(--font-size-base);
-  }
-
   .card-dealer__content {
     gap: var(--spacing-xl);
     padding: var(--spacing-lg);
@@ -1722,10 +1561,6 @@ watch(isAnimating, (val) => {
 
 /* Small mobile devices */
 @media (max-width: 480px) {
-  .card-dealer__title {
-    font-size: var(--font-size-2xl);
-  }
-
   .card-dealer__cards {
     flex-direction: column;
   }
