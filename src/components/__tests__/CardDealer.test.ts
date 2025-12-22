@@ -47,6 +47,7 @@ const gsapMocks = vi.hoisted(() => {
   return {
     set: vi.fn(),
     getProperty: vi.fn(() => 0),
+    killTweensOf: vi.fn(),
     to: vi.fn((_, vars: Record<string, unknown> = {}) => {
       if (typeof vars.onStart === 'function') {
         vars.onStart()
@@ -98,6 +99,7 @@ vi.mock('gsap', () => ({
     from: vi.fn(),
     delayedCall: gsapMocks.delayedCall,
     timeline: gsapMocks.timeline,
+    killTweensOf: gsapMocks.killTweensOf,
     context: gsapMocks.context,
     matchMedia: gsapMocks.matchMedia,
     registerPlugin: gsapMocks.registerPlugin,

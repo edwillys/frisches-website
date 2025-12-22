@@ -47,8 +47,8 @@ const panelEase = CustomEase.create('deckPanelEase', 'M0,0 C0.4,0 0.15,1 1,1')
 
 const bgRef = ref<HTMLElement | null>(null)
 const bgMainRef = ref<HTMLImageElement | null>(null)
-const bgCoverRef = ref<HTMLImageElement | null>(null)
-const coverDimRef = ref<HTMLElement | null>(null)
+const bgSecondaryRef = ref<HTMLImageElement | null>(null)
+const bgSecondaryDimRef = ref<HTMLElement | null>(null)
 const cardsRef = ref<(HTMLElement | null)[]>([])
 const cardsContainerRef = ref<HTMLElement | null>(null)
 const contentPanelRef = ref<HTMLElement | null>(null)
@@ -116,6 +116,7 @@ const menuItems = [
   {
     title: 'About',
     image: new URL('../assets/images/menu-card-about.png', import.meta.url).href,
+    coverImage: new URL('../assets/images/cover.png', import.meta.url).href,
     route: '/about',
   },
   {
@@ -124,6 +125,15 @@ const menuItems = [
     route: '/tour',
   },
 ]
+
+const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
+
+const defaultCoverSrc = computed(() => {
+  const firstCover = menuItems.find((item) => 'coverImage' in item && Boolean(item.coverImage)) as
+    | { coverImage?: string }
+    | undefined
+  return firstCover?.coverImage || TRANSPARENT_PIXEL
+})
 
 const deckLeadIndex = Math.floor(menuItems.length / 2)
 
@@ -543,8 +553,6 @@ const playContentCloseAndCardsReturn = () => {
   const tl = gsap.timeline({
     defaults: { ease: deckSpreadEase },
     onStart: () => {
-      // Start background transition at the beginning
-      transitionToCover(false)
       emit('palette-change', readParticlesPaletteFromCss('main'))
     },
     onComplete: () => {
@@ -557,6 +565,20 @@ const playContentCloseAndCardsReturn = () => {
       isAnimating.value = false
     },
   })
+
+  // Background transition stays in-sync with the content-close animation
+  tl.add(
+    transitionToCover({
+      enter: false,
+      elements: getBackgroundTransitionElements(
+        false,
+        bgMainRef.value,
+        bgSecondaryRef.value,
+        bgSecondaryDimRef.value
+      ),
+    }),
+    0
+  )
 
   // Phase 1: Fade out content panel
   if (panel) {
@@ -706,6 +728,16 @@ const playCardSelection = (cardIndex: number) => {
     return
   }
 
+  const selectedMenuItem = menuItems[cardIndex]
+  const coverSrc =
+    selectedMenuItem && 'coverImage' in selectedMenuItem
+      ? (selectedMenuItem.coverImage as string | undefined)
+      : undefined
+  const coverKey = coverSrc ? slugify(selectedMenuItem?.title || '') : undefined
+
+  // Emit palette immediately (tests + keeps UI responsive)
+  emit('palette-change', readParticlesPaletteFromCss(coverSrc ? 'cover' : 'main'))
+
   // Get positions before changing view state
   const selectedCardEl = cards[cardIndex]
   if (!selectedCardEl) return
@@ -722,27 +754,36 @@ const playCardSelection = (cardIndex: number) => {
 
     const tl = gsap.timeline({
       defaults: { ease: deckSpreadEase },
-      onStart: () => {
-        // Start background transition at the beginning
-        const selectedMenuItem = menuItems[cardIndex]
-        if (selectedMenuItem?.title === 'About') {
-          const coverKey = (selectedMenuItem.title || '')
-            .toString()
-            .toLowerCase()
-            .replace(/\s+/g, '-')
-          transitionToCover(true, coverKey)
-
-          emit('palette-change', readParticlesPaletteFromCss('cover'))
-        } else {
-          // Reset cover if any and emit main/home palette as RGB array
-          transitionToCover(false)
-          emit('palette-change', readParticlesPaletteFromCss('main'))
-        }
-      },
       onComplete: () => {
         isAnimating.value = false
       },
     })
+
+    // Background transition stays in-sync with the card selection animation
+    tl.add(
+      coverSrc
+        ? transitionToCover({
+            enter: true,
+            coverSrc,
+            coverKey,
+            elements: getBackgroundTransitionElements(
+              true,
+              bgMainRef.value,
+              bgSecondaryRef.value,
+              bgSecondaryDimRef.value
+            ),
+          })
+        : transitionToCover({
+            enter: false,
+            elements: getBackgroundTransitionElements(
+              false,
+              bgMainRef.value,
+              bgSecondaryRef.value,
+              bgSecondaryDimRef.value
+            ),
+          }),
+      0
+    )
 
     // Calculate avatar target position (in header)
     const targetX = 24 + 48 + 16 + 24 - selectedCardRect.left - selectedCardRect.width / 2
@@ -820,39 +861,82 @@ const playCardSelection = (cardIndex: number) => {
   })
 }
 
-// Smoothly crossfade to the cover image (enter = true) or back to main (enter = false)
-const transitionToCover = (enter: boolean, coverKey?: string) => {
-  const cover = bgCoverRef.value
-  if (!cover) return
+const slugify = (value: string) => value.toString().toLowerCase().trim().replace(/\s+/g, '-')
+
+type CoverTransitionOptions = {
+  enter: boolean
+  coverSrc?: string
+  coverKey?: string
+}
+
+type BackgroundTransitionElements = {
+  fromImg: HTMLImageElement | null
+  toImg: HTMLImageElement | null
+  dimEl: HTMLElement | null
+}
+
+type BackgroundTransitionOptions = CoverTransitionOptions & {
+  elements: BackgroundTransitionElements
+}
+
+const getBackgroundTransitionElements = (
+  enter: boolean,
+  mainRef: HTMLImageElement | null,
+  coverRef: HTMLImageElement | null,
+  dimRef: HTMLElement | null
+): BackgroundTransitionElements => {
+  return {
+    fromImg: enter ? mainRef : coverRef,
+    toImg: enter ? coverRef : mainRef,
+    dimEl: dimRef,
+  }
+}
+
+// Generic background crossfade: transitions from `elements.fromImg` to `elements.toImg`.
+// `coverSrc` (optional) sets the destination image source when entering.
+// Returns a GSAP timeline so callers can compose it into their existing timelines.
+const transitionToCover = ({
+  enter,
+  coverSrc,
+  coverKey,
+  elements,
+}: BackgroundTransitionOptions) => {
+  const { fromImg, toImg, dimEl } = elements
+  if (!fromImg || !toImg) return gsap.timeline()
 
   const styles = getComputedStyle(document.documentElement)
   const durationStr = styles.getPropertyValue('--bg-cover-transition-duration') || '1.6s'
   const duration = parseFloat(durationStr) || 1.6
 
-  const dimEl = coverDimRef.value
-  const mainBg = bgMainRef.value
+  // Prevent competing tweens when users navigate quickly
+  gsap.killTweensOf([fromImg, toImg, dimEl].filter(Boolean))
+
+  const key = slugify(coverKey || '')
+
   if (enter) {
+    if (coverSrc && toImg.src !== coverSrc) {
+      toImg.src = coverSrc
+    }
+
     // Determine per-cover dim (overlay darkness) first; if set, prefer dim overlay
-    const key = (coverKey || '').toString().toLowerCase().replace(/\s+/g, '-')
     const dimVar = key ? `--bg-cover-${key}-dim` : '--bg-cover-dim'
     let dim = parseFloat(styles.getPropertyValue(dimVar) || '')
     if (!Number.isFinite(dim)) dim = parseFloat(styles.getPropertyValue('--bg-cover-dim') || '')
 
-    // Determine desired main background opacity while cover is active
+    // Determine desired base/background opacity while cover is active
     let mainOpacity = parseFloat(styles.getPropertyValue('--bg-main-opacity') || '')
     if (!Number.isFinite(mainOpacity)) mainOpacity = 1
 
-    // Build a single timeline to animate cover, dim overlay, and main background in sync
-    const tl = gsap.timeline()
+    const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' } })
+
+    gsap.set(fromImg, { visibility: 'visible' })
+    gsap.set(toImg, { opacity: 0, visibility: 'visible' })
+    if (dimEl) gsap.set(dimEl, { opacity: 0, visibility: 'visible' })
 
     if (Number.isFinite(dim)) {
-      // Show cover and dim overlay together
-      gsap.set(cover, { opacity: 0, visibility: 'visible' })
-      if (dimEl) gsap.set(dimEl, { opacity: 0, visibility: 'visible' })
-      tl.to(cover, { opacity: 1, duration, ease: 'power2.inOut' }, 0)
-      if (dimEl)
-        tl.to(dimEl, { opacity: Math.max(0, Math.min(1, dim)), duration, ease: 'power2.inOut' }, 0)
-      if (mainBg) tl.to(mainBg, { opacity: mainOpacity, duration, ease: 'power2.inOut' }, 0)
+      tl.to(toImg, { opacity: 1, duration }, 0)
+      if (dimEl) tl.to(dimEl, { opacity: Math.max(0, Math.min(1, dim)), duration }, 0)
+      tl.to(fromImg, { opacity: mainOpacity, duration }, 0)
     } else {
       // Fallback: animate cover opacity (no dim available)
       const varName = key ? `--bg-cover-${key}-opacity` : '--bg-cover-target-opacity'
@@ -860,24 +944,31 @@ const transitionToCover = (enter: boolean, coverKey?: string) => {
       if (!Number.isFinite(targetOpacity)) {
         targetOpacity = parseFloat(styles.getPropertyValue('--bg-cover-target-opacity') || '1') || 1
       }
-      gsap.set(cover, { opacity: 0, visibility: 'visible' })
-      if (mainBg) gsap.set(mainBg, { opacity: 1, visibility: 'visible' })
-      tl.to(cover, { opacity: targetOpacity, duration, ease: 'power2.inOut' }, 0)
-      if (mainBg) tl.to(mainBg, { opacity: mainOpacity, duration, ease: 'power2.inOut' }, 0)
+      tl.to(toImg, { opacity: targetOpacity, duration }, 0)
+      tl.to(fromImg, { opacity: mainOpacity, duration }, 0)
     }
-  } else {
-    // Animate dim overlay and cover out together
-    const tl = gsap.timeline({
-      onComplete: () => {
-        if (dimEl) gsap.set(dimEl, { visibility: 'hidden' })
-        gsap.set(cover, { visibility: 'hidden' })
-        if (mainBg) gsap.set(mainBg, { opacity: 1 })
-      },
-    })
-    if (dimEl) tl.to(dimEl, { opacity: 0, duration, ease: 'power2.inOut' }, 0)
-    tl.to(cover, { opacity: 0, duration, ease: 'power2.inOut' }, 0)
-    if (mainBg) tl.to(mainBg, { opacity: 1, duration, ease: 'power2.inOut' }, 0)
+
+    return tl
   }
+
+  // Leaving cover: fade destination (main) in and hide cover + dim.
+  const tl = gsap.timeline({
+    onComplete: () => {
+      if (dimEl) gsap.set(dimEl, { visibility: 'hidden' })
+      gsap.set(fromImg, { visibility: 'hidden' })
+      gsap.set(toImg, { opacity: 1, visibility: 'visible' })
+    },
+    defaults: { ease: 'power2.inOut' },
+  })
+
+  gsap.set(fromImg, { visibility: 'visible' })
+  gsap.set(toImg, { visibility: 'visible' })
+
+  if (dimEl) tl.to(dimEl, { opacity: 0, duration }, 0)
+  tl.to(fromImg, { opacity: 0, duration }, 0)
+  tl.to(toImg, { opacity: 1, duration }, 0)
+
+  return tl
 }
 
 // NOTE: color extraction from image removed. Palette should be declared
@@ -886,16 +977,16 @@ const transitionToCover = (enter: boolean, coverKey?: string) => {
 onMounted(() => {
   window.addEventListener('pointerdown', handleGlobalPointerDown)
 
-  // Preload cover image to ensure it loads properly
-  const coverImg = new Image()
-  coverImg.src = new URL('../assets/images/cover.png', import.meta.url).href
-  coverImg.onload = () => {
-    // Set the src on the actual element to ensure browser caches it
-    if (bgCoverRef.value) {
-      bgCoverRef.value.src = coverImg.src
-    }
-  }
-  coverImg.onerror = () => {}
+  // Preload any configured cover images (future-proof for multiple covers)
+  const coverImages = new Set(
+    menuItems
+      .map((item) => ('coverImage' in item ? (item.coverImage as string | undefined) : undefined))
+      .filter((value): value is string => Boolean(value))
+  )
+  coverImages.forEach((src) => {
+    const img = new Image()
+    img.src = src
+  })
 })
 
 onBeforeUnmount(() => {
@@ -909,7 +1000,6 @@ onBeforeUnmount(() => {
       'card-dealer',
       {
         'is-animating': isAnimating,
-        'card-dealer--about': currentView === 'content' && selectedItem?.title === 'About',
       },
     ]"
   >
@@ -1046,14 +1136,14 @@ onBeforeUnmount(() => {
         class="card-dealer__bg-image card-dealer__bg-main"
       />
       <img
-        ref="bgCoverRef"
-        src="../assets/images/cover.png"
+        ref="bgSecondaryRef"
+        :src="defaultCoverSrc"
         alt="Cover"
         class="card-dealer__bg-image card-dealer__bg-cover"
         style="opacity: 0; visibility: hidden"
       />
       <div
-        ref="coverDimRef"
+        ref="bgSecondaryDimRef"
         class="card-dealer__cover-dim"
         style="opacity: 0; visibility: hidden; pointer-events: none"
       ></div>
