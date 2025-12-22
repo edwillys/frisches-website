@@ -2,7 +2,23 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import CharacterSelection from '../CharacterSelection.vue'
 import { nextTick } from 'vue'
-import type { ComponentPublicInstance } from 'vue'
+
+// Component VM shape used in tests to avoid `any` and satisfy linting
+type Character = {
+  id: number
+  name: string
+  modelPath: string
+  instruments: string[]
+  influences: string[]
+  favoriteSong: string
+}
+
+type ComponentVM = {
+  characters: Character[]
+  selectedIndex: number
+  selectedCharacter: Character
+  isAnimating: boolean
+}
 
 // Mock TresJS components - must be simple for hoisting
 vi.mock('@tresjs/core', () => ({
@@ -233,7 +249,7 @@ describe('CharacterSelection', () => {
       },
     })
 
-    const vm = wrapper.vm as ComponentPublicInstance
+    const vm = wrapper.vm as unknown as ComponentVM
 
     // Check character data structure
     expect(vm.characters).toHaveLength(2)
@@ -252,7 +268,7 @@ describe('CharacterSelection', () => {
       },
     })
 
-    const vm = wrapper.vm as ComponentPublicInstance
+    const vm = wrapper.vm as unknown as ComponentVM
     expect(vm.selectedIndex).toBe(0)
     expect(vm.selectedCharacter.name).toBe('Edgar')
   })
@@ -264,7 +280,7 @@ describe('CharacterSelection', () => {
       },
     })
 
-    const vm = wrapper.vm as ComponentPublicInstance
+    const vm = wrapper.vm as unknown as ComponentVM
 
     // Initially selected character at index 0
     expect(vm.selectedCharacter.id).toBe(1)
@@ -286,7 +302,7 @@ describe('CharacterSelection', () => {
       },
     })
 
-    const vm = wrapper.vm as ComponentPublicInstance
+    const vm = wrapper.vm as unknown as ComponentVM
 
     // Start at Edgar
     expect(vm.selectedCharacter.name).toBe('Edgar')
@@ -315,7 +331,7 @@ describe('CharacterSelection', () => {
     await rightArrow.trigger('click')
 
     // Should be disabled during animation
-    const vm = wrapper.vm as ComponentPublicInstance
+    const vm = wrapper.vm as unknown as ComponentVM
     expect(vm.isAnimating).toBe(true)
   })
 
