@@ -87,7 +87,6 @@ describe('CharacterSelection', () => {
     expect(wrapper.exists()).toBe(true)
     expect(wrapper.find('.character-selection').exists()).toBe(true)
     expect(wrapper.find('.character-selection__scene').exists()).toBe(true)
-    expect(wrapper.find('.character-selection__name-display').exists()).toBe(true)
     expect(wrapper.find('.character-selection__details').exists()).toBe(true)
   })
 
@@ -115,8 +114,8 @@ describe('CharacterSelection', () => {
       },
     })
 
-    const name = wrapper.find('.character-selection__name')
-    expect(name.text()).toBe('Edgar')
+    const cardTitle = wrapper.find('.character-selection__card-title')
+    expect(cardTitle.text()).toBe('Edgar')
 
     const infoSections = wrapper.findAll('.character-selection__info-section')
     const instrumentsSection = infoSections[0] // First section is instruments
@@ -138,8 +137,8 @@ describe('CharacterSelection', () => {
     })
 
     // Initially showing Edgar
-    let name = wrapper.find('.character-selection__name')
-    expect(name.text()).toBe('Edgar')
+    let cardTitle = wrapper.find('.character-selection__card-title')
+    expect(cardTitle.text()).toBe('Edgar')
 
     // Click right arrow to go to next character
     const rightArrow = wrapper.find('.character-selection__arrow--right')
@@ -147,8 +146,8 @@ describe('CharacterSelection', () => {
     await nextTick()
 
     // Should show Cami now
-    name = wrapper.find('.character-selection__name')
-    expect(name.text()).toBe('Cami')
+    cardTitle = wrapper.find('.character-selection__card-title')
+    expect(cardTitle.text()).toBe('Cami')
 
     const infoSections = wrapper.findAll('.character-selection__info-section')
     const instrumentsSection = infoSections[0] // First section is instruments
@@ -344,14 +343,13 @@ describe('CharacterSelection', () => {
     // Check main container classes
     expect(wrapper.find('.character-selection').exists()).toBe(true)
     expect(wrapper.find('.character-selection__scene').exists()).toBe(true)
-    expect(wrapper.find('.character-selection__name-display').exists()).toBe(true)
     expect(wrapper.find('.character-selection__details').exists()).toBe(true)
     expect(wrapper.find('.character-selection__card').exists()).toBe(true)
     expect(wrapper.find('.character-selection__arrow--left').exists()).toBe(true)
     expect(wrapper.find('.character-selection__arrow--right').exists()).toBe(true)
 
     // Check detail classes
-    expect(wrapper.find('.character-selection__name').exists()).toBe(true)
+    expect(wrapper.find('.character-selection__card-title').exists()).toBe(true)
     expect(wrapper.find('.character-selection__portrait').exists()).toBe(true)
     expect(wrapper.find('.character-selection__info-section').exists()).toBe(true)
     expect(wrapper.find('.character-selection__section-title').exists()).toBe(true)

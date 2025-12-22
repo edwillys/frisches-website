@@ -904,7 +904,15 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div :class="['card-dealer', { 'is-animating': isAnimating }]">
+  <div
+    :class="[
+      'card-dealer',
+      {
+        'is-animating': isAnimating,
+        'card-dealer--about': currentView === 'content' && selectedItem?.title === 'About',
+      },
+    ]"
+  >
     <!-- Social links (top center) -->
     <div
       v-if="currentView !== 'content'"

@@ -49,10 +49,25 @@ const getCharacterPosition = (index: number, currentRotation: number): [number, 
   return [Math.sin(angle) * radius, 0, Math.cos(angle) * radius]
 }
 
-// Calculate rotation for character to face camera
-const getCharacterRotation = (index: number, currentRotation: number): [number, number, number] => {
-  const angle = index * angleStep + currentRotation
-  return [0, -angle + Math.PI, 0] // Face inward (toward center/camera)
+// Calculate rotation so character faces the camera (XZ plane)
+const cameraXZ = { x: 0, z: 10 }
+const modelYawOffset = 0
+
+const getCharacterRotation = (index: number, groupRotation: number): [number, number, number] => {
+  const worldAngle = index * angleStep + groupRotation
+  const x = Math.sin(worldAngle) * radius
+  const z = Math.cos(worldAngle) * radius
+
+  const dx = cameraXZ.x - x
+  const dz = cameraXZ.z - z
+
+  // Yaw that would face the camera in world space
+  const worldYaw = Math.atan2(dx, dz) + modelYawOffset
+
+  // Compensate for the parent group's rotation so the model ends up with worldYaw
+  const localYaw = worldYaw - groupRotation
+
+  return [0, localYaw, 0]
 }
 
 // Navigate to next character (clockwise)
@@ -105,9 +120,12 @@ const prevCharacter = () => {
 }
 
 const gl = {
-  clearColor: 'transparent',
+  // Explicit clear alpha to prevent black WebGL clear background
+  clearColor: '#000000',
+  clearAlpha: 0,
   shadows: true,
   alpha: true,
+  premultipliedAlpha: false,
   shadowMapType: PCFSoftShadowMap,
   outputColorSpace: SRGBColorSpace,
   toneMapping: ACESFilmicToneMapping,
@@ -168,7 +186,7 @@ onUnmounted(() => {
     <!-- 3D Scene -->
     <div ref="sceneRef" class="character-selection__scene">
       <TresCanvas v-bind="gl">
-        <TresPerspectiveCamera :position="[0, 3, 10]" :fov="45" />
+        <TresPerspectiveCamera :position="[0, 2.6, 10]" :fov="45" />
 
         <!-- Lighting -->
         <TresAmbientLight :intensity="0.4" />
@@ -195,7 +213,7 @@ onUnmounted(() => {
               <GLTFModel
                 :path="character.modelPath"
                 :position="getCharacterPosition(index, 0)"
-                :rotation="getCharacterRotation(index, 0)"
+                :rotation="getCharacterRotation(index, rotationAngle)"
                 :scale="index === selectedIndex ? 2 : 1.5"
                 draco
               />
@@ -250,18 +268,18 @@ onUnmounted(() => {
               </TresMesh>
             </template>
 
-            <!-- Shadow overlay for unselected characters -->
+            <!-- Shadow overlay for unselected characters (ground shadow, avoids camera-facing black disc) -->
             <template v-if="index !== selectedIndex">
               <TresMesh
                 :position="[
                   getCharacterPosition(index, 0)[0],
-                  2,
+                  0.025,
                   getCharacterPosition(index, 0)[2],
                 ]"
-                :scale="[2.5, 2.5, 2.5]"
+                :rotation="[-Math.PI / 2, 0, 0]"
               >
-                <TresSphereGeometry :args="[1, 32, 32]" />
-                <TresMeshBasicMaterial :color="new Color(0x000000)" :opacity="0.7" transparent />
+                <TresCircleGeometry :args="[2.1, 64]" />
+                <TresMeshBasicMaterial :color="new Color(0x000000)" :opacity="0.22" transparent />
               </TresMesh>
             </template>
           </template>
@@ -270,11 +288,8 @@ onUnmounted(() => {
         <!-- Ground Plane -->
         <TresMesh :position="[0, -0.02, 0]" :rotation="[-Math.PI / 2, 0, 0]" receive-shadow>
           <TresPlaneGeometry :args="[25, 25]" />
-          <TresMeshStandardMaterial
-            :color="new Color(0x0a0a0a)"
-            :metalness="0.3"
-            :roughness="0.8"
-          />
+          <!-- Shadow-only: keeps depth without painting a black floor -->
+          <TresShadowMaterial :opacity="0.18" />
         </TresMesh>
 
         <!-- Camera Controls - disabled rotation for fixed view -->
@@ -323,11 +338,6 @@ onUnmounted(() => {
       </svg>
     </button>
 
-    <!-- Selected Character Name (centered at bottom) -->
-    <div class="character-selection__name-display">
-      <h2 class="character-selection__name">{{ selectedCharacter?.name }}</h2>
-    </div>
-
     <!-- Character Details Panel (RPG-style card) -->
     <div class="character-selection__details" v-if="selectedCharacter">
       <div class="character-selection__card">
@@ -369,413 +379,4 @@ onUnmounted(() => {
   </div>
 </template>
 
-<style scoped>
-.character-selection {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: transparent;
-  overflow: hidden;
-}
-
-.character-selection__scene {
-  flex: 1;
-  position: relative;
-  width: 100%;
-  min-height: 500px;
-}
-
-/* Navigation Arrows - positioned near center */
-.character-selection__arrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 20;
-  background: rgba(0, 0, 0, 0.85);
-  border: 3px solid #ffeb3b;
-  border-radius: 50%;
-  width: 70px;
-  height: 70px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #ffeb3b;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(8px);
-  box-shadow:
-    0 0 20px rgba(255, 235, 59, 0.3),
-    inset 0 0 20px rgba(255, 235, 59, 0.1);
-}
-
-.character-selection__arrow:hover:not(:disabled) {
-  background: rgba(255, 235, 59, 0.15);
-  border-color: #ffd54f;
-  transform: translateY(-50%) scale(1.15);
-  box-shadow:
-    0 0 30px rgba(255, 235, 59, 0.6),
-    inset 0 0 30px rgba(255, 235, 59, 0.2);
-}
-
-.character-selection__arrow:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.character-selection__arrow--left {
-  left: 35%;
-}
-
-.character-selection__arrow--right {
-  right: 35%;
-}
-
-/* Character Name Display (centered below scene) */
-.character-selection__name-display {
-  position: absolute;
-  bottom: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
-  text-align: center;
-}
-
-.character-selection__name {
-  font-size: 2.5rem;
-  font-weight: bold;
-  color: #ffeb3b;
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 4px;
-  text-shadow:
-    0 0 20px rgba(255, 235, 59, 1),
-    0 0 40px rgba(255, 235, 59, 0.6),
-    0 0 60px rgba(255, 235, 59, 0.4),
-    0 4px 8px rgba(0, 0, 0, 0.8);
-  animation: pulse 2.5s ease-in-out infinite;
-  font-family: 'Cinzel', 'Georgia', serif;
-  font-weight: 700;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    text-shadow:
-      0 0 20px rgba(255, 235, 59, 1),
-      0 0 40px rgba(255, 235, 59, 0.6),
-      0 0 60px rgba(255, 235, 59, 0.4),
-      0 4px 8px rgba(0, 0, 0, 0.8);
-  }
-  50% {
-    text-shadow:
-      0 0 30px rgba(255, 235, 59, 1),
-      0 0 60px rgba(255, 235, 59, 0.8),
-      0 0 90px rgba(255, 235, 59, 0.6),
-      0 4px 12px rgba(0, 0, 0, 0.9);
-  }
-}
-
-/* RPG-Style Character Card */
-.character-selection__details {
-  position: absolute;
-  top: 2rem;
-  right: 2rem;
-  width: 380px;
-  z-index: 10;
-  perspective: 1000px;
-}
-
-.character-selection__card {
-  background: linear-gradient(135deg, rgba(15, 10, 5, 0.98) 0%, rgba(30, 20, 10, 0.98) 100%);
-  border: 4px solid #d4af37;
-  border-radius: 20px;
-  padding: 0;
-  backdrop-filter: blur(16px);
-  box-shadow:
-    0 0 40px rgba(212, 175, 55, 0.5),
-    inset 0 0 60px rgba(212, 175, 55, 0.1),
-    0 15px 60px rgba(0, 0, 0, 0.9);
-  position: relative;
-  overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.character-selection__card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 6px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    #d4af37 20%,
-    #ffd700 50%,
-    #d4af37 80%,
-    transparent 100%
-  );
-  animation: shimmer 3s ease-in-out infinite;
-}
-
-.character-selection__card::after {
-  content: '';
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  right: 8px;
-  bottom: 8px;
-  border: 1px solid rgba(212, 175, 55, 0.3);
-  border-radius: 16px;
-  pointer-events: none;
-}
-
-@keyframes shimmer {
-  0%,
-  100% {
-    opacity: 0.4;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.character-selection__details:hover .character-selection__card {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow:
-    0 0 50px rgba(212, 175, 55, 0.7),
-    inset 0 0 80px rgba(212, 175, 55, 0.15),
-    0 20px 80px rgba(0, 0, 0, 0.95);
-  border-color: #ffd700;
-}
-
-/* Character Portrait */
-.character-selection__portrait {
-  padding: 2rem 2rem 1.5rem;
-  display: flex;
-  justify-content: center;
-  position: relative;
-  z-index: 1;
-}
-
-.character-selection__portrait-inner {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-  border: 4px solid #d4af37;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 3.5rem;
-  font-weight: bold;
-  color: #d4af37;
-  font-family: 'Cinzel', 'Georgia', serif;
-  box-shadow:
-    0 0 30px rgba(212, 175, 55, 0.6),
-    inset 0 0 40px rgba(0, 0, 0, 0.8);
-  position: relative;
-  overflow: hidden;
-}
-
-.character-selection__portrait-inner::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(
-    45deg,
-    transparent 30%,
-    rgba(255, 255, 255, 0.1) 50%,
-    transparent 70%
-  );
-  animation: portraitShine 4s ease-in-out infinite;
-}
-
-@keyframes portraitShine {
-  0%,
-  100% {
-    transform: rotate(0deg) translate(-50%, -50%);
-  }
-  50% {
-    transform: rotate(180deg) translate(-50%, -50%);
-  }
-}
-
-/* Card Content */
-.character-selection__card-content {
-  padding: 0 2rem 2rem;
-  position: relative;
-  z-index: 1;
-}
-
-.character-selection__card-title {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #d4af37;
-  margin: 0 0 1.5rem;
-  text-align: center;
-  text-transform: uppercase;
-  letter-spacing: 3px;
-  font-family: 'Cinzel', 'Georgia', serif;
-  text-shadow:
-    0 0 20px rgba(212, 175, 55, 0.8),
-    0 2px 8px rgba(0, 0, 0, 0.9);
-}
-.character-selection__info-section {
-  margin-bottom: 1.5rem;
-  position: relative;
-}
-
-.character-selection__info-section:last-child {
-  margin-bottom: 0;
-}
-
-.character-selection__section-title {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #ffd700;
-  margin: 0 0 0.75rem 0;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  font-family: 'Cinzel', 'Georgia', serif;
-  text-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
-  border-bottom: 2px solid rgba(212, 175, 55, 0.3);
-  padding-bottom: 0.5rem;
-}
-
-.character-selection__info-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.character-selection__info-list li {
-  padding: 0.5rem 0;
-  color: #d4af37;
-  font-size: 1rem;
-  position: relative;
-  padding-left: 1.5rem;
-  line-height: 1.6;
-  transition: all 0.2s ease;
-  font-family: 'Georgia', serif;
-}
-
-.character-selection__info-list li:hover {
-  color: #ffd700;
-  padding-left: 1.75rem;
-}
-
-.character-selection__info-list li::before {
-  content: '⚔';
-  position: absolute;
-  left: 0;
-  color: #d4af37;
-  font-size: 1rem;
-  transition: all 0.2s ease;
-}
-
-.character-selection__info-list li:hover::before {
-  left: 0.25rem;
-  color: #ffd700;
-}
-
-.character-selection__section-text,
-.character-selection__favorite-song {
-  color: #d4af37;
-  font-size: 1rem;
-  line-height: 1.6;
-  margin: 0;
-  font-family: 'Georgia', serif;
-  font-style: italic;
-}
-
-/* Responsive Design */
-@media (max-width: 1024px) {
-  .character-selection__details {
-    width: 280px;
-    right: 1rem;
-    top: 1rem;
-  }
-
-  .character-selection__name {
-    font-size: 2.75rem;
-    letter-spacing: 4px;
-  }
-
-  .character-selection__arrow {
-    width: 60px;
-    height: 60px;
-  }
-
-  .character-selection__arrow--left {
-    left: 30%;
-  }
-
-  .character-selection__arrow--right {
-    right: 30%;
-  }
-}
-
-@media (max-width: 768px) {
-  .character-selection__details {
-    position: relative;
-    right: auto;
-    top: auto;
-    margin: 1rem auto;
-    width: calc(100% - 2rem);
-    max-width: 400px;
-  }
-
-  .character-selection__name-display {
-    bottom: 2rem;
-  }
-
-  .character-selection__name {
-    font-size: 2rem;
-    letter-spacing: 3px;
-  }
-
-  .character-selection__arrow {
-    width: 50px;
-    height: 50px;
-  }
-
-  .character-selection__arrow--left {
-    left: 20%;
-  }
-
-  .character-selection__arrow--right {
-    right: 20%;
-  }
-
-  .character-selection__scene {
-    min-height: 350px;
-  }
-}
-
-@media (max-width: 480px) {
-  .character-selection__name {
-    font-size: 1.5rem;
-    letter-spacing: 2px;
-  }
-
-  .character-selection__arrow {
-    width: 45px;
-    height: 45px;
-  }
-
-  .character-selection__arrow--left {
-    left: 15%;
-  }
-
-  .character-selection__arrow--right {
-    right: 15%;
-  }
-}
-</style>
+<style scoped src="./characterSelection/CharacterSelection.css"></style>

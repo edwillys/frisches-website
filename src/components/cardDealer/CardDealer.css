@@ -222,6 +222,26 @@
   z-index: 0;
 }
 
+/* About view should show only the cover background (use same overlay approach as home) */
+.card-dealer--about .card-dealer__content-overlay {
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.card-dealer--about .card-dealer__cover-dim {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+.card-dealer--about .card-dealer__bg-main {
+  opacity: 0 !important;
+}
+
+.card-dealer--about .card-dealer__bg-cover {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
 .card-dealer__content-container {
   position: relative;
   z-index: 1;
