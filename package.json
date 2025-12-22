@@ -19,8 +19,11 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@tresjs/cientos": "^5.2.0",
+    "@tresjs/core": "^5.2.0",
     "gsap": "^3.13.0",
     "pinia": "^3.0.3",
+    "three": "^0.182.0",
     "vue": "^3.5.22",
     "vue-router": "^4.6.3"
   },

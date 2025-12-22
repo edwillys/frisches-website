@@ -4,6 +4,18 @@ import { nextTick } from 'vue'
 import CardDealer from '../CardDealer.vue'
 import MenuCard from '../MenuCard.vue'
 
+// Mock @tresjs/cientos to avoid module resolution issues
+vi.mock('@tresjs/cientos', () => ({
+  OrbitControls: { name: 'OrbitControls', template: '<div class="mock-orbit-controls"></div>' },
+  GLTFModel: { name: 'GLTFModel', template: '<div class="mock-gltf-model"></div>' },
+  useGLTF: vi.fn(() => ({ nodes: {}, materials: {} })),
+}))
+
+// Mock @tresjs/core
+vi.mock('@tresjs/core', () => ({
+  TresCanvas: { name: 'TresCanvas', template: '<div class="mock-tres-canvas"><slot /></div>' },
+}))
+
 /**
  * CardDealer Component Tests
  *

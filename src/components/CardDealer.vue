@@ -29,6 +29,7 @@ import { ref, onMounted, nextTick, onBeforeUnmount, computed } from 'vue'
 import MenuCard from './MenuCard.vue'
 import LogoButton from './LogoButton.vue'
 import AudioPlayer from './AudioPlayer.vue'
+import CharacterSelection from './CharacterSelection.vue'
 import { useGSAP } from '../composables/useGSAP'
 import { readParticlesPaletteFromCss } from '../composables/useCardDealerPalette'
 import { getTargetXYToViewportCenter, getViewportCenter } from './cardDealer/viewportCenter'
@@ -1142,6 +1143,11 @@ onBeforeUnmount(() => {
           <!-- Music Player -->
           <div v-if="selectedItem?.title === 'Music'" class="card-dealer__music-content">
             <AudioPlayer />
+          </div>
+
+          <!-- About / Character Selection -->
+          <div v-else-if="selectedItem?.title === 'About'" class="card-dealer__about-content">
+            <CharacterSelection />
           </div>
 
           <!-- Other content -->
