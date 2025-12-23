@@ -86,5 +86,9 @@ watchEffect(() => {
 </script>
 
 <template>
-  <primitive v-if="!isLoadingRef && stateRef?.scene" :object="stateRef.scene" v-bind="$attrs" />
+  <primitive
+    v-if="!isLoadingRef.value && stateRef.value?.scene"
+    :object="stateRef.value.scene"
+    v-bind="$attrs"
+  />
 </template>

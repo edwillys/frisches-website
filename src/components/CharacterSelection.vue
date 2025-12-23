@@ -92,8 +92,16 @@ interface GLTFScene {
   animations?: Array<{ name: string }>
 }
 
+interface GLTFPayload {
+  scene?: unknown
+}
+
+const isGLTFPayload = (value: unknown): value is GLTFPayload =>
+  !!value && typeof value === 'object' && 'scene' in value
+
 // Preload all models
-const onModelLoaded = (id: number, payload: { scene?: unknown }) => {
+const onModelLoaded = (id: number, payload: unknown) => {
+  if (!isGLTFPayload(payload)) return
   if (payload.scene) {
     loadedModels.set(id, payload.scene)
 
