@@ -14,6 +14,18 @@ We are building a dynamic website for the rock band **Frisches** using Vue.js. T
   - (Other typical band site sections)
 - The cards will be interactive and visually styled to match the mood of the media resources.
 
+## Character Selection Behavior
+
+- **One character at a time:** The About/character view displays a single 3D character next to an information card (name, influences, favorite song).
+- **Selection UI:** Users pick characters via circular initial buttons (one per character) in the button row below the scene; the active button is highlighted.
+- **Badges:** Instead of an instrument text list, each character shows small SVG “badge medals” (stored in `src/assets/badges`) rendered in a compact grid beside the portrait.
+- **Preloading & rendering:** All GLTF models are preloaded (instantiated) but only the selected model is visible; this makes swaps instantaneous and avoids loading delays during selection.
+- **Synchronized swap animation:** GSAP timelines animate the card and model out and in synchronously for smooth transitions between characters.
+- **Model framing & orientation:** Camera position / FOV and per-character `rotationY` and `scale` properties are used to ensure each character fits the same visual height as the card and faces forward; OrbitControls rotation is disabled to keep a consistent viewing angle.
+- **Shadow & lighting:** Models use three.js shadows and a small skylight setup to integrate visually with the card backdrop.
+- **Animations & playback:** The loader logs available animation clips; future enhancement is to automatically play a character’s idle animation via an AnimationMixer when present.
+- **Testing & reliability:** Unit tests were updated to mock GSAP timelines (run synchronously in tests) and to assert badges and info sections; all unit tests pass locally (`56/56`).
+
 ## Visual Effects
 
 ### Luminescent Dust Particles (MouseParticles Component)
