@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watchEffect } from 'vue'
+import { computed, watchEffect } from 'vue'
 import { useGLTF } from '@tresjs/cientos'
 
 type MeshLike = {
@@ -17,6 +17,8 @@ const isMeshLike = (value: unknown): value is MeshLike =>
 type RefLike<T> = { value: T }
 const isRefLike = <T = unknown,>(value: unknown): value is RefLike<T> =>
   isObject(value) && 'value' in value
+
+type LoadedPayload = { scene?: unknown }
 
 const props = withDefaults(
   defineProps<{
@@ -42,39 +44,46 @@ const emit = defineEmits<{
 const gltfResult = useGLTF(props.path, {
   draco: props.draco,
   decoderPath: props.decoderPath,
-}) as unknown as {
-  state?: unknown
-  isLoading?: unknown
-  error?: unknown
-}
+}) as unknown
 
-const stateRef: RefLike<{ scene?: unknown } | null> = isRefLike(gltfResult.state)
-  ? (gltfResult.state as RefLike<{ scene?: unknown } | null>)
-  : { value: null }
-const isLoadingRef: RefLike<boolean> = isRefLike(gltfResult.isLoading)
-  ? (gltfResult.isLoading as RefLike<boolean>)
-  : { value: false }
-const errorRef: RefLike<unknown> = isRefLike(gltfResult.error)
-  ? (gltfResult.error as RefLike<unknown>)
-  : { value: null }
+// `useGLTF` shape differs across versions; support both:
+// - `{ scene, isLoading, error }` where `scene` is a ref
+// - `{ state, isLoading, error }` where `state.value.scene` exists
+const resultObj = (isObject(gltfResult) ? gltfResult : {}) as Record<string, unknown>
+
+const sceneRef = isRefLike(resultObj.scene) ? (resultObj.scene as RefLike<unknown>) : null
+const stateRef = isRefLike(resultObj.state)
+  ? (resultObj.state as RefLike<{ scene?: unknown } | null>)
+  : ({ value: null } as RefLike<{ scene?: unknown } | null>)
+const isLoadingRef = isRefLike(resultObj.isLoading)
+  ? (resultObj.isLoading as RefLike<boolean>)
+  : ({ value: false } as RefLike<boolean>)
+const errorRef = isRefLike(resultObj.error)
+  ? (resultObj.error as RefLike<unknown>)
+  : ({ value: null } as RefLike<unknown>)
 
 defineExpose({ instance: stateRef })
+
+const sceneObject = computed<unknown>(() => sceneRef?.value ?? stateRef.value?.scene)
 
 watchEffect(() => {
   if (errorRef.value) emit('error', errorRef.value)
 })
 
 watchEffect(() => {
-  if (!isLoadingRef.value && stateRef.value?.scene) emit('loaded', stateRef.value)
+  if (isLoadingRef.value) return
+  const scene = sceneObject.value
+  if (!scene) return
+  const payload: LoadedPayload = { scene }
+  emit('loaded', payload)
 })
 
 watchEffect(() => {
-  if (!stateRef.value?.scene) return
+  const sceneValue = sceneObject.value
+  if (!sceneValue) return
   if (!props.castShadow && !props.receiveShadow) return
 
-  const scene = stateRef.value.scene as
-    | { traverse?: (fn: (child: unknown) => void) => void }
-    | undefined
+  const scene = sceneValue as { traverse?: (fn: (child: unknown) => void) => void } | undefined
   if (!scene?.traverse) return
 
   scene.traverse((child: unknown) => {
@@ -86,9 +95,5 @@ watchEffect(() => {
 </script>
 
 <template>
-  <primitive
-    v-if="!isLoadingRef.value && stateRef.value?.scene"
-    :object="stateRef.value.scene"
-    v-bind="$attrs"
-  />
+  <primitive v-if="sceneObject" :object="sceneObject" v-bind="$attrs" />
 </template>
