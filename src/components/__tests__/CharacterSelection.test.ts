@@ -3,6 +3,26 @@ import { mount } from '@vue/test-utils'
 import CharacterSelection from '../CharacterSelection.vue'
 import { nextTick } from 'vue'
 
+interface TimelineChain {
+  to: (selector: string, props: unknown) => TimelineChain
+  call: (callback: () => void) => TimelineChain
+}
+
+// Mock GSAP to execute animations synchronously
+vi.mock('gsap', () => ({
+  default: {
+    timeline: vi.fn(() => ({
+      to: vi.fn(function (this: TimelineChain) {
+        return this
+      }),
+      call: vi.fn(function (this: TimelineChain, callback: () => void) {
+        callback()
+        return this
+      }),
+    })),
+  },
+}))
+
 // Component VM shape used in tests to avoid `any` and satisfy linting
 type Character = {
   id: number
@@ -97,21 +117,21 @@ describe('CharacterSelection', () => {
 
     expect(wrapper.exists()).toBe(true)
     expect(wrapper.find('.character-selection').exists()).toBe(true)
-    expect(wrapper.find('.character-selection__scene').exists()).toBe(true)
-    expect(wrapper.find('.character-selection__details').exists()).toBe(true)
+    expect(wrapper.find('.character-selection__model-container').exists()).toBe(true)
+    expect(wrapper.find('.character-selection__card').exists()).toBe(true)
   })
 
-  it('displays navigation arrows', () => {
+  it('displays character selection buttons', () => {
     const wrapper = mount(CharacterSelection, {
       global: {
         stubs: globalStubs,
       },
     })
 
-    const arrows = wrapper.findAll('.character-selection__arrow')
-    expect(arrows).toHaveLength(2)
-    expect(wrapper.find('.character-selection__arrow--left').exists()).toBe(true)
-    expect(wrapper.find('.character-selection__arrow--right').exists()).toBe(true)
+    const vm = wrapper.vm as unknown as ComponentVM
+    const buttons = wrapper.findAll('.character-selection__button')
+    expect(buttons).toHaveLength(vm.characters.length)
+    expect(buttons[0]?.classes()).toContain('character-selection__button--active')
   })
 
   it('displays first character profile by default', () => {
@@ -131,20 +151,15 @@ describe('CharacterSelection', () => {
     const cardTitle = wrapper.find('.character-selection__card-title')
     expect(cardTitle.text()).toBe(vm.selectedCharacter.name)
 
-    const infoSections = wrapper.findAll('.character-selection__info-section')
-    const instrumentsSection = infoSections[0] // First section is instruments
-
-    const instruments = instrumentsSection?.findAll('.character-selection__info-list li')
-    expect(instruments).toHaveLength(vm.selectedCharacter.instruments.length)
-    vm.selectedCharacter.instruments.forEach((instrument, i) => {
-      expect(instruments?.[i]?.text()).toBe(instrument)
-    })
+    // Check badges (instruments) in portrait area
+    const badges = wrapper.findAll('.character-selection__badge')
+    expect(badges).toHaveLength(vm.selectedCharacter.instruments.length)
 
     const favoriteSong = wrapper.find('.character-selection__favorite-song')
     expect(favoriteSong.text()).toBe(vm.selectedCharacter.favoriteSong)
   })
 
-  it('switches character when arrow is clicked', async () => {
+  it('switches character when button is clicked', async () => {
     const wrapper = mount(CharacterSelection, {
       global: {
         stubs: globalStubs,
@@ -157,22 +172,16 @@ describe('CharacterSelection', () => {
     let cardTitle = wrapper.find('.character-selection__card-title')
     expect(cardTitle.text()).toBe(vm.selectedCharacter.name)
 
-    // Click right arrow to go to next character
-    const rightArrow = wrapper.find('.character-selection__arrow--right')
-    await rightArrow.trigger('click')
+    // Click second button to switch character
+    const buttons = wrapper.findAll('.character-selection__button')
+    await buttons[1]?.trigger('click')
     await nextTick()
 
     cardTitle = wrapper.find('.character-selection__card-title')
     expect(cardTitle.text()).toBe(vm.selectedCharacter.name)
 
-    const infoSections = wrapper.findAll('.character-selection__info-section')
-    const instrumentsSection = infoSections[0] // First section is instruments
-
-    const instruments = instrumentsSection?.findAll('.character-selection__info-list li')
-    expect(instruments).toHaveLength(vm.selectedCharacter.instruments.length)
-    vm.selectedCharacter.instruments.forEach((instrument, i) => {
-      expect(instruments?.[i]?.text()).toBe(instrument)
-    })
+    const badges = wrapper.findAll('.character-selection__badge')
+    expect(badges).toHaveLength(vm.selectedCharacter.instruments.length)
 
     const favoriteSong = wrapper.find('.character-selection__favorite-song')
     expect(favoriteSong.text()).toBe(vm.selectedCharacter.favoriteSong)
@@ -192,9 +201,11 @@ describe('CharacterSelection', () => {
     const vm = wrapper.vm as unknown as ComponentVM
 
     const infoSections = wrapper.findAll('.character-selection__info-section')
-    const influencesSection = infoSections[1] // Second section is influences
+    const influencesSection = infoSections.find(
+      (section) => section.find('.character-selection__section-title').text() === 'Influences'
+    )
 
-    expect(influencesSection?.find('.character-selection__section-title').text()).toBe('Influences')
+    expect(influencesSection).toBeTruthy()
 
     const influences = influencesSection?.findAll('.character-selection__info-list li')
     expect(influences).toHaveLength(vm.selectedCharacter.influences.length)
@@ -213,14 +224,16 @@ describe('CharacterSelection', () => {
     const vm = wrapper.vm as unknown as ComponentVM
     expect(vm.characters.length).toBeGreaterThan(1)
 
-    const rightArrow = wrapper.find('.character-selection__arrow--right')
+    const buttons = wrapper.findAll('.character-selection__button')
 
     // Switch to second character
-    await rightArrow.trigger('click')
+    await buttons[1]?.trigger('click')
     await nextTick()
 
     const infoSections = wrapper.findAll('.character-selection__info-section')
-    const influencesSection = infoSections[1]
+    const influencesSection = infoSections.find(
+      (section) => section.find('.character-selection__section-title').text() === 'Influences'
+    )
 
     const influences = influencesSection?.findAll('.character-selection__info-list li')
     expect(influences).toHaveLength(vm.selectedCharacter.influences.length)
@@ -242,7 +255,7 @@ describe('CharacterSelection', () => {
 
     const titles = wrapper.findAll('.character-selection__section-title').map((el) => el.text())
 
-    expect(titles).toEqual(['Role', 'Influences', 'Favorite Song'])
+    expect(titles).toEqual(['Influences', 'Favorite Song'])
   })
 
   it('maintains correct character data structure', () => {
@@ -295,16 +308,19 @@ describe('CharacterSelection', () => {
     expect(vm.selectedCharacter.id).toBe(vm.characters[0]!.id)
     expect(vm.selectedCharacter.name).toBe(vm.characters[0]!.name)
 
-    // Select character 2 using arrow
-    const rightArrow = wrapper.find('.character-selection__arrow--right')
-    await rightArrow.trigger('click')
+    // Select character 2 using button
+    const buttons = wrapper.findAll('.character-selection__button')
+    await buttons[1]?.trigger('click')
+
+    // Wait for animation to complete
+    await new Promise((resolve) => setTimeout(resolve, 100))
     await nextTick()
 
     expect(vm.selectedCharacter.id).toBe(vm.characters[1]!.id)
     expect(vm.selectedCharacter.name).toBe(vm.characters[1]!.name)
   })
 
-  it('navigates backwards with left arrow', async () => {
+  it('renders character selection buttons', async () => {
     const wrapper = mount(CharacterSelection, {
       global: {
         stubs: globalStubs,
@@ -313,33 +329,37 @@ describe('CharacterSelection', () => {
 
     const vm = wrapper.vm as unknown as ComponentVM
 
-    expect(vm.characters.length).toBeGreaterThan(1)
+    const buttons = wrapper.findAll('.character-selection__button')
+    expect(buttons).toHaveLength(vm.characters.length)
 
-    // Start at first character
-    expect(vm.selectedCharacter.name).toBe(vm.characters[0]!.name)
+    // Initially first button is active
+    expect(buttons[0]?.classes()).toContain('character-selection__button--active')
 
-    // Click left arrow - should wrap to last character
-    const leftArrow = wrapper.find('.character-selection__arrow--left')
-    await leftArrow.trigger('click')
+    // Click second button
+    await buttons[1]?.trigger('click')
+
+    // Wait for animation to complete
+    await new Promise((resolve) => setTimeout(resolve, 100))
     await nextTick()
 
-    expect(vm.selectedCharacter.name).toBe(vm.characters[vm.characters.length - 1]!.name)
+    // Now second button should be active
+    expect(buttons[1]?.classes()).toContain('character-selection__button--active')
   })
 
-  it('disables arrows during animation', async () => {
+  it('disables buttons during animation', async () => {
     const wrapper = mount(CharacterSelection, {
       global: {
         stubs: globalStubs,
       },
     })
 
-    const rightArrow = wrapper.find('.character-selection__arrow--right')
+    const buttons = wrapper.findAll('.character-selection__button')
 
     // Initially not disabled
-    expect(rightArrow.attributes('disabled')).toBeUndefined()
+    expect(buttons[0]?.attributes('disabled')).toBeUndefined()
 
-    // Click arrow
-    await rightArrow.trigger('click')
+    // Click button
+    await buttons[1]?.trigger('click')
 
     // Should be disabled during animation
     const vm = wrapper.vm as unknown as ComponentVM
@@ -357,7 +377,7 @@ describe('CharacterSelection', () => {
       },
     })
 
-    expect(wrapper.find('.character-selection__scene').exists()).toBe(true)
+    expect(wrapper.find('.character-selection__model-container').exists()).toBe(true)
   })
 
   it('has proper CSS classes for styling', () => {
@@ -369,17 +389,15 @@ describe('CharacterSelection', () => {
 
     // Check main container classes
     expect(wrapper.find('.character-selection').exists()).toBe(true)
-    expect(wrapper.find('.character-selection__scene').exists()).toBe(true)
-    expect(wrapper.find('.character-selection__details').exists()).toBe(true)
+    expect(wrapper.find('.character-selection__model-container').exists()).toBe(true)
     expect(wrapper.find('.character-selection__card').exists()).toBe(true)
-    expect(wrapper.find('.character-selection__arrow--left').exists()).toBe(true)
-    expect(wrapper.find('.character-selection__arrow--right').exists()).toBe(true)
+    expect(wrapper.find('.character-selection__buttons').exists()).toBe(true)
 
     // Check detail classes
     expect(wrapper.find('.character-selection__card-title').exists()).toBe(true)
     expect(wrapper.find('.character-selection__portrait').exists()).toBe(true)
     expect(wrapper.find('.character-selection__info-section').exists()).toBe(true)
     expect(wrapper.find('.character-selection__section-title').exists()).toBe(true)
-    expect(wrapper.find('.character-selection__info-list').exists()).toBe(true)
+    expect(wrapper.find('.character-selection__badges').exists()).toBe(true)
   })
 })
