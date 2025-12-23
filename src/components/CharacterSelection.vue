@@ -19,17 +19,33 @@ const characters = ref<Character[]>([
     id: 1,
     name: 'Edgar',
     modelPath: new URL('../assets/threed/monster1.glb', import.meta.url).href,
-    instruments: ['Guitar', 'Vocals'],
-    influences: ['Black Sabbath', 'Led Zeppelin', 'Pink Floyd'],
-    favoriteSong: 'Tales From The Cellar',
+    instruments: ['Guitar', 'Backing Vocals'],
+    influences: ['Led Zeppelin', 'Beatles'],
+    favoriteSong: 'Tears of Joyful Despair',
   },
   {
     id: 2,
     name: 'Cami',
     modelPath: new URL('../assets/threed/monster2.glb', import.meta.url).href,
-    instruments: ['Bass', 'Backing Vocals'],
-    influences: ['The Stooges', 'Motörhead', 'The Ramones'],
+    instruments: ['Singer', 'Flute'],
+    influences: ['Beatles', 'Joni Mitchell'],
     favoriteSong: 'Witch Hunting',
+  },
+  {
+    id: 3,
+    name: 'Steff',
+    modelPath: new URL('../assets/threed/monster3.glb', import.meta.url).href,
+    instruments: ['Drums'],
+    influences: ['Led Zeppelin', 'Pink Floyd'],
+    favoriteSong: 'Étiquette',
+  },
+  {
+    id: 4,
+    name: 'Tobi',
+    modelPath: new URL('../assets/threed/monster4.glb', import.meta.url).href,
+    instruments: ['Bass'],
+    influences: ['Red Hot Chili Peppers', 'Jimi Hendrix'],
+    favoriteSong: 'Misled',
   },
 ])
 
@@ -38,7 +54,7 @@ const rotationAngle = ref<number>(0)
 const isAnimating = ref<boolean>(false)
 
 // Circular positioning parameters
-const radius = 3.5
+const radius = 2.5
 const angleStep = (Math.PI * 2) / characters.value.length
 
 const selectedCharacter = computed(() => characters.value[selectedIndex.value])
@@ -214,7 +230,7 @@ onUnmounted(() => {
                 :path="character.modelPath"
                 :position="getCharacterPosition(index, 0)"
                 :rotation="getCharacterRotation(index, rotationAngle)"
-                :scale="index === selectedIndex ? 2 : 1.5"
+                :scale="index === selectedIndex ? 2 : 1.3"
                 draco
               />
             </Suspense>
