@@ -73,6 +73,9 @@ const BG_BLUR_PX = 3
 // Track loaded model roots so we can update layers/materials when selection changes
 const modelRootsById = new Map<number, unknown>()
 
+// Track halo mesh so it stays on SELECTED_LAYER (not blurred)
+const haloMeshRef = ref<unknown | null>(null)
+
 // Tres context & postprocessing composer for the background layer
 const tresCtx = shallowRef<unknown | null>(null)
 const bgComposer = shallowRef<unknown | null>(null)
@@ -149,6 +152,18 @@ const getCtxSize = (ctx: unknown): { width: number; height: number } | null => {
   const height = sizes?.height?.value
   if (typeof width === 'number' && typeof height === 'number') return { width, height }
   return null
+}
+
+const extractTresInstanceFromRef = (el: unknown): unknown => {
+  if (!el) return null
+  if (isObject(el) && 'instance' in el) return unwrap((el as { instance?: unknown }).instance)
+  return unwrap(el)
+}
+
+const setHaloMeshRef = (el: unknown) => {
+  haloMeshRef.value = el
+  const instance = extractTresInstanceFromRef(el)
+  if (instance) setObjectLayerDeep(instance, SELECTED_LAYER)
 }
 
 const setObjectLayerDeep = (root: unknown, layer: number) => {
@@ -584,6 +599,7 @@ onUnmounted(() => {
             <!-- Halo Ring for Selected Character -->
             <template v-if="index === selectedIndex">
               <TresMesh
+                :ref="setHaloMeshRef"
                 :position="[
                   getCharacterPosition(index, 0)[0],
                   0.1,
