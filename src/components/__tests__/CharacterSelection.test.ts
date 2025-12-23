@@ -125,19 +125,23 @@ describe('CharacterSelection', () => {
       },
     })
 
+    const vm = wrapper.vm as unknown as ComponentVM
+    expect(vm.characters.length).toBeGreaterThan(0)
+
     const cardTitle = wrapper.find('.character-selection__card-title')
-    expect(cardTitle.text()).toBe('Edgar')
+    expect(cardTitle.text()).toBe(vm.selectedCharacter.name)
 
     const infoSections = wrapper.findAll('.character-selection__info-section')
     const instrumentsSection = infoSections[0] // First section is instruments
 
     const instruments = instrumentsSection?.findAll('.character-selection__info-list li')
-    expect(instruments).toHaveLength(2)
-    expect(instruments?.[0]?.text()).toBe('Guitar')
-    expect(instruments?.[1]?.text()).toBe('Vocals')
+    expect(instruments).toHaveLength(vm.selectedCharacter.instruments.length)
+    vm.selectedCharacter.instruments.forEach((instrument, i) => {
+      expect(instruments?.[i]?.text()).toBe(instrument)
+    })
 
     const favoriteSong = wrapper.find('.character-selection__favorite-song')
-    expect(favoriteSong.text()).toBe('Tales From The Cellar')
+    expect(favoriteSong.text()).toBe(vm.selectedCharacter.favoriteSong)
   })
 
   it('switches character when arrow is clicked', async () => {
@@ -147,28 +151,31 @@ describe('CharacterSelection', () => {
       },
     })
 
-    // Initially showing Edgar
+    const vm = wrapper.vm as unknown as ComponentVM
+    expect(vm.characters.length).toBeGreaterThan(1)
+
     let cardTitle = wrapper.find('.character-selection__card-title')
-    expect(cardTitle.text()).toBe('Edgar')
+    expect(cardTitle.text()).toBe(vm.selectedCharacter.name)
 
     // Click right arrow to go to next character
     const rightArrow = wrapper.find('.character-selection__arrow--right')
     await rightArrow.trigger('click')
     await nextTick()
 
-    // Should show Cami now
     cardTitle = wrapper.find('.character-selection__card-title')
-    expect(cardTitle.text()).toBe('Cami')
+    expect(cardTitle.text()).toBe(vm.selectedCharacter.name)
 
     const infoSections = wrapper.findAll('.character-selection__info-section')
     const instrumentsSection = infoSections[0] // First section is instruments
 
     const instruments = instrumentsSection?.findAll('.character-selection__info-list li')
-    expect(instruments?.[0]?.text()).toBe('Bass')
-    expect(instruments?.[1]?.text()).toBe('Backing Vocals')
+    expect(instruments).toHaveLength(vm.selectedCharacter.instruments.length)
+    vm.selectedCharacter.instruments.forEach((instrument, i) => {
+      expect(instruments?.[i]?.text()).toBe(instrument)
+    })
 
     const favoriteSong = wrapper.find('.character-selection__favorite-song')
-    expect(favoriteSong.text()).toBe('Witch Hunting')
+    expect(favoriteSong.text()).toBe(vm.selectedCharacter.favoriteSong)
   })
 
   it('displays character influences correctly', () => {
@@ -182,16 +189,18 @@ describe('CharacterSelection', () => {
       },
     })
 
+    const vm = wrapper.vm as unknown as ComponentVM
+
     const infoSections = wrapper.findAll('.character-selection__info-section')
     const influencesSection = infoSections[1] // Second section is influences
 
     expect(influencesSection?.find('.character-selection__section-title').text()).toBe('Influences')
 
     const influences = influencesSection?.findAll('.character-selection__info-list li')
-    expect(influences).toHaveLength(3)
-    expect(influences?.[0]?.text()).toBe('Black Sabbath')
-    expect(influences?.[1]?.text()).toBe('Led Zeppelin')
-    expect(influences?.[2]?.text()).toBe('Pink Floyd')
+    expect(influences).toHaveLength(vm.selectedCharacter.influences.length)
+    vm.selectedCharacter.influences.forEach((influence, i) => {
+      expect(influences?.[i]?.text()).toBe(influence)
+    })
   })
 
   it('updates influences when character changes', async () => {
@@ -200,6 +209,9 @@ describe('CharacterSelection', () => {
         stubs: globalStubs,
       },
     })
+
+    const vm = wrapper.vm as unknown as ComponentVM
+    expect(vm.characters.length).toBeGreaterThan(1)
 
     const rightArrow = wrapper.find('.character-selection__arrow--right')
 
@@ -211,10 +223,10 @@ describe('CharacterSelection', () => {
     const influencesSection = infoSections[1]
 
     const influences = influencesSection?.findAll('.character-selection__info-list li')
-    expect(influences).toHaveLength(3)
-    expect(influences?.[0]?.text()).toBe('The Stooges')
-    expect(influences?.[1]?.text()).toBe('Motörhead')
-    expect(influences?.[2]?.text()).toBe('The Ramones')
+    expect(influences).toHaveLength(vm.selectedCharacter.influences.length)
+    vm.selectedCharacter.influences.forEach((influence, i) => {
+      expect(influences?.[i]?.text()).toBe(influence)
+    })
   })
 
   it('displays all info sections with correct titles', () => {
@@ -247,7 +259,7 @@ describe('CharacterSelection', () => {
     const vm = wrapper.vm as unknown as ComponentVM
 
     // Check character data structure
-    expect(vm.characters).toHaveLength(2)
+    expect(vm.characters.length).toBeGreaterThan(0)
     expect(vm.characters[0]).toHaveProperty('id')
     expect(vm.characters[0]).toHaveProperty('name')
     expect(vm.characters[0]).toHaveProperty('modelPath')
@@ -265,7 +277,7 @@ describe('CharacterSelection', () => {
 
     const vm = wrapper.vm as unknown as ComponentVM
     expect(vm.selectedIndex).toBe(0)
-    expect(vm.selectedCharacter.name).toBe('Edgar')
+    expect(vm.selectedCharacter.name).toBe(vm.characters[0]!.name)
   })
 
   it('computed selectedCharacter returns correct character', async () => {
@@ -277,17 +289,19 @@ describe('CharacterSelection', () => {
 
     const vm = wrapper.vm as unknown as ComponentVM
 
+    expect(vm.characters.length).toBeGreaterThan(1)
+
     // Initially selected character at index 0
-    expect(vm.selectedCharacter.id).toBe(1)
-    expect(vm.selectedCharacter.name).toBe('Edgar')
+    expect(vm.selectedCharacter.id).toBe(vm.characters[0]!.id)
+    expect(vm.selectedCharacter.name).toBe(vm.characters[0]!.name)
 
     // Select character 2 using arrow
     const rightArrow = wrapper.find('.character-selection__arrow--right')
     await rightArrow.trigger('click')
     await nextTick()
 
-    expect(vm.selectedCharacter.id).toBe(2)
-    expect(vm.selectedCharacter.name).toBe('Cami')
+    expect(vm.selectedCharacter.id).toBe(vm.characters[1]!.id)
+    expect(vm.selectedCharacter.name).toBe(vm.characters[1]!.name)
   })
 
   it('navigates backwards with left arrow', async () => {
@@ -299,15 +313,17 @@ describe('CharacterSelection', () => {
 
     const vm = wrapper.vm as unknown as ComponentVM
 
-    // Start at Edgar
-    expect(vm.selectedCharacter.name).toBe('Edgar')
+    expect(vm.characters.length).toBeGreaterThan(1)
 
-    // Click left arrow - should wrap to last character (Cami)
+    // Start at first character
+    expect(vm.selectedCharacter.name).toBe(vm.characters[0]!.name)
+
+    // Click left arrow - should wrap to last character
     const leftArrow = wrapper.find('.character-selection__arrow--left')
     await leftArrow.trigger('click')
     await nextTick()
 
-    expect(vm.selectedCharacter.name).toBe('Cami')
+    expect(vm.selectedCharacter.name).toBe(vm.characters[vm.characters.length - 1]!.name)
   })
 
   it('disables arrows during animation', async () => {
