@@ -33,10 +33,6 @@ vi.mock('@tresjs/cientos', () => ({
     name: 'OrbitControls',
     template: '<div class="mock-orbit-controls"></div>',
   },
-  GLTFModel: {
-    name: 'GLTFModel',
-    template: '<div class="mock-gltf-model"></div>',
-  },
   useGLTF: vi.fn(() => ({
     nodes: {},
     materials: {},
@@ -83,9 +79,8 @@ const globalStubs = {
   TresMeshStandardMaterial: true,
   TresMeshBasicMaterial: true,
   OrbitControls: true,
-  Suspense: true,
   primitive: true,
-  GLTFModel: true,
+  GLTFModelWithEvents: true,
 }
 
 describe('CharacterSelection', () => {
