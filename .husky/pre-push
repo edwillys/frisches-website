@@ -1,0 +1,9 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Run type-check (and optionally tests) before allowing a push.
+# This keeps commits fast while ensuring upstream quality on push.
+npm run type-check
+
+# Run unit tests before push (this will block push on failing tests)
+npm run test:unit -- --run

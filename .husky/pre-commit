@@ -1,5 +1,5 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
+# Run auto-fixers on staged files only (keep commits fast)
 npx lint-staged
-npm run type-check
