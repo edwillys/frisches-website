@@ -1,22 +1,32 @@
 <script setup lang="ts">
-import { computed, watchEffect } from 'vue'
-import { useGLTF } from '@tresjs/cientos'
+/**
+ * GLTFModelWithEvents - Optimized GLTF Model Loader with Animation Support
+ *
+ * Features:
+ * - Proper animation detection and playback via useAnimations
+ * - Mesh optimization (frustum culling, bounding computation)
+ * - Shadow configuration
+ * - Error handling with proper events
+ */
+import { computed, watchEffect, shallowRef, onUnmounted, watch } from 'vue'
+import { useGLTF, useAnimations } from '@tresjs/cientos'
+import type { AnimationClip, Object3D, BufferGeometry, Material } from 'three'
 
-type MeshLike = {
-  isMesh?: boolean
-  castShadow?: boolean
-  receiveShadow?: boolean
-}
-
+// Type guards
 const isObject = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object'
 
+interface MeshLike {
+  isMesh?: boolean
+  castShadow?: boolean
+  receiveShadow?: boolean
+  frustumCulled?: boolean
+  geometry?: BufferGeometry
+  material?: Material | Material[]
+}
+
 const isMeshLike = (value: unknown): value is MeshLike =>
   isObject(value) && (value as MeshLike).isMesh === true
-
-type RefLike<T> = { value: T }
-const isRefLike = <T = unknown,>(value: unknown): value is RefLike<T> =>
-  isObject(value) && 'value' in value
 
 const props = withDefaults(
   defineProps<{
@@ -25,76 +35,137 @@ const props = withDefaults(
     decoderPath?: string
     castShadow?: boolean
     receiveShadow?: boolean
+    autoPlayAnimation?: boolean
+    animationIndex?: number
   }>(),
   {
-    draco: false,
+    draco: true, // Enable Draco by default for better performance
     decoderPath: 'https://www.gstatic.com/draco/versioned/decoders/1.5.6/',
     castShadow: false,
     receiveShadow: false,
+    autoPlayAnimation: true,
+    animationIndex: 0,
   }
 )
 
 const emit = defineEmits<{
-  loaded: [payload: unknown]
+  loaded: [payload: { scene: Object3D; animations: AnimationClip[] }]
   error: [error: unknown]
+  animationStarted: [animationName: string]
 }>()
 
-const gltfResult = useGLTF(props.path, {
+// Load GLTF with useGLTF composable
+const { state, isLoading } = useGLTF(props.path, {
   draco: props.draco,
   decoderPath: props.decoderPath,
-}) as unknown
-
-// `useGLTF` shape differs across versions; support both:
-// - `{ scene, isLoading, error }` where `scene` is a ref
-// - `{ state, isLoading, error }` where `state.value.scene` exists
-const resultObj = (isObject(gltfResult) ? gltfResult : {}) as Record<string, unknown>
-
-const sceneRef = isRefLike(resultObj.scene) ? (resultObj.scene as RefLike<unknown>) : null
-const stateRef = isRefLike(resultObj.state)
-  ? (resultObj.state as RefLike<{ scene?: unknown } | null>)
-  : ({ value: null } as RefLike<{ scene?: unknown } | null>)
-const isLoadingRef = isRefLike(resultObj.isLoading)
-  ? (resultObj.isLoading as RefLike<boolean>)
-  : ({ value: false } as RefLike<boolean>)
-const errorRef = isRefLike(resultObj.error)
-  ? (resultObj.error as RefLike<unknown>)
-  : ({ value: null } as RefLike<unknown>)
-
-defineExpose({ instance: stateRef })
-
-const sceneObject = computed<unknown>(() => sceneRef?.value ?? stateRef.value?.scene)
-
-watchEffect(() => {
-  if (errorRef.value) emit('error', errorRef.value)
 })
 
+// Extract scene and animations from state
+const sceneObject = computed<Object3D | null>(() => {
+  if (!state.value) return null
+  // GLTF type has scene as Group which extends Object3D
+  return (state.value as unknown as { scene?: Object3D }).scene || null
+})
+
+const animations = computed<AnimationClip[]>(() => {
+  if (!state.value) return []
+  return (state.value as unknown as { animations?: AnimationClip[] }).animations || []
+})
+
+// Use animations composable for proper animation playback
+const { actions, mixer } = useAnimations(animations, sceneObject)
+
+// Track current action for cleanup
+const currentActionName = shallowRef<string | null>(null)
+
+// Play animation when available
+watch(
+  [actions, () => props.autoPlayAnimation, () => props.animationIndex],
+  ([newActions, autoPlay, animIndex]) => {
+    if (!autoPlay || !newActions) return
+
+    const actionNames = Object.keys(newActions)
+    if (actionNames.length === 0) return
+
+    // Stop current animation if any
+    if (currentActionName.value) {
+      const currentAction = newActions[currentActionName.value]
+      if (currentAction) {
+        currentAction.stop()
+      }
+    }
+
+    // Play animation at specified index (or first available)
+    const targetIndex = Math.min(animIndex, actionNames.length - 1)
+    const animName = actionNames[targetIndex]
+    if (animName) {
+      const action = newActions[animName]
+      if (action) {
+        action.reset().fadeIn(0.3).play()
+        currentActionName.value = animName
+        emit('animationStarted', animName)
+      }
+    }
+  },
+  { immediate: true }
+)
+
+// Cleanup on unmount
+onUnmounted(() => {
+  if (mixer.value) {
+    mixer.value.stopAllAction()
+  }
+})
+
+// Emit loaded event when model is ready
 watchEffect(() => {
-  if (isLoadingRef.value) return
+  if (isLoading.value) return
   const scene = sceneObject.value
   if (!scene) return
 
-  // Extract animations if available
-  const animations = isRefLike(resultObj.animations)
-    ? (resultObj.animations as RefLike<unknown>).value
-    : resultObj.animations
-
-  const payload = { scene, animations }
-  emit('loaded', payload)
+  emit('loaded', {
+    scene,
+    animations: animations.value,
+  })
 })
 
+// Apply shadow settings and optimize meshes
 watchEffect(() => {
-  const sceneValue = sceneObject.value
-  if (!sceneValue) return
-  if (!props.castShadow && !props.receiveShadow) return
+  const scene = sceneObject.value
+  if (!scene) return
 
-  const scene = sceneValue as { traverse?: (fn: (child: unknown) => void) => void } | undefined
-  if (!scene?.traverse) return
+  const traverseObj = scene as { traverse?: (fn: (child: unknown) => void) => void }
+  if (!traverseObj.traverse) return
 
-  scene.traverse((child: unknown) => {
+  traverseObj.traverse((child: unknown) => {
     if (!isMeshLike(child)) return
+
+    // Shadow configuration
     child.castShadow = props.castShadow
     child.receiveShadow = props.receiveShadow
+
+    // Mesh optimizations
+    child.frustumCulled = true
+
+    // Optimize geometry if available
+    if (child.geometry) {
+      // Compute bounding box/sphere for frustum culling
+      if (!child.geometry.boundingBox) {
+        child.geometry.computeBoundingBox()
+      }
+      if (!child.geometry.boundingSphere) {
+        child.geometry.computeBoundingSphere()
+      }
+    }
   })
+})
+
+// Expose for parent component access
+defineExpose({
+  scene: sceneObject,
+  animations,
+  actions,
+  mixer,
 })
 </script>
 

@@ -7,7 +7,8 @@ import CardDealer from '../CardDealer.vue'
 vi.mock('@tresjs/cientos', () => ({
   OrbitControls: { name: 'OrbitControls', template: '<div class="mock-orbit-controls"></div>' },
   GLTFModel: { name: 'GLTFModel', template: '<div class="mock-gltf-model"></div>' },
-  useGLTF: vi.fn(() => ({ nodes: {}, materials: {} })),
+  useGLTF: vi.fn(() => ({ state: { value: null }, isLoading: { value: false } })),
+  useAnimations: vi.fn(() => ({ actions: {}, mixer: { value: null } })),
 }))
 
 // Mock @tresjs/core

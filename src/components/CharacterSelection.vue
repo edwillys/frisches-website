@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onUnmounted, onBeforeUnmount, shallowRef } from 'vue'
 import { TresCanvas } from '@tresjs/core'
 import { OrbitControls } from '@tresjs/cientos'
-import { ACESFilmicToneMapping, PCFSoftShadowMap, SRGBColorSpace } from 'three'
+import { PCFSoftShadowMap, SRGBColorSpace, ACESFilmicToneMapping } from 'three'
+import type { AnimationClip, Object3D } from 'three'
 import gsap from 'gsap'
 import GLTFModelWithEvents from './GLTFModelWithEvents.vue'
-import { useModelCache } from '@/composables/useModelCache'
 
 // Badge SVG imports
 import guitarHeadSvg from '@/assets/badges/guitar-head.svg'
@@ -114,12 +114,18 @@ const touchStartX = ref(0)
 const touchEndX = ref(0)
 
 const handleTouchStart = (e: TouchEvent) => {
-  touchStartX.value = e.changedTouches[0].screenX
+  const touch = e.changedTouches[0]
+  if (touch) {
+    touchStartX.value = touch.screenX
+  }
 }
 
 const handleTouchEnd = (e: TouchEvent) => {
-  touchEndX.value = e.changedTouches[0].screenX
-  handleSwipe()
+  const touch = e.changedTouches[0]
+  if (touch) {
+    touchEndX.value = touch.screenX
+    handleSwipe()
+  }
 }
 
 const handleSwipe = () => {
@@ -135,11 +141,6 @@ onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
   window.addEventListener('touchstart', handleTouchStart)
   window.addEventListener('touchend', handleTouchEnd)
-
-  // Preload all character models
-  const { preloadModels } = useModelCache()
-  const modelPaths = characters.value.map((c) => c.modelPath)
-  preloadModels(modelPaths)
 })
 
 onBeforeUnmount(() => {
@@ -169,54 +170,40 @@ onUnmounted(() => {
   }
 })
 
-// Character Interaction
-const onCharacterClick = () => {
-  // Trigger a temporary animation
-  // Since we don't have specific animations loaded yet or they are not detected,
-  // we can do a simple GSAP animation on the scale or rotation of the container
-  // or just log for now as requested "to be defined yet".
-  // But I'll add a small "jump" effect using the scale prop if possible, or just a console log.
-  console.log('Character clicked!')
-
-  // Simple jump animation using GSAP on the model container if possible,
-  // but here we are inside the canvas.
-  // We can animate the scale of the current character in the `characters` array temporarily?
-  // Or better, emit an event.
+// Track loaded models and their animations
+interface LoadedModel {
+  scene: Object3D
+  animations: AnimationClip[]
 }
-
-// Track loaded models for preloading
-const loadedModels = new Map<number, unknown>()
+const loadedModels = shallowRef(new Map<number, LoadedModel>())
 
 const selectedCharacter = computed(() => characters.value[selectedIndex.value])
 
-interface GLTFPayload {
-  scene?: unknown
-}
+const onModelLoaded = (id: number, payload: { scene: Object3D; animations: AnimationClip[] }) => {
+  console.log(`Model loaded for character ${id}`)
 
-const isGLTFPayload = (value: unknown): value is GLTFPayload =>
-  !!value && typeof value === 'object' && 'scene' in value
+  if (payload.scene) {
+    loadedModels.value.set(id, {
+      scene: payload.scene,
+      animations: payload.animations,
+    })
 
-// Preload all models
-const onModelLoaded = (id: number, payload: unknown) => {
-  console.log(`Model loaded for character ${id}`, payload)
-  if (!isGLTFPayload(payload)) return
-
-  const gltf = payload as { scene?: unknown; animations?: Array<{ name: string }> }
-
-  if (gltf.scene) {
-    loadedModels.set(id, gltf.scene)
-
-    if (gltf.animations && gltf.animations.length > 0) {
+    if (payload.animations && payload.animations.length > 0) {
       console.log(
         `Character ${id} available animations:`,
-        gltf.animations.map((a) => a.name)
+        payload.animations.map((a) => a.name)
       )
     } else {
-      console.log(`Character ${id} has no animations found`)
+      console.log(`Character ${id} has no embedded animations`)
     }
   }
 }
 
+const onAnimationStarted = (id: number, animationName: string) => {
+  console.log(`Character ${id} started animation: ${animationName}`)
+}
+
+// Preload all models
 const onModelError = (id: number, error: unknown) => {
   console.error(`Failed to load model for character ${id}:`, error)
 }
@@ -271,16 +258,22 @@ const selectCharacter = (index: number) => {
     )
 }
 
+// Optimized WebGL settings for performance
 const gl = {
   clearColor: '#000000',
   clearAlpha: 0,
-  shadows: true,
+  shadows: false, // Disable shadows for performance
   alpha: true,
   premultipliedAlpha: false,
   shadowMapType: PCFSoftShadowMap,
   outputColorSpace: SRGBColorSpace,
   toneMapping: ACESFilmicToneMapping,
   toneMappingExposure: 1.2,
+  // Performance optimizations
+  powerPreference: 'high-performance' as const,
+  antialias: false, // Disable antialiasing for performance
+  // Limit pixel ratio for performance on high-DPI displays
+  dpr: Math.min(window.devicePixelRatio, 1.5),
 }
 
 const modelContainerRef = ref<HTMLElement | null>(null)
@@ -292,45 +285,37 @@ const modelContainerRef = ref<HTMLElement | null>(null)
     <div class="character-selection__content">
       <!-- 3D Character Model -->
       <div ref="modelContainerRef" class="character-selection__model-container">
-        <TresCanvas v-bind="gl" render-mode="always">
+        <TresCanvas v-bind="gl" render-mode="on-demand" :window-size="false">
           <TresPerspectiveCamera :position="[0, 1.2, 5]" :fov="50" />
 
-          <!-- Lighting -->
-          <TresAmbientLight :intensity="0.5" />
-          <TresDirectionalLight
-            :position="[5, 10, 5]"
-            :intensity="1.5"
-            cast-shadow
-            :shadow-mapSize-width="2048"
-            :shadow-mapSize-height="2048"
-          />
-          <TresPointLight :position="[0, 5, 0]" :intensity="0.6" color="#ffffff" />
+          <!-- Simplified lighting for performance -->
+          <TresAmbientLight :intensity="0.8" />
+          <TresDirectionalLight :position="[5, 10, 5]" :intensity="1.0" />
 
-          <!-- Preload all models, show only selected -->
-          <template v-for="(character, index) in characters" :key="character.id">
+          <!-- Only load the SELECTED model (lazy loading) -->
+          <Suspense>
             <GLTFModelWithEvents
-              :path="character.modelPath"
-              cast-shadow
-              receive-shadow
+              :key="selectedCharacter.id"
+              :path="selectedCharacter.modelPath"
+              draco
+              auto-play-animation
               :position="[0, -2.2, 0]"
-              :rotation="[0, character.rotationY ?? DEFAULT_ROTATION_Y, 0]"
+              :rotation="[0, selectedCharacter.rotationY ?? DEFAULT_ROTATION_Y, 0]"
               :scale="DEFAULT_SCALE"
-              :visible="index === selectedIndex"
-              @loaded="(payload) => onModelLoaded(character.id, payload)"
-              @error="(err) => onModelError(character.id, err)"
-              @click="onCharacterClick"
+              @loaded="(payload) => onModelLoaded(selectedCharacter.id, payload)"
+              @error="(err) => onModelError(selectedCharacter.id, err)"
+              @animation-started="(name) => onAnimationStarted(selectedCharacter.id, name)"
             />
-          </template>
+          </Suspense>
 
           <OrbitControls
             :enableDamping="false"
-            :dampingFactor="0.02"
             :enablePan="false"
             :enableZoom="true"
-            :zoomSpeed="1.5"
-            :rotateSpeed="1.2"
-            :minDistance="2.2"
-            :maxDistance="10"
+            :zoomSpeed="0.5"
+            :rotateSpeed="0.5"
+            :minDistance="3"
+            :maxDistance="8"
             :minPolarAngle="Math.PI / 4"
             :maxPolarAngle="Math.PI / 2"
             :autoRotate="false"
@@ -343,29 +328,27 @@ const modelContainerRef = ref<HTMLElement | null>(null)
       <div class="character-selection__card" v-if="selectedCharacter">
         <!-- Character Portrait Row -->
         <div class="character-selection__portrait-row">
-          <!-- Left Column (Empty) -->
-          <div class="character-selection__portrait-col-left"></div>
+          <!-- Instrument Badges (Top Left) -->
+          <div class="character-selection__badges-container">
+            <div
+              v-for="instrument in selectedCharacter.instruments"
+              :key="instrument"
+              class="character-selection__badge"
+              :title="instrument"
+            >
+              <img :src="badgeMap[instrument]" :alt="instrument" />
+            </div>
+          </div>
 
           <!-- Center Column (Avatar) -->
-          <div class="character-selection__portrait-col-center">
+          <div class="character-selection__portrait-center">
             <div class="character-selection__portrait-inner">
               {{ selectedCharacter.name.charAt(0) }}
             </div>
           </div>
 
-          <!-- Right Column (Badges Grid) -->
-          <div class="character-selection__portrait-col-right">
-            <div class="character-selection__badges-grid">
-              <div
-                v-for="instrument in selectedCharacter.instruments"
-                :key="instrument"
-                class="character-selection__badge"
-                :title="instrument"
-              >
-                <img :src="badgeMap[instrument]" :alt="instrument" />
-              </div>
-            </div>
-          </div>
+          <!-- Empty right side for balance -->
+          <div class="character-selection__portrait-spacer"></div>
         </div>
 
         <div class="character-selection__card-content">
@@ -387,7 +370,9 @@ const modelContainerRef = ref<HTMLElement | null>(null)
           <div class="character-selection__info-section">
             <h4 class="character-selection__section-title">Favorite Frisches Song</h4>
             <a href="#" class="character-selection__favorite-song-link" @click.prevent>
-              {{ selectedCharacter.favoriteSong }}
+              <span class="character-selection__favorite-song">{{
+                selectedCharacter.favoriteSong
+              }}</span>
               <span class="character-selection__play-icon">▶</span>
             </a>
           </div>
