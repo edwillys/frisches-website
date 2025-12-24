@@ -26,6 +26,10 @@ We are building a dynamic website for the rock band **Frisches** using Vue.js. T
 - **Animations & playback:** The loader logs available animation clips; future enhancement is to automatically play a character’s idle animation via an AnimationMixer when present.
 - **Testing & reliability:** Unit tests were updated to mock GSAP timelines (run synchronously in tests) and to assert badges and info sections; all unit tests pass locally (`56/56`).
 
+## Testing (Non-Interactive)
+
+- Run unit tests once and exit (no watch / no prompt): `npm run test:unit -- --run`
+
 ## Visual Effects
 
 ### Luminescent Dust Particles (MouseParticles Component)
