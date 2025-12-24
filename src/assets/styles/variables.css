@@ -16,8 +16,8 @@
   --color-accent: #d4af37;
   --color-accent-light: #e6c963;
   --color-accent-dark: #b8941f;
-  --color-neon-cyan: #00f3ff; /* Bright cyan for neon effects */
-  --color-neon-magenta: #ff00ff; /* Bright magenta for neon effects */
+  --color-neon-cyan: #00f3e0; /* Slightly dimmed cyan for neon effects */
+  --color-neon-magenta: #b000b0; /* Slightly dimmed magenta for neon effects */
 
   /* Neutral Colors */
   --color-background: #0a0a12;
