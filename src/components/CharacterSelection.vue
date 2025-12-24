@@ -2,12 +2,15 @@
 import { ref, computed, onMounted, onUnmounted, onBeforeUnmount, shallowRef, watch } from 'vue'
 import { TresCanvas } from '@tresjs/core'
 import { OrbitControls } from '@tresjs/cientos'
-import { PCFSoftShadowMap, SRGBColorSpace, ACESFilmicToneMapping, Vector3 } from 'three'
+import { PCFSoftShadowMap, SRGBColorSpace, ACESFilmicToneMapping, Vector3, Cache } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import type { AnimationClip, Object3D } from 'three'
 import gsap from 'gsap'
 import GLTFModelWithEvents from './GLTFModelWithEvents.vue'
+
+// Enable Three.js cache - this is critical for sharing loaded models across loaders
+Cache.enabled = true
 
 // Badge SVG imports
 import guitarHeadSvg from '@/assets/badges/guitar-head.svg'
@@ -161,18 +164,44 @@ dracoLoader.preload()
 const gltfLoader = new GLTFLoader()
 gltfLoader.setDRACOLoader(dracoLoader)
 
-// Preload models in background
-const preloadModels = () => {
+// Preload all models in parallel for faster initial load
+const preloadAllModels = () => {
   characters.value.forEach((char) => {
     if (!preloadedModels.has(char.modelPath)) {
+      preloadedModels.add(char.modelPath) // Mark as loading immediately to prevent duplicates
       gltfLoader.load(
         char.modelPath,
         () => {
-          preloadedModels.add(char.modelPath)
           console.log(`Preloaded model: ${char.name}`)
         },
         undefined,
-        (error) => console.warn(`Failed to preload ${char.name}:`, error)
+        (error) => {
+          preloadedModels.delete(char.modelPath) // Remove on error so it can retry
+          console.warn(`Failed to preload ${char.name}:`, error)
+        }
+      )
+    }
+  })
+}
+
+// Preload adjacent characters for faster switching
+const preloadAdjacentModels = (currentIndex: number) => {
+  const nextIndex = (currentIndex + 1) % characters.value.length
+  const prevIndex = (currentIndex - 1 + characters.value.length) % characters.value.length
+
+  const adjacentPaths = [
+    characters.value[nextIndex].modelPath,
+    characters.value[prevIndex].modelPath,
+  ]
+
+  adjacentPaths.forEach((path) => {
+    if (!preloadedModels.has(path)) {
+      preloadedModels.add(path)
+      gltfLoader.load(
+        path,
+        () => {},
+        undefined,
+        () => preloadedModels.delete(path)
       )
     }
   })
@@ -183,9 +212,8 @@ onMounted(() => {
   window.addEventListener('touchstart', handleTouchStart)
   window.addEventListener('touchend', handleTouchEnd)
 
-  // Preload all models in background after a short delay
-  // to prioritize the first model loading
-  setTimeout(preloadModels, 500)
+  // Start preloading all models immediately
+  preloadAllModels()
 })
 
 onBeforeUnmount(() => {
@@ -205,6 +233,9 @@ onUnmounted(() => {
     autoRotationTween.kill()
     autoRotationTween = null
   }
+
+  // Clean up DRACO loader
+  dracoLoader.dispose()
 
   // Clean up WebGL context by finding and disposing the canvas
   if (modelContainerRef.value) {
@@ -340,7 +371,11 @@ const resetCameraToFrontal = (startRotationAfter = false) => {
 
 const onModelLoaded = (id: number, payload: { scene: Object3D; animations: AnimationClip[] }) => {
   console.log(`Model loaded for character ${id}`)
-  isModelLoading.value = false
+
+  // Only hide loading spinner when the SELECTED character is loaded
+  if (id === selectedCharacter.value?.id) {
+    isModelLoading.value = false
+  }
 
   if (payload.scene) {
     loadedModels.value.set(id, {
@@ -357,11 +392,12 @@ const onModelLoaded = (id: number, payload: { scene: Object3D; animations: Anima
       console.log(`Character ${id} has no embedded animations`)
     }
 
-    // Start automatic 360-degree camera rotation after a brief delay
-    // to ensure OrbitControls are fully initialized
-    setTimeout(() => {
-      startAutoRotation()
-    }, 100)
+    // Start automatic 360-degree camera rotation only for selected character
+    if (id === selectedCharacter.value?.id) {
+      setTimeout(() => {
+        startAutoRotation()
+      }, 100)
+    }
   }
 }
 
@@ -379,7 +415,13 @@ const onModelError = (id: number, error: unknown) => {
 const selectCharacter = (index: number) => {
   if (isAnimating.value || index === selectedIndex.value) return
   isAnimating.value = true
-  isModelLoading.value = true // Show loading for new model
+
+  // Only show loading if the model isn't already loaded
+  const targetCharacter = characters.value[index]
+  const isAlreadyLoaded = loadedModels.value.has(targetCharacter.id)
+  if (!isAlreadyLoaded) {
+    isModelLoading.value = true
+  }
 
   // Stop auto-rotation and reset camera for new character
   stopAutoRotation()
@@ -389,6 +431,10 @@ const selectCharacter = (index: number) => {
   const timeline = gsap.timeline({
     onComplete: () => {
       isAnimating.value = false
+      // Start auto-rotation for the new character if already loaded
+      if (isAlreadyLoaded) {
+        setTimeout(() => startAutoRotation(), 100)
+      }
     },
   })
 
@@ -470,20 +516,22 @@ const modelContainerRef = ref<HTMLElement | null>(null)
           <TresAmbientLight :intensity="0.8" />
           <TresDirectionalLight :position="[5, 10, 5]" :intensity="1.0" />
 
-          <!-- Only load the SELECTED model (lazy loading) -->
+          <!-- Load ALL models once, show/hide based on selection for instant switching -->
           <Suspense>
-            <GLTFModelWithEvents
-              :key="selectedCharacter.id"
-              :path="selectedCharacter.modelPath"
-              draco
-              :auto-play-animation="false"
-              :position="[0, -2.2, 0]"
-              :rotation="[0, selectedCharacter.rotationY ?? DEFAULT_ROTATION_Y, 0]"
-              :scale="DEFAULT_SCALE"
-              @loaded="(payload) => onModelLoaded(selectedCharacter.id, payload)"
-              @error="(err) => onModelError(selectedCharacter.id, err)"
-              @animation-started="(name) => onAnimationStarted(selectedCharacter.id, name)"
-            />
+            <template v-for="character in characters" :key="character.id">
+              <GLTFModelWithEvents
+                :path="character.modelPath"
+                draco
+                :auto-play-animation="false"
+                :position="[0, -2.2, 0]"
+                :rotation="[0, character.rotationY ?? DEFAULT_ROTATION_Y, 0]"
+                :scale="DEFAULT_SCALE"
+                :visible="character.id === selectedCharacter.id"
+                @loaded="(payload) => onModelLoaded(character.id, payload)"
+                @error="(err) => onModelError(character.id, err)"
+                @animation-started="(name) => onAnimationStarted(character.id, name)"
+              />
+            </template>
           </Suspense>
 
           <OrbitControls
