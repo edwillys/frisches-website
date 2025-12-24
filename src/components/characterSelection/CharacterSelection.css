@@ -28,6 +28,38 @@
   position: relative;
 }
 
+/* Loading indicator */
+.character-selection__loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: var(--color-neon-cyan, #00f0ff);
+  font-family: 'Cinzel', 'Georgia', serif;
+  font-size: 0.9rem;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.character-selection__loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(0, 240, 255, 0.2);
+  border-top-color: var(--color-neon-cyan, #00f0ff);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Ensure the WebGL canvas stays transparent and disable pointer events for performance */
 .character-selection__model-container :deep(canvas) {
   background: transparent !important;

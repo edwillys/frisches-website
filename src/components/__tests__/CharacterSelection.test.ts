@@ -28,6 +28,14 @@ vi.mock('gsap', () => ({
       }
       return chain
     }),
+    // Mock gsap.to for camera reset animations
+    to: vi.fn((target, props) => {
+      // Execute onUpdate if provided
+      if (props?.onUpdate) {
+        props.onUpdate()
+      }
+      return {}
+    }),
   },
 }))
 
@@ -60,20 +68,25 @@ vi.mock('@tresjs/core', () => ({
   },
 }))
 
-vi.mock('@tresjs/cientos', () => ({
-  OrbitControls: {
-    name: 'OrbitControls',
-    template: '<div class="mock-orbit-controls"></div>',
-  },
-  useGLTF: vi.fn(() => ({
+vi.mock('@tresjs/cientos', () => {
+  const useGLTFMock = vi.fn(() => ({
     state: { value: null },
     isLoading: { value: false },
-  })),
-  useAnimations: vi.fn(() => ({
-    actions: {},
-    mixer: { value: null },
-  })),
-}))
+  })) as unknown as { preload: ReturnType<typeof vi.fn> }
+  useGLTFMock.preload = vi.fn()
+
+  return {
+    OrbitControls: {
+      name: 'OrbitControls',
+      template: '<div class="mock-orbit-controls"></div>',
+    },
+    useGLTF: useGLTFMock,
+    useAnimations: vi.fn(() => ({
+      actions: {},
+      mixer: { value: null },
+    })),
+  }
+})
 
 // Mock Three.js classes
 vi.mock('three', () => ({

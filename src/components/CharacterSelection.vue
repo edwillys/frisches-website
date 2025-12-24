@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, onBeforeUnmount, shallowRef } from 'vue'
+import { ref, computed, onMounted, onUnmounted, onBeforeUnmount, shallowRef, watch } from 'vue'
 import { TresCanvas } from '@tresjs/core'
 import { OrbitControls } from '@tresjs/cientos'
-import { PCFSoftShadowMap, SRGBColorSpace, ACESFilmicToneMapping } from 'three'
+import { PCFSoftShadowMap, SRGBColorSpace, ACESFilmicToneMapping, Vector3 } from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import type { AnimationClip, Object3D } from 'three'
 import gsap from 'gsap'
 import GLTFModelWithEvents from './GLTFModelWithEvents.vue'
@@ -84,6 +86,16 @@ const characters = ref<Character[]>([
 const selectedIndex = ref<number>(0)
 const isAnimating = ref<boolean>(false)
 
+// Auto-rotation state
+const isAutoRotating = ref<boolean>(false)
+let autoRotationTween: gsap.core.Tween | null = null
+const AUTO_ROTATION_DURATION = 3 // seconds for full 360 rotation
+
+// OrbitControls ref for camera reset
+const orbitControlsRef = ref<InstanceType<typeof OrbitControls> | null>(null)
+const initialCameraPosition = new Vector3(0, 1.2, 5)
+const initialTarget = new Vector3(0, 0, 0)
+
 const emit = defineEmits<{
   (e: 'back'): void
 }>()
@@ -137,10 +149,43 @@ const handleSwipe = () => {
   }
 }
 
+// Model loading state
+const isModelLoading = ref(true)
+const preloadedModels = new Set<string>()
+
+// Set up DRACO loader once for reuse
+const dracoLoader = new DRACOLoader()
+dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/')
+dracoLoader.preload()
+
+const gltfLoader = new GLTFLoader()
+gltfLoader.setDRACOLoader(dracoLoader)
+
+// Preload models in background
+const preloadModels = () => {
+  characters.value.forEach((char) => {
+    if (!preloadedModels.has(char.modelPath)) {
+      gltfLoader.load(
+        char.modelPath,
+        () => {
+          preloadedModels.add(char.modelPath)
+          console.log(`Preloaded model: ${char.name}`)
+        },
+        undefined,
+        (error) => console.warn(`Failed to preload ${char.name}:`, error)
+      )
+    }
+  })
+}
+
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
   window.addEventListener('touchstart', handleTouchStart)
   window.addEventListener('touchend', handleTouchEnd)
+
+  // Preload all models in background after a short delay
+  // to prioritize the first model loading
+  setTimeout(preloadModels, 500)
 })
 
 onBeforeUnmount(() => {
@@ -154,6 +199,12 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
   window.removeEventListener('touchstart', handleTouchStart)
   window.removeEventListener('touchend', handleTouchEnd)
+
+  // Clean up auto-rotation tween
+  if (autoRotationTween) {
+    autoRotationTween.kill()
+    autoRotationTween = null
+  }
 
   // Clean up WebGL context by finding and disposing the canvas
   if (modelContainerRef.value) {
@@ -170,6 +221,11 @@ onUnmounted(() => {
   }
 })
 
+// Preload adjacent models when selection changes for faster next/prev switching
+watch(selectedIndex, (newIndex) => {
+  preloadAdjacentModels(newIndex)
+})
+
 // Track loaded models and their animations
 interface LoadedModel {
   scene: Object3D
@@ -179,8 +235,112 @@ const loadedModels = shallowRef(new Map<number, LoadedModel>())
 
 const selectedCharacter = computed(() => characters.value[selectedIndex.value])
 
+// Stop auto-rotation on user interaction
+const stopAutoRotation = () => {
+  if (autoRotationTween) {
+    autoRotationTween.kill()
+    autoRotationTween = null
+  }
+  isAutoRotating.value = false
+}
+
+// Handle user interaction with OrbitControls
+const onControlsStart = () => {
+  // User started interacting, stop auto-rotation
+  stopAutoRotation()
+}
+
+// Start 360-degree camera rotation around the model
+const startAutoRotation = () => {
+  // Access the underlying Three.js OrbitControls via .instance
+  const controlsInstance = orbitControlsRef.value?.instance
+  if (!controlsInstance) {
+    console.log('Auto-rotation: OrbitControls not ready')
+    return
+  }
+
+  const camera = controlsInstance.object
+  const target = controlsInstance.target
+
+  if (!camera || !target) {
+    console.log('Auto-rotation: Camera or target not available')
+    return
+  }
+
+  // Stop any existing auto-rotation
+  stopAutoRotation()
+
+  isAutoRotating.value = true
+  console.log('Auto-rotation: Starting 360° camera rotation')
+
+  // Calculate the current distance from target for rotation radius
+  const currentPos = camera.position.clone()
+  const targetPos = target.clone()
+  const offset = currentPos.sub(targetPos)
+  const radius = Math.sqrt(offset.x * offset.x + offset.z * offset.z)
+  const startY = camera.position.y
+  const startAngle = Math.atan2(offset.x, offset.z)
+
+  // Animate rotation around the Y axis
+  const rotationState = { angle: 0 }
+  autoRotationTween = gsap.to(rotationState, {
+    angle: Math.PI * 2, // Full 360 degrees
+    duration: AUTO_ROTATION_DURATION,
+    ease: 'power1.inOut',
+    onUpdate: () => {
+      const newAngle = startAngle + rotationState.angle
+      camera.position.x = target.x + Math.sin(newAngle) * radius
+      camera.position.z = target.z + Math.cos(newAngle) * radius
+      camera.position.y = startY
+      controlsInstance.update()
+    },
+    onComplete: () => {
+      isAutoRotating.value = false
+      autoRotationTween = null
+      console.log('Auto-rotation: Completed')
+    },
+  })
+}
+
+// Reset camera to frontal view
+const resetCameraToFrontal = (startRotationAfter = false) => {
+  const controlsInstance = orbitControlsRef.value?.instance
+  if (controlsInstance) {
+    const camera = controlsInstance.object
+    const target = controlsInstance.target
+
+    if (camera && target) {
+      // Stop any existing auto-rotation first
+      stopAutoRotation()
+
+      // Animate camera back to frontal position
+      gsap.to(camera.position, {
+        x: initialCameraPosition.x,
+        y: initialCameraPosition.y,
+        z: initialCameraPosition.z,
+        duration: 0.8,
+        ease: 'power2.out',
+        onUpdate: () => controlsInstance.update(),
+        onComplete: () => {
+          if (startRotationAfter) {
+            startAutoRotation()
+          }
+        },
+      })
+      gsap.to(target, {
+        x: initialTarget.x,
+        y: initialTarget.y,
+        z: initialTarget.z,
+        duration: 0.8,
+        ease: 'power2.out',
+      })
+    }
+  }
+}
+
 const onModelLoaded = (id: number, payload: { scene: Object3D; animations: AnimationClip[] }) => {
   console.log(`Model loaded for character ${id}`)
+  isModelLoading.value = false
 
   if (payload.scene) {
     loadedModels.value.set(id, {
@@ -196,6 +356,12 @@ const onModelLoaded = (id: number, payload: { scene: Object3D; animations: Anima
     } else {
       console.log(`Character ${id} has no embedded animations`)
     }
+
+    // Start automatic 360-degree camera rotation after a brief delay
+    // to ensure OrbitControls are fully initialized
+    setTimeout(() => {
+      startAutoRotation()
+    }, 100)
   }
 }
 
@@ -206,12 +372,18 @@ const onAnimationStarted = (id: number, animationName: string) => {
 // Preload all models
 const onModelError = (id: number, error: unknown) => {
   console.error(`Failed to load model for character ${id}:`, error)
+  isModelLoading.value = false
 }
 
 // Character selection with animation
 const selectCharacter = (index: number) => {
   if (isAnimating.value || index === selectedIndex.value) return
   isAnimating.value = true
+  isModelLoading.value = true // Show loading for new model
+
+  // Stop auto-rotation and reset camera for new character
+  stopAutoRotation()
+  resetCameraToFrontal(false)
 
   // Animate card out then in
   const timeline = gsap.timeline({
@@ -285,6 +457,12 @@ const modelContainerRef = ref<HTMLElement | null>(null)
     <div class="character-selection__content">
       <!-- 3D Character Model -->
       <div ref="modelContainerRef" class="character-selection__model-container">
+        <!-- Loading indicator -->
+        <div v-if="isModelLoading" class="character-selection__loading">
+          <div class="character-selection__loading-spinner"></div>
+          <span>Loading...</span>
+        </div>
+
         <TresCanvas v-bind="gl" render-mode="on-demand" :window-size="false">
           <TresPerspectiveCamera :position="[0, 1.2, 5]" :fov="50" />
 
@@ -298,7 +476,7 @@ const modelContainerRef = ref<HTMLElement | null>(null)
               :key="selectedCharacter.id"
               :path="selectedCharacter.modelPath"
               draco
-              auto-play-animation
+              :auto-play-animation="false"
               :position="[0, -2.2, 0]"
               :rotation="[0, selectedCharacter.rotationY ?? DEFAULT_ROTATION_Y, 0]"
               :scale="DEFAULT_SCALE"
@@ -309,6 +487,7 @@ const modelContainerRef = ref<HTMLElement | null>(null)
           </Suspense>
 
           <OrbitControls
+            ref="orbitControlsRef"
             :enableDamping="false"
             :enablePan="false"
             :enableZoom="true"
@@ -320,6 +499,7 @@ const modelContainerRef = ref<HTMLElement | null>(null)
             :maxPolarAngle="Math.PI / 2"
             :autoRotate="false"
             :enableRotate="true"
+            @start="onControlsStart"
           />
         </TresCanvas>
       </div>

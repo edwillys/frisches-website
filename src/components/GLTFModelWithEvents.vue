@@ -60,6 +60,14 @@ const { state, isLoading } = useGLTF(props.path, {
   decoderPath: props.decoderPath,
 })
 
+// Reset loaded flag when path changes (new model)
+watch(
+  () => props.path,
+  () => {
+    hasEmittedLoaded.value = false
+  }
+)
+
 // Extract scene and animations from state
 const sceneObject = computed<Object3D | null>(() => {
   if (!state.value) return null
@@ -78,16 +86,31 @@ const { actions, mixer } = useAnimations(animations, sceneObject)
 // Track current action for cleanup
 const currentActionName = shallowRef<string | null>(null)
 
-// Play animation when available
+// Track if loaded event has been emitted for current model
+const hasEmittedLoaded = shallowRef(false)
+
+// Play animation when available, stop when autoPlayAnimation becomes false
 watch(
   [actions, () => props.autoPlayAnimation, () => props.animationIndex],
   ([newActions, autoPlay, animIndex]) => {
-    if (!autoPlay || !newActions) return
+    if (!newActions) return
 
     const actionNames = Object.keys(newActions)
     if (actionNames.length === 0) return
 
-    // Stop current animation if any
+    // If autoPlay is false, stop animation with fade out
+    if (!autoPlay) {
+      if (currentActionName.value) {
+        const currentAction = newActions[currentActionName.value]
+        if (currentAction) {
+          currentAction.fadeOut(0.5)
+          currentActionName.value = null
+        }
+      }
+      return
+    }
+
+    // Stop current animation if any (before starting new one)
     if (currentActionName.value) {
       const currentAction = newActions[currentActionName.value]
       if (currentAction) {
@@ -117,17 +140,20 @@ onUnmounted(() => {
   }
 })
 
-// Emit loaded event when model is ready
-watchEffect(() => {
-  if (isLoading.value) return
-  const scene = sceneObject.value
-  if (!scene) return
+// Emit loaded event when model is ready (only once per model)
+watch(
+  [isLoading, sceneObject],
+  ([loading, scene]) => {
+    if (loading || !scene || hasEmittedLoaded.value) return
 
-  emit('loaded', {
-    scene,
-    animations: animations.value,
-  })
-})
+    hasEmittedLoaded.value = true
+    emit('loaded', {
+      scene,
+      animations: animations.value,
+    })
+  },
+  { immediate: true }
+)
 
 // Apply shadow settings and optimize meshes
 watchEffect(() => {
