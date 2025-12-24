@@ -153,6 +153,20 @@ const emit = defineEmits<{
   (e: 'palette-change', payload: number[] | null): void
 }>()
 
+const handleKeydown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape') {
+    handleBackClick()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
+
 const handleLogoHover = (hovered: boolean) => {
   const instance = logoButtonRef.value
   if (!instance || typeof instance !== 'object' || !('rootEl' in instance)) return
@@ -239,15 +253,14 @@ const setDeckMask = (cards: HTMLElement[], maskNonLead: boolean) => {
 }
 
 const handleBackClick = () => {
-  if (isAnimating.value || currentView.value !== 'content') return
-  isAnimating.value = true
-  playContentCloseAndCardsReturn()
-}
-
-const handleCardsBackClick = () => {
-  if (isAnimating.value || currentView.value !== 'cards') return
-  isAnimating.value = true
-  playCardCloseAndLogoReappear()
+  if (isAnimating.value) return
+  if (currentView.value == 'content') {
+    isAnimating.value = true
+    playContentCloseAndCardsReturn()
+  } else if (currentView.value == 'cards') {
+    isAnimating.value = true
+    playCardCloseAndLogoReappear()
+  }
 }
 
 const handleGlobalPointerDown = (event: PointerEvent) => {
@@ -1212,7 +1225,7 @@ onBeforeUnmount(() => {
 
       <!-- Back button for cards view -->
       <div v-if="currentView === 'cards'" class="card-dealer__cards-back-button-wrapper">
-        <div class="card-dealer__back-button" @click="handleCardsBackClick">
+        <div class="card-dealer__back-button" @click="handleBackClick">
           <svg
             width="24"
             height="24"
@@ -1240,12 +1253,12 @@ onBeforeUnmount(() => {
         <div ref="contentPanelRef" class="card-dealer__content-container">
           <!-- Music Player -->
           <div v-if="selectedItem?.title === 'Music'" class="card-dealer__music-content">
-            <AudioPlayer />
+            <AudioPlayer @back="handleBackClick" />
           </div>
 
           <!-- About / Character Selection -->
           <div v-else-if="selectedItem?.title === 'About'" class="card-dealer__about-content">
-            <CharacterSelection />
+            <CharacterSelection @back="handleBackClick" />
           </div>
 
           <!-- Other content -->

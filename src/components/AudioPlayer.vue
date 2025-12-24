@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 
 interface Track {
   id: number | string
@@ -35,6 +35,10 @@ const volume = ref(1)
 const previousVolume = ref(1)
 const showVolume = ref(false)
 const audioRef = ref<HTMLAudioElement | null>(null)
+
+const emit = defineEmits<{
+  (e: 'back'): void
+}>()
 
 // Mock data if no tracks provided
 const defaultTracks: Track[] = [
@@ -253,6 +257,23 @@ watch(volume, (newVol) => {
     audioRef.value.volume = newVol
   }
 })
+
+onMounted(() => {
+  if (audioRef.value) {
+    audioRef.value.volume = volume.value
+  }
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
+
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    emit('back')
+  }
+}
 </script>
 
 <template>

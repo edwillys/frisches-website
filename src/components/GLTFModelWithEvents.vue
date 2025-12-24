@@ -18,8 +18,6 @@ type RefLike<T> = { value: T }
 const isRefLike = <T = unknown,>(value: unknown): value is RefLike<T> =>
   isObject(value) && 'value' in value
 
-type LoadedPayload = { scene?: unknown }
-
 const props = withDefaults(
   defineProps<{
     path: string
@@ -74,7 +72,13 @@ watchEffect(() => {
   if (isLoadingRef.value) return
   const scene = sceneObject.value
   if (!scene) return
-  const payload: LoadedPayload = { scene }
+
+  // Extract animations if available
+  const animations = isRefLike(resultObj.animations)
+    ? (resultObj.animations as RefLike<unknown>).value
+    : resultObj.animations
+
+  const payload = { scene, animations }
   emit('loaded', payload)
 })
 
