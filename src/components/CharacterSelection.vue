@@ -1,10 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, onBeforeUnmount, shallowRef, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, onBeforeUnmount, shallowRef } from 'vue'
 import { TresCanvas } from '@tresjs/core'
 import { OrbitControls } from '@tresjs/cientos'
 import { PCFSoftShadowMap, SRGBColorSpace, ACESFilmicToneMapping, Vector3, Cache } from 'three'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import type { AnimationClip, Object3D } from 'three'
 import gsap from 'gsap'
 import GLTFModelWithEvents from './GLTFModelWithEvents.vue'
@@ -154,66 +152,14 @@ const handleSwipe = () => {
 
 // Model loading state
 const isModelLoading = ref(true)
-const preloadedModels = new Set<string>()
 
-// Set up DRACO loader once for reuse
-const dracoLoader = new DRACOLoader()
-dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/')
-dracoLoader.preload()
-
-const gltfLoader = new GLTFLoader()
-gltfLoader.setDRACOLoader(dracoLoader)
-
-// Preload all models in parallel for faster initial load
-const preloadAllModels = () => {
-  characters.value.forEach((char) => {
-    if (!preloadedModels.has(char.modelPath)) {
-      preloadedModels.add(char.modelPath) // Mark as loading immediately to prevent duplicates
-      gltfLoader.load(
-        char.modelPath,
-        () => {
-          console.log(`Preloaded model: ${char.name}`)
-        },
-        undefined,
-        (error) => {
-          preloadedModels.delete(char.modelPath) // Remove on error so it can retry
-          console.warn(`Failed to preload ${char.name}:`, error)
-        }
-      )
-    }
-  })
-}
-
-// Preload adjacent characters for faster switching
-const preloadAdjacentModels = (currentIndex: number) => {
-  const nextIndex = (currentIndex + 1) % characters.value.length
-  const prevIndex = (currentIndex - 1 + characters.value.length) % characters.value.length
-
-  const adjacentPaths = [
-    characters.value[nextIndex].modelPath,
-    characters.value[prevIndex].modelPath,
-  ]
-
-  adjacentPaths.forEach((path) => {
-    if (!preloadedModels.has(path)) {
-      preloadedModels.add(path)
-      gltfLoader.load(
-        path,
-        () => {},
-        undefined,
-        () => preloadedModels.delete(path)
-      )
-    }
-  })
-}
+// Note: Models are preloaded from App.vue via useCharacterPreloader
+// The Three.js Cache ensures they're shared across loaders
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
   window.addEventListener('touchstart', handleTouchStart)
   window.addEventListener('touchend', handleTouchEnd)
-
-  // Start preloading all models immediately
-  preloadAllModels()
 })
 
 onBeforeUnmount(() => {
@@ -234,9 +180,6 @@ onUnmounted(() => {
     autoRotationTween = null
   }
 
-  // Clean up DRACO loader
-  dracoLoader.dispose()
-
   // Clean up WebGL context by finding and disposing the canvas
   if (modelContainerRef.value) {
     const canvas = modelContainerRef.value.querySelector('canvas')
@@ -250,11 +193,6 @@ onUnmounted(() => {
       }
     }
   }
-})
-
-// Preload adjacent models when selection changes for faster next/prev switching
-watch(selectedIndex, (newIndex) => {
-  preloadAdjacentModels(newIndex)
 })
 
 // Track loaded models and their animations

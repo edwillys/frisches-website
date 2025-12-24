@@ -1,7 +1,16 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import CardDealer from './components/CardDealer.vue'
 import MouseParticles from './components/MouseParticles.vue'
+import { preloadCharacterModels } from './composables/useCharacterPreloader'
+
+// Start preloading character models in the background after a short delay
+// This ensures the main UI renders first, then models load in background
+onMounted(() => {
+  setTimeout(() => {
+    preloadCharacterModels()
+  }, 1000) // Wait 1 second for initial page to settle
+})
 
 const mouseParticlesRef = ref<{
   setLogoButtonState: (hovered: boolean, x: number, y: number) => void
