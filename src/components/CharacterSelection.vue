@@ -8,7 +8,17 @@ import gsap from 'gsap'
 import GLTFModelWithEvents from './GLTFModelWithEvents.vue'
 
 // Enable Three.js cache - this is critical for sharing loaded models across loaders
-Cache.enabled = true
+// Wrapped in try-catch to handle test environments where Cache may not be available
+try {
+  if (typeof Cache !== 'undefined' && Object.prototype.hasOwnProperty.call(Cache, 'enabled')) {
+    ;(Cache as unknown as { enabled?: boolean }).enabled = true
+  }
+} catch {
+  // Silently fail in test environment
+  if (import.meta.env.MODE !== 'test') {
+    console.warn('Three.js Cache not available, models will not be cached')
+  }
+}
 
 // Badge SVG imports
 import guitarHeadSvg from '@/assets/badges/guitar-head.svg'

@@ -44,8 +44,8 @@ function getLoaders() {
  * Safe to call multiple times - will only load once
  */
 export function preloadCharacterModels(): Promise<void> {
-  // Already done or in progress
-  if (preloadComplete.value || isPreloading.value) {
+  // Skip in test environment or if already done/in progress
+  if (import.meta.env.MODE === 'test' || preloadComplete.value || isPreloading.value) {
     return Promise.resolve()
   }
 

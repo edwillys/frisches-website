@@ -4,12 +4,15 @@ import CardDealer from './components/CardDealer.vue'
 import MouseParticles from './components/MouseParticles.vue'
 import { preloadCharacterModels } from './composables/useCharacterPreloader'
 
-// Start preloading character models in the background after a short delay
+// Start preloading character models in the background
 // This ensures the main UI renders first, then models load in background
+// Skip preloading in test environment to avoid unhandled promise rejections
 onMounted(() => {
-  setTimeout(() => {
-    preloadCharacterModels()
-  }, 1000) // Wait 1 second for initial page to settle
+  if (import.meta.env.MODE !== 'test') {
+    preloadCharacterModels().catch((err) => {
+      console.warn('Failed to preload character models:', err)
+    })
+  }
 })
 
 const mouseParticlesRef = ref<{
