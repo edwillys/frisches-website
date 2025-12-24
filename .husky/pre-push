@@ -1,5 +1,3 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
 
 # Run type-check (and optionally tests) before allowing a push.
 # This keeps commits fast while ensuring upstream quality on push.

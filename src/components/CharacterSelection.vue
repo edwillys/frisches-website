@@ -356,6 +356,11 @@ const selectCharacter = (index: number) => {
 
   // Only show loading if the model isn't already loaded
   const targetCharacter = characters.value[index]
+  // Guard against invalid index (TypeScript strict check)
+  if (!targetCharacter) {
+    isAnimating.value = false
+    return
+  }
   const isAlreadyLoaded = loadedModels.value.has(targetCharacter.id)
   if (!isAlreadyLoaded) {
     isModelLoading.value = true
@@ -464,7 +469,7 @@ const modelContainerRef = ref<HTMLElement | null>(null)
                 :position="[0, -2.2, 0]"
                 :rotation="[0, character.rotationY ?? DEFAULT_ROTATION_Y, 0]"
                 :scale="DEFAULT_SCALE"
-                :visible="character.id === selectedCharacter.id"
+                :visible="character.id === selectedCharacter?.id"
                 @loaded="(payload) => onModelLoaded(character.id, payload)"
                 @error="(err) => onModelError(character.id, err)"
                 @animation-started="(name) => onAnimationStarted(character.id, name)"
