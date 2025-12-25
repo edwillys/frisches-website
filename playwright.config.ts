@@ -12,6 +12,7 @@ import { defineConfig, devices } from '@playwright/test'
  */
 export default defineConfig({
   testDir: './e2e',
+  fullyParallel: true,
   /* Maximum time one test can run for. */
   timeout: 30 * 1000,
   expect: {
@@ -25,6 +26,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   /* Stop after first failure on local for faster feedback */
   maxFailures: process.env.CI ? undefined : 1,
+  /* TODO: add sharding as per https://playwright.dev/docs/test-sharding */
+  workers: 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'line',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
