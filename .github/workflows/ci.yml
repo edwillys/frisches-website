@@ -45,7 +45,7 @@ jobs:
         run: npm run build
 
       - name: Run E2E tests
-        run: npm run test:e2e -- --ui=none
+        run: npm run test:e2e --
         env:
           CI: true
 
