@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 test.describe('Frisches Website', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('load')
     // Wait for the card dealer component to be ready
     await page.locator('[data-testid="card-dealer"]').waitFor({ state: 'attached', timeout: 10000 })
   })
@@ -69,6 +69,7 @@ test.describe('Frisches Website', () => {
     // Wait for cards container to be visible
     const cardsContainer = page.locator('[data-testid="card-dealer-cards-container"]')
     await expect(cardsContainer).toBeVisible({ timeout: 10000 })
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Necessary to wait for GSAP animation
     await page.waitForTimeout(2000) // Wait for animation to complete
     // Wait for and click about card
     const aboutCard = page.locator('[data-testid="card-/about"]')
@@ -81,7 +82,7 @@ test.describe('Frisches Website', () => {
   test('page loads in reasonable time', async ({ page }) => {
     const startTime = Date.now()
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('load')
     const loadTime = Date.now() - startTime
     expect(loadTime).toBeLessThan(10000)
   })

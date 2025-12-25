@@ -111,12 +111,14 @@ test.describe('Frisches Website - Complete User Flow', () => {
     const cardsContainer = page.locator('.card-dealer__cards')
     await expect(cardsContainer).toBeVisible({ timeout: 5000 })
 
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Necessary to wait for GSAP animation
     // Wait for card animation to fully complete
     await page.waitForTimeout(3000)
 
     // Click outside the cards area to return to logo (click in a safe area)
     await page.mouse.click(100, 100)
 
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Necessary to wait for GSAP animation
     // Wait for logo transition animation
     await page.waitForTimeout(3000)
     
@@ -138,18 +140,21 @@ test.describe('Frisches Website - Complete User Flow', () => {
     // Step 2: Click logo → cards appear
     await logoButton.click()
     await expect(cardsContainer).toBeVisible({ timeout: 5000 })
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Necessary to wait for GSAP animation
     await page.waitForTimeout(2000) // Wait for animation to fully complete
 
     // Step 3: Click card → content appears
     const firstCard = page.locator('.menu-card').first()
     await firstCard.click()
     await expect(contentView).toBeVisible({ timeout: 5000 })
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Necessary to wait for GSAP animation
     await page.waitForTimeout(2000) // Wait for animation to fully complete
 
     // Step 4: Click back button → cards return
-    let backButton = page.locator('.card-dealer__back-button').first()
+    const backButton = page.locator('.card-dealer__back-button').first()
     await backButton.click()
     await expect(cardsContainer).toBeVisible({ timeout: 5000 })
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Necessary to wait for GSAP animation
     await page.waitForTimeout(3000) // Wait longer for animation to fully complete
 
     // Verify all three cards are back
@@ -158,6 +163,7 @@ test.describe('Frisches Website - Complete User Flow', () => {
 
     // Step 5: Click outside cards → logo returns (click in a safe area away from cards)
     await page.mouse.click(100, 100)
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Necessary to wait for GSAP animation
     await page.waitForTimeout(3000) // Wait for logo transition animation
     await expect(logoButton).toBeVisible({ timeout: 15000 })
   })
@@ -167,6 +173,7 @@ test.describe('Frisches Website - Complete User Flow', () => {
     const logoButton = page.locator('.logo-button')
     await logoButton.click()
     await expect(page.locator('.card-dealer__cards')).toBeVisible({ timeout: 5000 })
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Necessary to wait for GSAP animation
     await page.waitForTimeout(2000) // Wait for animation to fully complete
 
     const cards = page.locator('.menu-card')
@@ -180,12 +187,14 @@ test.describe('Frisches Website - Complete User Flow', () => {
       await card.click()
       const contentView = page.locator('.card-dealer__content-view')
       await expect(contentView).toBeVisible({ timeout: 5000 })
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Necessary to wait for GSAP animation
       await page.waitForTimeout(2000) // Wait for animation to fully complete
 
       // Click back button to return to cards
       const backButton = page.locator('.card-dealer__back-button').first()
       await backButton.click()
       await expect(page.locator('.card-dealer__cards')).toBeVisible({ timeout: 5000 })
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Necessary to wait for GSAP animation
       await page.waitForTimeout(2000) // Wait for animation to fully complete
     }
   })
