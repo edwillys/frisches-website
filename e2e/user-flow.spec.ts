@@ -14,7 +14,7 @@ import { test, expect } from '@playwright/test'
 test.describe('Frisches Website - Complete User Flow', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the website
-    await page.goto('http://localhost:5174/')
+    await page.goto('/')
     // Wait for page to load
     await page.waitForLoadState('load')
   })

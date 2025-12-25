@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Frisches Website', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:5173')
+    await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
   })
 
@@ -51,7 +51,7 @@ test.describe('Frisches Website', () => {
 
   test('page loads in reasonable time', async ({ page }) => {
     const startTime = Date.now()
-    await page.goto('http://localhost:5173')
+    await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
     const loadTime = Date.now() - startTime
     expect(loadTime).toBeLessThan(10000)
