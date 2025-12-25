@@ -1,82 +1,157 @@
 import { test, expect } from '@playwright/test'
+import { waitForAnimations, clickAndWaitForAnimations } from './helpers.js'
 
-test.describe('Frisches Website', () => {
+test.describe('Frisches Website - Critical Flows', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('load')
     // Wait for the card dealer component to be ready
     await page.locator('[data-testid="card-dealer"]').waitFor({ state: 'attached', timeout: 10000 })
+    // Ensure initial page load animations complete
+    await waitForAnimations(page)
   })
 
-  test('page title is correct', async ({ page }) => {
+  test('page loads with correct title and components', async ({ page }) => {
+    // Check title
     await expect(page).toHaveTitle(/Frisches/)
-  })
-
-  test('card dealer component renders', async ({ page }) => {
+    
+    // Check main components
     const cardDealer = page.locator('[data-testid="card-dealer"]')
     await expect(cardDealer).toBeVisible({ timeout: 10000 })
-  })
-
-  test('logo button is present', async ({ page }) => {
+    
     const logoButton = page.locator('[data-testid="logo-button"]')
     await expect(logoButton).toBeVisible({ timeout: 10000 })
   })
 
-  test('cards container exists', async ({ page }) => {
-    // Click logo to reveal cards
+  test('logo reveals cards with animations', async ({ page }) => {
     const logoButton = page.locator('[data-testid="logo-button"]')
-    await logoButton.click()
-    // Now check if cards container is visible
     const cardsContainer = page.locator('[data-testid="card-dealer-cards-container"]')
+    
+    // Initial state: cards hidden
+    await expect(cardsContainer).toBeHidden()
+    
+    // Click logo and wait for animation
+    await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
+    
+    // Cards should be visible
     await expect(cardsContainer).toBeVisible({ timeout: 10000 })
+    
+    // All three cards should be present
+    const musicCard = page.locator('[data-testid="card-/music"]')
+    const aboutCard = page.locator('[data-testid="card-/about"]')
+    const tourCard = page.locator('[data-testid="card-/tour"]')
+    
+    await expect(musicCard).toBeVisible({ timeout: 10000 })
+    await expect(aboutCard).toBeVisible({ timeout: 10000 })
+    await expect(tourCard).toBeVisible({ timeout: 10000 })
+    
+    // Logo should be hidden
+    await expect(logoButton).toBeHidden()
   })
 
-  test('can navigate to music content', async ({ page }) => {
-    // Click logo to reveal cards
-    const logoButton = page.locator('[data-testid="logo-button"]')
-    await logoButton.click()
-    // Wait for cards container to be visible
+  test('navigates to music content and back', async ({ page }) => {
+    // Navigate to cards
+    await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
+    
     const cardsContainer = page.locator('[data-testid="card-dealer-cards-container"]')
     await expect(cardsContainer).toBeVisible({ timeout: 10000 })
-    // Wait for and click music card
+    
+    // Click music card
     const musicCard = page.locator('[data-testid="card-/music"]')
     await expect(musicCard).toBeVisible({ timeout: 10000 })
     await musicCard.click()
+    await waitForAnimations(page)
+    
+    // Verify music content
     const audioPlayer = page.locator('[data-testid="audio-player"]')
     await expect(audioPlayer).toBeVisible({ timeout: 10000 })
+    
+    // Click back button
+    const backButton = page.locator('.card-dealer__back-button').first()
+    await backButton.click()
+    await waitForAnimations(page)
+    
+    // Should be back to cards
+    await expect(cardsContainer).toBeVisible({ timeout: 10000 })
   })
 
-  test('can navigate to about content', async ({ page }) => {
-    // Click logo to reveal cards
-    const logoButton = page.locator('[data-testid="logo-button"]')
-    await logoButton.click()
-    // Wait for cards container to be visible
+  test('navigates to about content with character selection', async ({ page }) => {
+    // Navigate to cards
+    await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
+    
     const cardsContainer = page.locator('[data-testid="card-dealer-cards-container"]')
     await expect(cardsContainer).toBeVisible({ timeout: 10000 })
-    await page.waitForTimeout(2000) // Wait for animation to complete
-    // Wait for and click about card
+    
+    // Click about card
     const aboutCard = page.locator('[data-testid="card-/about"]')
     await expect(aboutCard).toBeVisible({ timeout: 10000 })
     await aboutCard.click()
+    await waitForAnimations(page)
+    
+    // Verify character selection with 4 cards
     const charSelection = page.locator('[data-testid="character-selection"]')
     await expect(charSelection).toBeVisible({ timeout: 20000 })
-  })
-
-  test('character cards render in about section', async ({ page }) => {
-    // Click logo to reveal cards
-    const logoButton = page.locator('[data-testid="logo-button"]')
-    await logoButton.click()
-    // Wait for cards container to be visible
-    const cardsContainer = page.locator('[data-testid="card-dealer-cards-container"]')
-    await expect(cardsContainer).toBeVisible({ timeout: 10000 })
-    // eslint-disable-next-line playwright/no-wait-for-timeout -- Necessary to wait for GSAP animation
-    await page.waitForTimeout(2000) // Wait for animation to complete
-    // Wait for and click about card
-    const aboutCard = page.locator('[data-testid="card-/about"]')
-    await expect(aboutCard).toBeVisible({ timeout: 10000 })
-    await aboutCard.click()
+    
     const characters = page.locator('[data-testid="character-card"]')
     await expect(characters).toHaveCount(4, { timeout: 20000 })
+  })
+
+  test('complete navigation cycle: logo → cards → content → cards → logo', async ({ page }) => {
+    const logoButton = page.locator('[data-testid="logo-button"]')
+    const cardsContainer = page.locator('.card-dealer__cards')
+    const contentView = page.locator('.card-dealer__content-view')
+
+    // Step 1: Logo → Cards
+    await expect(logoButton).toBeVisible()
+    await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
+    await expect(cardsContainer).toBeVisible({ timeout: 5000 })
+
+    // Step 2: Cards → Content
+    const firstCard = page.locator('.menu-card').first()
+    await firstCard.click()
+    await waitForAnimations(page)
+    await expect(contentView).toBeVisible({ timeout: 5000 })
+
+    // Step 3: Content → Cards
+    const backButton = page.locator('.card-dealer__back-button').first()
+    await backButton.click()
+    await waitForAnimations(page)
+    await expect(cardsContainer).toBeVisible({ timeout: 5000 })
+
+    // Verify all three cards are present
+    const cards = page.locator('.menu-card')
+    expect(await cards.count()).toBe(3)
+
+    // Step 4: Cards → Logo (click outside)
+    await page.mouse.click(100, 100)
+    await waitForAnimations(page)
+    await expect(logoButton).toBeVisible({ timeout: 15000 })
+  })
+
+  test('handles all three cards sequentially', async ({ page }) => {
+    // Navigate to cards
+    await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
+    await expect(page.locator('.card-dealer__cards')).toBeVisible({ timeout: 5000 })
+
+    const cards = page.locator('.menu-card')
+    const cardCount = await cards.count()
+
+    // Click each card and return
+    for (let i = 0; i < cardCount; i++) {
+      const card = cards.nth(i)
+      
+      // Navigate to content
+      await card.click()
+      await waitForAnimations(page)
+      const contentView = page.locator('.card-dealer__content-view')
+      await expect(contentView).toBeVisible({ timeout: 5000 })
+
+      // Navigate back
+      const backButton = page.locator('.card-dealer__back-button').first()
+      await backButton.click()
+      await waitForAnimations(page)
+      await expect(page.locator('.card-dealer__cards')).toBeVisible({ timeout: 5000 })
+    }
   })
 
   test('page loads in reasonable time', async ({ page }) => {
@@ -87,21 +162,29 @@ test.describe('Frisches Website', () => {
     expect(loadTime).toBeLessThan(10000)
   })
 
-  test('viewport works on mobile', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 667 })
-    const cardDealer = page.locator('[data-testid="card-dealer"]')
-    await expect(cardDealer).toBeVisible({ timeout: 10000 })
-  })
+  test('responsive design works across viewports', async ({ page }) => {
+    const viewports = [
+      { width: 375, height: 667, name: 'mobile' },
+      { width: 768, height: 1024, name: 'tablet' },
+      { width: 1920, height: 1080, name: 'desktop' },
+    ]
 
-  test('viewport works on tablet', async ({ page }) => {
-    await page.setViewportSize({ width: 768, height: 1024 })
-    const cardDealer = page.locator('[data-testid="card-dealer"]')
-    await expect(cardDealer).toBeVisible({ timeout: 10000 })
-  })
-
-  test('viewport works on desktop', async ({ page }) => {
-    await page.setViewportSize({ width: 1920, height: 1080 })
-    const cardDealer = page.locator('[data-testid="card-dealer"]')
-    await expect(cardDealer).toBeVisible({ timeout: 10000 })
+    for (const viewport of viewports) {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height })
+      
+      // Verify card dealer is visible at this viewport
+      const cardDealer = page.locator('[data-testid="card-dealer"]')
+      await expect(cardDealer).toBeVisible({ timeout: 10000 })
+      
+      // Test basic interaction at this viewport
+      await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
+      const cardsContainer = page.locator('[data-testid="card-dealer-cards-container"]')
+      await expect(cardsContainer).toBeVisible({ timeout: 10000 })
+      
+      // Return to logo for next iteration
+      await page.mouse.click(100, 100)
+      await waitForAnimations(page)
+    }
   })
 })
+

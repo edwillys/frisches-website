@@ -1010,6 +1010,7 @@ onBeforeUnmount(() => {
 <template>
   <div
     data-testid="card-dealer"
+    :data-animating="isAnimating"
     :class="[
       'card-dealer',
       {
