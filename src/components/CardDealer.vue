@@ -1009,6 +1009,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div
+    data-testid="card-dealer"
     :class="[
       'card-dealer',
       {
@@ -1178,6 +1179,7 @@ onBeforeUnmount(() => {
       <div
         v-show="currentView !== 'logo'"
         ref="cardsContainerRef"
+        data-testid="card-dealer-cards-container"
         :class="[
           'card-dealer__cards',
           { 'card-dealer__cards--content': currentView === 'content' },
@@ -1191,6 +1193,7 @@ onBeforeUnmount(() => {
           :image="item.image"
           :route="item.route"
           :index="index"
+          :data-testid="`card-${item.route}`"
           @click="handleCardClick"
           class="card-dealer__card"
         />

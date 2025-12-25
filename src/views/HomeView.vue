@@ -1,5 +1,5 @@
 <template>
-  <main class="home-view">
+  <main class="home-view" data-testid="home-view">
     <!-- Reuse existing CardDealer component for the home screen -->
     <CardDealer />
   </main>

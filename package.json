@@ -16,7 +16,8 @@
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix --cache",
     "format": "prettier --write src/",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "playwright install"
   },
   "dependencies": {
     "@tresjs/cientos": "^5.2.0",

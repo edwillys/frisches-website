@@ -451,7 +451,7 @@ const modelContainerRef = ref<HTMLElement | null>(null)
 </script>
 
 <template>
-  <div class="character-selection">
+  <div class="character-selection" data-testid="character-selection">
     <!-- Character and Card Container -->
     <div class="character-selection__content">
       <!-- 3D Character Model -->
@@ -462,7 +462,12 @@ const modelContainerRef = ref<HTMLElement | null>(null)
           <span>Loading...</span>
         </div>
 
-        <TresCanvas v-bind="gl" render-mode="on-demand" :window-size="false">
+        <TresCanvas
+          v-bind="gl"
+          render-mode="on-demand"
+          :window-size="false"
+          data-testid="gltf-canvas"
+        >
           <TresPerspectiveCamera :position="[0, 1.2, 5]" :fov="50" />
 
           <!-- Simplified lighting for performance -->
@@ -506,11 +511,11 @@ const modelContainerRef = ref<HTMLElement | null>(null)
       </div>
 
       <!-- Character Details Card -->
-      <div class="character-selection__card" v-if="selectedCharacter">
+      <div class="character-selection__card" v-if="selectedCharacter" data-testid="character-info">
         <!-- Character Portrait Row -->
         <div class="character-selection__portrait-row">
           <!-- Instrument Badges (Top Left) -->
-          <div class="character-selection__badges-container">
+          <div class="character-selection__badges-container" data-testid="char-instruments">
             <div
               v-for="instrument in selectedCharacter.instruments"
               :key="instrument"
@@ -533,11 +538,13 @@ const modelContainerRef = ref<HTMLElement | null>(null)
         </div>
 
         <div class="character-selection__card-content">
-          <h3 class="character-selection__card-title">{{ selectedCharacter.name }}</h3>
+          <h3 class="character-selection__card-title" data-testid="character-name">
+            {{ selectedCharacter.name }}
+          </h3>
 
           <div class="character-selection__info-section">
             <h4 class="character-selection__section-title">Influences</h4>
-            <div class="character-selection__influences-container">
+            <div class="character-selection__influences-container" data-testid="char-influences">
               <span
                 v-for="influence in selectedCharacter.influences"
                 :key="influence"
@@ -568,6 +575,7 @@ const modelContainerRef = ref<HTMLElement | null>(null)
         :key="character.id"
         class="character-selection__button"
         :class="{ 'character-selection__button--active': index === selectedIndex }"
+        data-testid="character-card"
         @click="selectCharacter(index)"
         :disabled="isAnimating"
         :aria-label="`Select ${character.name}`"

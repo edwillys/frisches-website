@@ -64,6 +64,7 @@ defineExpose({
     role="button"
     tabindex="0"
     aria-label="Frisches - Click to reveal menu"
+    data-testid="logo-button"
     @click="onClick"
     @keydown.enter="onClick"
     @mouseenter="onMouseEnter"

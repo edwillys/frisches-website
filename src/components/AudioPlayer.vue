@@ -303,7 +303,11 @@ function handleKeydown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="audio-player" :class="{ 'is-playlist-open': isPlaylistOpen }">
+  <div
+    class="audio-player"
+    :class="{ 'is-playlist-open': isPlaylistOpen }"
+    data-testid="audio-player"
+  >
     <!-- Main Player View -->
     <div class="player-main">
       <!-- Header Section: Transitions between Large and Compact -->

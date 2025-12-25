@@ -38,6 +38,7 @@ defineExpose({
     class="menu-card"
     :class="{ 'menu-card--hovered': isHovered }"
     :style="cardStyle"
+    :data-testid="`card-${props.route.slice(1)}`"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
     @click="handleClick"
