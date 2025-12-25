@@ -10,14 +10,14 @@
   /* Secondary Colors - Card dealer mystique */
   --color-secondary: #8b4f7d;
   --color-secondary-light: #a86fa0;
-  --color-secondary-dark: #6b3560;
+  --color-secondary-dark: #190541;
 
   /* Accent Colors - Magical highlights */
   --color-accent: #d4af37;
   --color-accent-light: #e6c963;
   --color-accent-dark: #b8941f;
   --color-neon-cyan: #00f3e0; /* Slightly dimmed cyan for neon effects */
-  --color-neon-magenta: #b000b0; /* Slightly dimmed magenta for neon effects */
+  --color-neon-magenta: #bf075a; /* Slightly dimmed magenta for neon effects */
 
   /* Neutral Colors */
   --color-background: #0a0a12;
