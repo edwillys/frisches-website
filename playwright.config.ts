@@ -25,10 +25,10 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  /* Stop after first failure on local for faster feedback */
+  maxFailures: process.env.CI ? undefined : 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+  reporter: 'line',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
@@ -40,7 +40,8 @@ export default defineConfig({
     trace: 'on-first-retry',
 
     /* Only on CI systems run the tests headless */
-    headless: !!process.env.CI,
+    //headless: !!process.env.CI,
+    headless: true,
   },
 
   /* Configure projects for major browsers */
@@ -51,18 +52,20 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
       },
     },
-    {
-      name: 'firefox',
-      use: {
-        ...devices['Desktop Firefox'],
+    ...(process.env.CI ? [
+      {
+        name: 'firefox',
+        use: {
+          ...devices['Desktop Firefox'],
+        },
       },
-    },
-    {
-      name: 'webkit',
-      use: {
-        ...devices['Desktop Safari'],
+      {
+        name: 'webkit',
+        use: {
+          ...devices['Desktop Safari'],
+        },
       },
-    },
+    ] : []),
 
     /* Test against mobile viewports. */
     // {

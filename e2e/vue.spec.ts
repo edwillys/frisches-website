@@ -4,5 +4,9 @@ import { test, expect } from '@playwright/test';
 // https://playwright.dev/docs/intro
 test('visits the app root url', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('h1')).toHaveText('You did it!');
+  await page.waitForLoadState('networkidle')
+  // Verify the app loaded by checking for the card dealer component
+  await expect(page.locator('[data-testid="card-dealer"]')).toBeVisible({ timeout: 10000 });
+  // Verify page title
+  await expect(page).toHaveTitle(/Frisches/);
 })
