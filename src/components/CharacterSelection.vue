@@ -55,7 +55,7 @@ const characters = ref<Character[]>([
   {
     id: 1,
     name: 'Edgar',
-    modelPath: new URL('../assets/threed/monster1.glb', import.meta.url).href,
+    modelPath: new URL('../assets/private/threed/monster1.glb', import.meta.url).href,
     //rotationY: DEFAULT_ROTATION_Y,
     //scale: DEFAULT_SCALE,
     instruments: ['Guitar', 'Backing Vocals'],
@@ -65,7 +65,7 @@ const characters = ref<Character[]>([
   {
     id: 2,
     name: 'Cami',
-    modelPath: new URL('../assets/threed/monster2.glb', import.meta.url).href,
+    modelPath: new URL('../assets/private/threed/monster2.glb', import.meta.url).href,
     //rotationY: DEFAULT_ROTATION_Y,
     //scale: DEFAULT_SCALE,
     instruments: ['Singer', 'Flute'],
@@ -75,7 +75,7 @@ const characters = ref<Character[]>([
   {
     id: 3,
     name: 'Steff',
-    modelPath: new URL('../assets/threed/monster3.glb', import.meta.url).href,
+    modelPath: new URL('../assets/private/threed/monster3.glb', import.meta.url).href,
     //rotationY: DEFAULT_ROTATION_Y,
     //scale: DEFAULT_SCALE,
     instruments: ['Drums'],
@@ -85,7 +85,7 @@ const characters = ref<Character[]>([
   {
     id: 4,
     name: 'Tobi',
-    modelPath: new URL('../assets/threed/monster4.glb', import.meta.url).href,
+    modelPath: new URL('../assets/private/threed/monster4.glb', import.meta.url).href,
     //rotationY: DEFAULT_ROTATION_Y,
     //scale: DEFAULT_SCALE,
     instruments: ['Bass'],

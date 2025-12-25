@@ -40,15 +40,17 @@ const emit = defineEmits<{
   (e: 'back'): void
 }>()
 
-// Mock data if no tracks provided
 const defaultTracks: Track[] = [
   {
     id: 0,
     title: 'Intro',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
-    url: '/audio/TalesFromTheCellar/00 - Intro - Mastered.mp3',
+    fallbackCover: '../assets/private/audio/TalesFromTheCellar/Cover.png',
+    url: new URL(
+      '../assets/private/audio/TalesFromTheCellar/00 - Intro - Mastered.mp3',
+      import.meta.url
+    ).href,
     duration: '0:45',
   },
   {
@@ -56,8 +58,11 @@ const defaultTracks: Track[] = [
     title: 'Misled',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
-    url: '/audio/TalesFromTheCellar/01 - Misled - Mastered.mp3',
+    fallbackCover: '../assets/private/audio/TalesFromTheCellar/Cover.png',
+    url: new URL(
+      '../assets/private/audio/TalesFromTheCellar/01 - Misled - Mastered.mp3',
+      import.meta.url
+    ).href,
     duration: '3:12',
   },
   {
@@ -65,8 +70,11 @@ const defaultTracks: Track[] = [
     title: 'TOJD',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
-    url: '/audio/TalesFromTheCellar/02 - TOJD - Mastered.mp3',
+    fallbackCover: '../assets/private/audio/TalesFromTheCellar/Cover.png',
+    url: new URL(
+      '../assets/private/audio/TalesFromTheCellar/02 - TOJD - Mastered.mp3',
+      import.meta.url
+    ).href,
     duration: '2:58',
   },
   {
@@ -74,8 +82,11 @@ const defaultTracks: Track[] = [
     title: 'Etiquette',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
-    url: '/audio/TalesFromTheCellar/03 - Etiquette - Mastered.mp3',
+    fallbackCover: '../assets/private/audio/TalesFromTheCellar/Cover.png',
+    url: new URL(
+      '../assets/private/audio/TalesFromTheCellar/03 - Etiquette - Mastered.mp3',
+      import.meta.url
+    ).href,
     duration: '3:05',
   },
   {
@@ -83,8 +94,11 @@ const defaultTracks: Track[] = [
     title: 'Mr Red Jacket',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
-    url: '/audio/TalesFromTheCellar/04 - Mr Red Jacket - Mastered.mp3',
+    fallbackCover: '../assets/private/audio/TalesFromTheCellar/Cover.png',
+    url: new URL(
+      '../assets/private/audio/TalesFromTheCellar/04 - Mr Red Jacket - Mastered.mp3',
+      import.meta.url
+    ).href,
     duration: '3:30',
   },
   {
@@ -92,8 +106,11 @@ const defaultTracks: Track[] = [
     title: 'Witch Hunting',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
-    url: '/audio/TalesFromTheCellar/05 - Witch Hunting - Mastered.mp3',
+    fallbackCover: '../assets/private/audio/TalesFromTheCellar/Cover.png',
+    url: new URL(
+      '../assets/private/audio/TalesFromTheCellar/05 - Witch Hunting - Mastered.mp3',
+      import.meta.url
+    ).href,
     duration: '3:45',
   },
   {
@@ -101,8 +118,11 @@ const defaultTracks: Track[] = [
     title: 'Suits',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
-    url: '/audio/TalesFromTheCellar/06 - Suits - Mastered.mp3',
+    fallbackCover: '../assets/private/audio/TalesFromTheCellar/Cover.png',
+    url: new URL(
+      '../assets/private/audio/TalesFromTheCellar/06 - Suits - Mastered.mp3',
+      import.meta.url
+    ).href,
     duration: '3:15',
   },
   {
@@ -110,8 +130,11 @@ const defaultTracks: Track[] = [
     title: 'Ordinary Suspects',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
-    url: '/audio/TalesFromTheCellar/07 - Ordinary Suspects - Mastered.mp3',
+    fallbackCover: '../assets/private/audio/TalesFromTheCellar/Cover.png',
+    url: new URL(
+      '../assets/private/audio/TalesFromTheCellar/07 - Ordinary Suspects - Mastered.mp3',
+      import.meta.url
+    ).href,
     duration: '3:20',
   },
   {
@@ -119,8 +142,11 @@ const defaultTracks: Track[] = [
     title: 'Solitude Etude',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    fallbackCover: '/audio/TalesFromTheCellar/Cover.png',
-    url: '/audio/TalesFromTheCellar/08 - Solitude Etude - Mastered.mp3',
+    fallbackCover: '../assets/private/audio/TalesFromTheCellar/Cover.png',
+    url: new URL(
+      '../assets/private/audio/TalesFromTheCellar/08 - Solitude Etude - Mastered.mp3',
+      import.meta.url
+    ).href,
     duration: '2:50',
   },
 ]

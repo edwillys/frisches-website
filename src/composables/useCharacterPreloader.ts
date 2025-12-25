@@ -14,10 +14,10 @@ const preloadedPaths = new Set<string>()
 
 // Model paths - these must match CharacterSelection.vue
 const MODEL_PATHS = [
-  new URL('../assets/threed/monster1.glb', import.meta.url).href,
-  new URL('../assets/threed/monster2.glb', import.meta.url).href,
-  new URL('../assets/threed/monster3.glb', import.meta.url).href,
-  new URL('../assets/threed/monster4.glb', import.meta.url).href,
+  new URL('../assets/private/threed/monster1.glb', import.meta.url).href,
+  new URL('../assets/private/threed/monster2.glb', import.meta.url).href,
+  new URL('../assets/private/threed/monster3.glb', import.meta.url).href,
+  new URL('../assets/private/threed/monster4.glb', import.meta.url).href,
 ]
 
 // Singleton loader instances
