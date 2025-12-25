@@ -26,8 +26,15 @@ export async function waitForAnimations(page: Page, timeout = 10000): Promise<vo
       { timeout, polling: 100 } // Poll every 100ms
     )
   } catch (error) {
+    console.warn('waitForFunction timed out, checking for stuck animations...', error)
     // Fallback: If waitForFunction times out, check if animations got stuck
     // This can happen in WebKit with complex 3D content
+    
+    // Check if page is still open before evaluating
+    if (page.isClosed()) {
+      return // Page closed, nothing to wait for
+    }
+    
     const isStillAnimating = await page.evaluate(() => {
       const element = document.querySelector('[data-testid="card-dealer"]')
       return element?.getAttribute('data-animating') === 'true'

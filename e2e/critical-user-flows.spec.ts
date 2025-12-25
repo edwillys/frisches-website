@@ -75,6 +75,59 @@ test.describe('Frisches Website - Critical Flows', () => {
     await expect(cardsContainer).toBeVisible({ timeout: 10000 })
   })
 
+  test('audio files load correctly', async ({ page }) => {
+    // Navigate to music section
+    await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
+    
+    const musicCard = page.locator('[data-testid="card-/music"]')
+    await musicCard.click()
+    await waitForAnimations(page)
+    
+    const audioPlayer = page.locator('[data-testid="audio-player"]')
+    await expect(audioPlayer).toBeVisible({ timeout: 10000 })
+    
+    // Wait for audio element to exist and load metadata
+    const hasLoadedAudio = await page.evaluate(async () => {
+      const audio = document.querySelector('audio')
+      if (!audio) return false
+      
+      // If already loaded, return true
+      if (audio.readyState >= 2) return true
+      
+      // Otherwise wait for loadedmetadata event
+      return new Promise((resolve) => {
+        audio.addEventListener('loadedmetadata', () => resolve(true), { once: true })
+        audio.addEventListener('error', () => resolve(false), { once: true })
+        // Timeout after 10 seconds
+        setTimeout(() => resolve(false), 10000)
+      })
+    })
+    
+    // This will fail if Git LFS files aren't pulled (audio will be a pointer file)
+    expect(hasLoadedAudio).toBe(true)
+  })
+
+  test('3D character models load correctly', async ({ page }) => {
+    // Navigate to about section
+    await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
+    
+    const aboutCard = page.locator('[data-testid="card-/about"]')
+    await aboutCard.click()
+    await waitForAnimations(page)
+    
+    const charSelection = page.locator('[data-testid="character-selection"]')
+    await expect(charSelection).toBeVisible({ timeout: 20000 })
+    
+    // Wait for loading spinner to disappear (means model loaded successfully)
+    // This will fail if Git LFS files aren't pulled (.glb will be a pointer file and fail to load)
+    const loadingSpinner = charSelection.locator('.character-selection__loading')
+    await expect(loadingSpinner).toBeHidden({ timeout: 20000 })
+    
+    // Verify the 3D GLTF canvas exists (indicates WebGL rendered the model successfully)
+    const canvas = page.locator('[data-testid="gltf-canvas"]')
+    await expect(canvas).toBeVisible({ timeout: 5000 })
+  })
+
   test('navigates to about content with character selection', async ({ page }) => {
     // Navigate to cards
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
