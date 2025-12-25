@@ -20,8 +20,13 @@ Official website for the rock band **Frisches**, featuring an immersive card dea
 ### Installation
 
 ```sh
+git clone https://github.com/edwillys/frisches-website.git
+cd frisches-website
+git submodule update --init --recursive
 npm install
 ```
+
+**Note:** This project uses a private git submodule for media assets (`src/assets/private/`). Make sure to clone with submodule support or run `git submodule update --init --recursive` after cloning. Of course you need access to this private repo.
 
 ### Development
 
@@ -50,7 +55,7 @@ npm run test:unit
 ### Recommended Browser Extensions
 
 - Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd) 
+  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
   - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
 - Firefox:
   - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)

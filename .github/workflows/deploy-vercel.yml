@@ -16,6 +16,10 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+        ssh-key: ${{ secrets.DEPLOY_KEY_ASSETS }}
+        ssh-strict: false
     
     - name: Setup Node.js
       uses: actions/setup-node@v4
