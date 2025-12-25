@@ -162,6 +162,7 @@ const handleSwipe = () => {
 
 // Model loading state
 const isModelLoading = ref(true)
+const preloadAllModels = ref(false)
 
 // Note: Models are preloaded from App.vue via useCharacterPreloader
 // The Three.js Cache ensures they're shared across loaders
@@ -323,6 +324,9 @@ const onModelLoaded = (id: number, payload: { scene: Object3D; animations: Anima
   // Only hide loading spinner when the SELECTED character is loaded
   if (id === selectedCharacter.value?.id) {
     isModelLoading.value = false
+    // After the first model is ready, allow background preloading of the others.
+    // This keeps initial load fast/stable on CI (especially Firefox).
+    preloadAllModels.value = true
   }
 
   if (payload.scene) {
@@ -357,6 +361,8 @@ const onAnimationStarted = (id: number, animationName: string) => {
 const onModelError = (id: number, error: unknown) => {
   console.error(`Failed to load model for character ${id}:`, error)
   isModelLoading.value = false
+  // If one model fails we still want to avoid blocking the UI indefinitely.
+  preloadAllModels.value = true
 }
 
 // Character selection with animation
@@ -478,6 +484,7 @@ const modelContainerRef = ref<HTMLElement | null>(null)
           <Suspense>
             <template v-for="character in characters" :key="character.id">
               <GLTFModelWithEvents
+                v-if="character.id === selectedCharacter?.id || preloadAllModels"
                 :path="character.modelPath"
                 draco
                 :auto-play-animation="false"

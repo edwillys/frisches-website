@@ -55,16 +55,22 @@ const emit = defineEmits<{
 }>()
 
 // Load GLTF with useGLTF composable
-const { state, isLoading } = useGLTF(props.path, {
+// Some versions also expose `error`; read it defensively.
+const gltfResult = useGLTF(props.path, {
   draco: props.draco,
   decoderPath: props.decoderPath,
 })
+
+const state = gltfResult.state
+const isLoading = gltfResult.isLoading
+const gltfError = (gltfResult as unknown as { error?: { value?: unknown } }).error
 
 // Reset loaded flag when path changes (new model)
 watch(
   () => props.path,
   () => {
     hasEmittedLoaded.value = false
+    hasEmittedError.value = false
   }
 )
 
@@ -88,6 +94,7 @@ const currentActionName = shallowRef<string | null>(null)
 
 // Track if loaded event has been emitted for current model
 const hasEmittedLoaded = shallowRef(false)
+const hasEmittedError = shallowRef(false)
 
 // Play animation when available, stop when autoPlayAnimation becomes false
 watch(
@@ -151,6 +158,26 @@ watch(
       scene,
       animations: animations.value,
     })
+  },
+  { immediate: true }
+)
+
+watch(
+  [isLoading, state],
+  ([loading, currentState]) => {
+    if (loading || hasEmittedLoaded.value || hasEmittedError.value) return
+
+    const err = gltfError?.value
+    if (err) {
+      hasEmittedError.value = true
+      emit('error', err)
+      return
+    }
+
+    if (!currentState) {
+      hasEmittedError.value = true
+      emit('error', new Error(`Failed to load GLTF model: ${props.path}`))
+    }
   },
   { immediate: true }
 )
