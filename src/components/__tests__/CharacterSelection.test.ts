@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, VueWrapper } from '@vue/test-utils'
 import CharacterSelection from '../CharacterSelection.vue'
-import { nextTick } from 'vue'
+import { nextTick, ref, reactive } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 
 interface TimelineChain {
@@ -70,8 +70,8 @@ vi.mock('@tresjs/core', () => ({
 
 vi.mock('@tresjs/cientos', () => {
   const useGLTFMock = vi.fn(() => ({
-    state: { value: null },
-    isLoading: { value: false },
+    state: ref(null),
+    isLoading: ref(false),
   })) as unknown as { preload: ReturnType<typeof vi.fn> }
   useGLTFMock.preload = vi.fn()
 
@@ -82,8 +82,8 @@ vi.mock('@tresjs/cientos', () => {
     },
     useGLTF: useGLTFMock,
     useAnimations: vi.fn(() => ({
-      actions: {},
-      mixer: { value: null },
+      actions: reactive({}),
+      mixer: ref(null),
     })),
   }
 })

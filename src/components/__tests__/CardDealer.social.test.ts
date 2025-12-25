@@ -1,14 +1,15 @@
 import { mount } from '@vue/test-utils'
 import { describe, it, expect } from 'vitest'
 import { vi } from 'vitest'
+import { ref, reactive } from 'vue'
 import CardDealer from '../CardDealer.vue'
 
 // Mock @tresjs/cientos to avoid module resolution issues
 vi.mock('@tresjs/cientos', () => ({
   OrbitControls: { name: 'OrbitControls', template: '<div class="mock-orbit-controls"></div>' },
   GLTFModel: { name: 'GLTFModel', template: '<div class="mock-gltf-model"></div>' },
-  useGLTF: vi.fn(() => ({ state: { value: null }, isLoading: { value: false } })),
-  useAnimations: vi.fn(() => ({ actions: {}, mixer: { value: null } })),
+  useGLTF: vi.fn(() => ({ state: ref(null), isLoading: ref(false) })),
+  useAnimations: vi.fn(() => ({ actions: reactive({}), mixer: ref(null) })),
 }))
 
 // Mock @tresjs/core
