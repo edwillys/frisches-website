@@ -16,6 +16,9 @@ export async function waitForAnimations(page: Page, timeout = 10000): Promise<vo
   
   try {
     // Try to wait for data-animating to be false with polling
+    // IMPORTANT: waitForFunction signature is (fn, arg?, options?)
+    // If we pass options as the 2nd argument, Playwright treats it as `arg` and
+    // the timeout/polling are ignored (leading to CI-only 30s test timeouts).
     await page.waitForFunction(
       () => {
         const element = document.querySelector('[data-testid="card-dealer"]')
@@ -23,26 +26,35 @@ export async function waitForAnimations(page: Page, timeout = 10000): Promise<vo
         const isAnimating = element.getAttribute('data-animating')
         return isAnimating === 'false' || isAnimating === null
       },
+      null,
       { timeout, polling: 100 } // Poll every 100ms
     )
   } catch (error) {
+    // If we timed out, it's usually because isAnimating never flipped back.
+    // Provide a clearer failure (and avoid evaluate-on-closed-page errors).
     console.warn('waitForFunction timed out, checking for stuck animations...', error)
-    // Fallback: If waitForFunction times out, check if animations got stuck
-    // This can happen in WebKit with complex 3D content
-    
-    // Check if page is still open before evaluating
-    if (page.isClosed()) {
-      return // Page closed, nothing to wait for
-    }
-    
-    const isStillAnimating = await page.evaluate(() => {
-      const element = document.querySelector('[data-testid="card-dealer"]')
-      return element?.getAttribute('data-animating') === 'true'
-    })
-    
-    if (isStillAnimating) {
-      // Give a small fixed wait as fallback (shorter than old approach)
-      await page.waitForTimeout(1000)
+
+    if (page.isClosed()) return
+
+    try {
+      const state = await page.evaluate(() => {
+        const el = document.querySelector('[data-testid="card-dealer"]')
+        return {
+          exists: Boolean(el),
+          dataAnimating: el?.getAttribute('data-animating'),
+          classAnimating: el?.classList.contains('is-animating') ?? false,
+        }
+      })
+
+      throw new Error(
+        `Timed out waiting for animations (data-animating to become false/null). ` +
+          `State: exists=${state.exists}, data-animating=${String(state.dataAnimating)}, ` +
+          `class.is-animating=${state.classAnimating}`
+      )
+    } catch (evaluateError) {
+      // If the page got closed between the checks, just rethrow original.
+      if (page.isClosed()) throw error
+      throw evaluateError
     }
   }
 }

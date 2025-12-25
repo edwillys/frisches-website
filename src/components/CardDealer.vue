@@ -345,7 +345,10 @@ const playCardOpen = () => {
   }
 
   const container = cardsContainerRef.value
-  if (!container) return
+  if (!container) {
+    isAnimating.value = false
+    return
+  }
 
   const tl = gsap.timeline({
     onComplete: () => {
@@ -427,7 +430,10 @@ const playCardCloseAndLogoReappear = () => {
   }
 
   const container = cardsContainerRef.value
-  if (!container) return
+  if (!container) {
+    isAnimating.value = false
+    return
+  }
 
   const leadCard = cards[deckLeadIndex] ?? cards[0]
   if (!leadCard) {
@@ -555,7 +561,10 @@ const playContentCloseAndCardsReturn = () => {
   const headerTitle = headerTitleRef.value
   const container = cardsContainerRef.value
 
-  if (!container) return
+  if (!container) {
+    isAnimating.value = false
+    return
+  }
 
   // We want the “gather to center” point to be the CENTER OF THE SCREEN (viewport),
   // not the center of the cards container (which is auto-sized and can be offset).
