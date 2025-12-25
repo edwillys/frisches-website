@@ -94,8 +94,9 @@ test.describe('Frisches Website - Extended User Flows', () => {
     const contentView = page.locator('.card-dealer__content-view')
     await expect(contentView).toBeVisible({ timeout: 5000 })
 
-    // Click back button
+    // Wait for back button to be visible and enabled
     const backButton = page.locator('.card-dealer__back-button').first()
+    await expect(backButton).toBeVisible({ timeout: 10000 })
     await backButton.click()
     await waitForAnimations(page)
 

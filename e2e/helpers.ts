@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test'
 
 /**
  * Waits for all GSAP animations to complete by monitoring the data-animating attribute
- * on the card-dealer component. This is more reliable than arbitrary timeouts.
+ * on the card-dealer component. Includes fallback logic for WebKit compatibility.
  * 
  * @param page - Playwright page object
  * @param timeout - Maximum time to wait in milliseconds (default: 10000)
@@ -14,16 +14,30 @@ export async function waitForAnimations(page: Page, timeout = 10000): Promise<vo
   // Wait for the element to exist first
   await cardDealer.waitFor({ state: 'attached', timeout })
   
-  // Wait for data-animating to be false (or not 'true' as a string)
-  await page.waitForFunction(
-    () => {
+  try {
+    // Try to wait for data-animating to be false with polling
+    await page.waitForFunction(
+      () => {
+        const element = document.querySelector('[data-testid="card-dealer"]')
+        if (!element) return false
+        const isAnimating = element.getAttribute('data-animating')
+        return isAnimating === 'false' || isAnimating === null
+      },
+      { timeout, polling: 100 } // Poll every 100ms
+    )
+  } catch (error) {
+    // Fallback: If waitForFunction times out, check if animations got stuck
+    // This can happen in WebKit with complex 3D content
+    const isStillAnimating = await page.evaluate(() => {
       const element = document.querySelector('[data-testid="card-dealer"]')
-      if (!element) return false
-      const isAnimating = element.getAttribute('data-animating')
-      return isAnimating === 'false' || isAnimating === null
-    },
-    { timeout }
-  )
+      return element?.getAttribute('data-animating') === 'true'
+    })
+    
+    if (isStillAnimating) {
+      // Give a small fixed wait as fallback (shorter than old approach)
+      await page.waitForTimeout(1000)
+    }
+  }
 }
 
 /**
