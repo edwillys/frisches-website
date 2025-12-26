@@ -266,8 +266,8 @@ function onSeek(e: Event) {
         </div>
 
         <div class="mini-player__info">
-          <div class="mini-player__title" :title="currentTitle">{{ currentTitle }}</div>
-          <div class="mini-player__artist" :title="currentArtist">{{ currentArtist }}</div>
+          <div class="mini-player__title">{{ currentTitle }}</div>
+          <div class="mini-player__artist">{{ currentArtist }}</div>
         </div>
       </div>
 

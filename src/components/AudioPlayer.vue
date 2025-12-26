@@ -97,7 +97,7 @@ function isCurrentTrack(track: Track): boolean {
       <button
         class="album-rail__toggle"
         @click="toggleAlbumDrawer"
-        :title="isAlbumDrawerExpanded ? 'Collapse library' : 'Expand library'"
+        :data-tooltip="isAlbumDrawerExpanded ? 'Collapse library' : 'Expand library'"
         :aria-label="isAlbumDrawerExpanded ? 'Collapse albums' : 'Expand albums'"
         data-testid="album-rail-toggle"
       >
@@ -121,7 +121,8 @@ function isCurrentTrack(track: Track): boolean {
           :key="album.albumId"
           class="album-rail__item"
           :class="{ 'is-active': album.albumId === selectedAlbumId }"
-          :title="`${album.title} • ${album.trackIds.length} songs`"
+          :data-tooltip="`${album.title} • ${album.trackIds.length} songs`"
+          :aria-label="album.title"
           @click="selectAlbum(album.albumId)"
           data-testid="album-rail-item"
         >
@@ -169,7 +170,7 @@ function isCurrentTrack(track: Track): boolean {
         <button
           class="btn-play-big"
           @click="playAlbum"
-          :title="isPlaying ? 'Pause' : 'Play'"
+          :data-tooltip="isPlaying ? 'Pause' : 'Play'"
           :aria-label="isPlaying ? 'Pause' : 'Play album'"
           data-testid="btn-play-album"
         >
@@ -199,7 +200,7 @@ function isCurrentTrack(track: Track): boolean {
           class="btn-shuffle"
           :class="{ 'is-active': isShuffle }"
           @click="toggleShuffle"
-          :title="isShuffle ? 'Disable shuffle' : 'Enable shuffle'"
+          :data-tooltip="isShuffle ? 'Disable shuffle' : 'Enable shuffle'"
           :aria-label="isShuffle ? 'Disable shuffle' : 'Enable shuffle'"
           data-testid="btn-shuffle"
         >
@@ -263,7 +264,7 @@ function isCurrentTrack(track: Track): boolean {
                 v-if="hoveredTrackId === track.trackId && isCurrentTrack(track) && isPlaying"
                 class="track-table__play-btn"
                 type="button"
-                title="Pause"
+                data-tooltip="Pause"
                 aria-label="Pause"
                 :data-testid="`track-pause-${index}`"
                 @click.stop="audioStore.togglePlayPause()"
@@ -284,7 +285,9 @@ function isCurrentTrack(track: Track): boolean {
                 v-else-if="hoveredTrackId === track.trackId"
                 class="track-table__play-btn"
                 type="button"
-                :title="(isCurrentTrack(track) && !isPlaying ? 'Resume ' : 'Play ') + track.title"
+                :data-tooltip="
+                  (isCurrentTrack(track) && !isPlaying ? 'Resume ' : 'Play ') + track.title
+                "
                 :aria-label="
                   (isCurrentTrack(track) && !isPlaying ? 'Resume ' : 'Play ') + track.title
                 "
@@ -466,6 +469,10 @@ function isCurrentTrack(track: Track): boolean {
 
 .album-rail__item.is-active {
   background: rgba(255, 255, 255, 0.15);
+}
+
+.album-rail:not(.is-expanded) .album-rail__item {
+  justify-content: center;
 }
 
 .album-rail__cover {
@@ -688,7 +695,7 @@ function isCurrentTrack(track: Track): boolean {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.track-table__row.is-playing {
+.track-table__row.is-playing:not(:hover):not(.is-selected) {
   background: transparent;
 }
 
@@ -836,12 +843,12 @@ function isCurrentTrack(track: Track): boolean {
 }
 
 /* Tooltip styling */
-[title]:not([title='']) {
+[data-tooltip]:not([data-tooltip='']) {
   position: relative;
 }
 
-[title]:not([title='']):hover::after {
-  content: attr(title);
+[data-tooltip]:not([data-tooltip='']):hover::after {
+  content: attr(data-tooltip);
   position: absolute;
   bottom: calc(100% + 8px);
   left: 50%;
@@ -861,7 +868,7 @@ function isCurrentTrack(track: Track): boolean {
   backdrop-filter: blur(8px);
 }
 
-[title]:not([title='']):hover::before {
+[data-tooltip]:not([data-tooltip='']):hover::before {
   content: '';
   position: absolute;
   bottom: calc(100% + 4px);
