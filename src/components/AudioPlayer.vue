@@ -16,6 +16,7 @@ const audioStore = useAudioStore()
 const selectedAlbumId = ref('tftc')
 const isAlbumDrawerExpanded = ref(false)
 const selectedTrackId = ref<string | null>(null)
+const hoveredTrackId = ref<string | null>(null)
 
 const selectedAlbum = computed(() => getAlbumById(selectedAlbumId.value))
 const albumTracks = computed(() => getAlbumTracks(selectedAlbumId.value))
@@ -23,6 +24,12 @@ const albumDurationFormatted = computed(() =>
   formatSecondsAsAlbumDuration(getAlbumTotalDurationSeconds(selectedAlbumId.value))
 )
 const albumSongCount = computed(() => albumTracks.value.length)
+const selectedArtist = computed(() => selectedAlbum.value?.artist ?? 'Frisches')
+
+const bandLogoUrl = new URL(
+  '../assets/private/image/Frisches_Logo-Mood-3-Round.png',
+  import.meta.url
+).href
 
 // Sync store playlist when album changes
 watch(
@@ -62,17 +69,16 @@ function toggleShuffle() {
   audioStore.toggleShuffle()
 }
 
-function playTrack(track: Track) {
+function playOrToggle(track: Track) {
+  if (isCurrentTrack(track)) {
+    audioStore.togglePlayPause()
+    return
+  }
   audioStore.startFromMusic(track.trackId)
 }
 
 function selectTrack(track: Track) {
-  // Don't select if it's the currently playing track
-  if (isCurrentTrack(track)) {
-    selectedTrackId.value = null
-  } else {
-    selectedTrackId.value = track.trackId
-  }
+  selectedTrackId.value = track.trackId
 }
 
 function formatDuration(duration?: string): string {
@@ -119,13 +125,7 @@ function isCurrentTrack(track: Track): boolean {
           @click="selectAlbum(album.albumId)"
           data-testid="album-rail-item"
         >
-          <img
-            :src="album.coverUrl"
-            :alt="album.title"
-            class="album-rail__cover"
-            width="48"
-            height="48"
-          />
+          <img :src="album.coverUrl" class="album-rail__cover" width="48" height="48" />
           <div v-if="isAlbumDrawerExpanded" class="album-rail__info">
             <div class="album-rail__title">{{ album.title }}</div>
             <div class="album-rail__meta">{{ album.trackIds.length }} songs</div>
@@ -152,12 +152,7 @@ function isCurrentTrack(track: Track): boolean {
           <div class="album-hero__label">Album</div>
           <h1 class="album-hero__title" data-testid="album-title">{{ selectedAlbum?.title }}</h1>
           <div class="album-hero__meta">
-            <img
-              v-if="selectedAlbum?.coverUrl"
-              :src="selectedAlbum.coverUrl"
-              :alt="selectedAlbum.artist"
-              class="album-hero__artist-avatar"
-            />
+            <img :src="bandLogoUrl" :alt="selectedArtist" class="album-hero__artist-avatar" />
             <span class="album-hero__artist">{{ selectedAlbum?.artist }}</span>
             <span class="album-hero__dot">•</span>
             <span>{{ selectedAlbum?.year }}</span>
@@ -256,16 +251,64 @@ function isCurrentTrack(track: Track): boolean {
             class="track-table__row"
             :class="{
               'is-playing': isCurrentTrack(track) && isPlaying,
-              'is-selected': selectedTrackId === track.trackId && !isCurrentTrack(track),
+              'is-selected': selectedTrackId === track.trackId,
             }"
             :data-testid="`track-row-${index}`"
             @click="selectTrack(track)"
+            @pointerenter="hoveredTrackId = track.trackId"
+            @pointerleave="hoveredTrackId = null"
           >
             <div class="track-table__col track-table__col--index">
-              <span class="track-table__number">{{ index + 1 }}</span>
+              <button
+                v-if="hoveredTrackId === track.trackId && isCurrentTrack(track) && isPlaying"
+                class="track-table__play-btn"
+                type="button"
+                title="Pause"
+                aria-label="Pause"
+                :data-testid="`track-pause-${index}`"
+                @click.stop="audioStore.togglePlayPause()"
+              >
+                <svg
+                  class="track-table__icon"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                </svg>
+              </button>
 
-              <!-- Animated bars when playing -->
-              <div v-if="isCurrentTrack(track) && isPlaying" class="track-table__animated-bars">
+              <button
+                v-else-if="hoveredTrackId === track.trackId"
+                class="track-table__play-btn"
+                type="button"
+                :title="(isCurrentTrack(track) && !isPlaying ? 'Resume ' : 'Play ') + track.title"
+                :aria-label="
+                  (isCurrentTrack(track) && !isPlaying ? 'Resume ' : 'Play ') + track.title
+                "
+                :data-testid="`track-play-${index}`"
+                @click.stop="playOrToggle(track)"
+              >
+                <svg
+                  class="track-table__icon"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </button>
+
+              <!-- Animated bars when playing (not hovered) -->
+              <div
+                v-else-if="isCurrentTrack(track) && isPlaying"
+                class="track-table__animated-bars"
+                aria-hidden="true"
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="16"
@@ -324,46 +367,7 @@ function isCurrentTrack(track: Track): boolean {
                 </svg>
               </div>
 
-              <!-- Pause button when playing (shows on hover over animated bars) -->
-              <button
-                v-if="isCurrentTrack(track) && isPlaying"
-                class="track-table__play-btn track-table__play-btn--current-playing"
-                title="Pause"
-                :aria-label="'Pause'"
-                :data-testid="`track-play-${index}`"
-                @click.stop="audioStore.togglePlayPause()"
-              >
-                <svg
-                  class="track-table__playing-icon"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                </svg>
-              </button>
-
-              <!-- Play button (shows on hover over track number) -->
-              <button
-                v-else
-                class="track-table__play-btn track-table__play-btn--hover"
-                :title="'Play ' + track.title"
-                :aria-label="'Play ' + track.title"
-                :data-testid="`track-play-${index}`"
-                @click.stop="playTrack(track)"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </button>
+              <span v-else class="track-table__number">{{ index + 1 }}</span>
             </div>
 
             <div class="track-table__col track-table__col--title">
@@ -473,7 +477,8 @@ function isCurrentTrack(track: Track): boolean {
   max-width: 48px;
   max-height: 48px;
   border-radius: 4px;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   flex-shrink: 0;
   aspect-ratio: 1 / 1;
 }
@@ -684,11 +689,15 @@ function isCurrentTrack(track: Track): boolean {
 }
 
 .track-table__row.is-playing {
-  background: rgba(255, 255, 255, 0.08);
+  background: transparent;
 }
 
 .track-table__row.is-playing .track-table__col--index {
   color: var(--color-neon-cyan);
+}
+
+.track-table__row.is-playing .track-table__number {
+  visibility: hidden;
 }
 
 .track-table__col {
@@ -698,7 +707,6 @@ function isCurrentTrack(track: Track): boolean {
 }
 
 .track-table__col--index {
-  position: relative;
   justify-content: center;
   color: var(--color-text-secondary);
   font-size: 14px;
@@ -706,26 +714,22 @@ function isCurrentTrack(track: Track): boolean {
 
 .track-table__number {
   font-variant-numeric: tabular-nums;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .track-table__animated-bars {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
-  pointer-events: none;
 }
 
 .track-table__play-btn {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -733,42 +737,21 @@ function isCurrentTrack(track: Track): boolean {
   height: 32px;
   border: none;
   background: transparent;
-  color: var(--color-neon-cyan);
+  color: var(--color-text);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .track-table__play-btn:hover {
-  transform: translate(-50%, -50%) scale(1.08);
+  transform: scale(1.08);
 }
 
-.track-table__play-btn--hover {
-  opacity: 0;
-  color: var(--color-text);
-}
-
-.track-table__play-btn--current-playing {
+.track-table__row.is-playing .track-table__animated-bars,
+.track-table__row.is-playing .track-table__play-btn {
   color: var(--color-neon-cyan);
-  opacity: 0;
 }
 
-.track-table__row:hover .track-table__number {
-  visibility: hidden;
-}
-
-.track-table__row:hover .track-table__animated-bars {
-  opacity: 0;
-}
-
-.track-table__row:hover .track-table__play-btn--hover {
-  opacity: 1;
-}
-
-.track-table__row:hover .track-table__play-btn--current-playing {
-  opacity: 1;
-}
-
-.track-table__playing-icon {
+.track-table__icon {
   color: inherit;
 }
 
