@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import CardDealer from './components/CardDealer.vue'
 import MouseParticles from './components/MouseParticles.vue'
+import GlobalAudioPlayer from './components/GlobalAudioPlayer.vue'
 import { preloadCharacterModels } from './composables/useCharacterPreloader'
 
 // Start preloading character models in the background
@@ -67,6 +68,7 @@ function handlePaletteChange(payload: number[] | null) {
       @logo-hide="handleLogoHide"
       @palette-change="handlePaletteChange"
     />
+    <GlobalAudioPlayer />
     <MouseParticles ref="mouseParticlesRef" />
   </div>
 </template>

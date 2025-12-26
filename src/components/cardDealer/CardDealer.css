@@ -231,6 +231,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--spacing-2xl);
+  padding-bottom: calc(var(--spacing-2xl) + var(--mini-player-offset, 0px));
   box-sizing: border-box;
   pointer-events: auto;
   overflow-y: auto;
@@ -238,10 +239,11 @@
 
 .card-dealer__music-content {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: stretch;
   width: 100%;
-  max-width: 800px;
+  height: 100%;
+  max-width: 1400px;
 }
 
 .card-dealer__about-content {
@@ -323,6 +325,7 @@
 
   .card-dealer__content-container {
     padding: var(--spacing-lg);
+    padding-bottom: calc(var(--spacing-lg) + var(--mini-player-offset, 0px));
   }
 
   .card-dealer__content-view {

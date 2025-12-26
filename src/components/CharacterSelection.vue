@@ -6,6 +6,8 @@ import { PCFSoftShadowMap, SRGBColorSpace, ACESFilmicToneMapping, Vector3, Cache
 import type { AnimationClip, Object3D } from 'three'
 import gsap from 'gsap'
 import GLTFModelWithEvents from './GLTFModelWithEvents.vue'
+import { getTrackById } from '@/data/tracks'
+import { useAudioStore } from '@/stores/audio'
 
 // Enable Three.js cache - this is critical for sharing loaded models across loaders
 // Wrapped in try-catch to handle test environments where Cache may not be available
@@ -45,7 +47,7 @@ interface Character {
   scale?: number
   instruments: string[]
   influences: string[]
-  favoriteSong: string
+  favoriteTrackId: string
 }
 
 const DEFAULT_SCALE = 2.5
@@ -60,7 +62,7 @@ const characters = ref<Character[]>([
     //scale: DEFAULT_SCALE,
     instruments: ['Guitar', 'Backing Vocals'],
     influences: ['Led Zeppelin', 'Beatles'],
-    favoriteSong: 'Tears of Joyful Despair',
+    favoriteTrackId: 'tftc:02-tojd',
   },
   {
     id: 2,
@@ -70,7 +72,7 @@ const characters = ref<Character[]>([
     //scale: DEFAULT_SCALE,
     instruments: ['Singer', 'Flute'],
     influences: ['Beatles', 'Joni Mitchell'],
-    favoriteSong: 'Witch Hunting',
+    favoriteTrackId: 'tftc:05-witch-hunting',
   },
   {
     id: 3,
@@ -80,7 +82,7 @@ const characters = ref<Character[]>([
     //scale: DEFAULT_SCALE,
     instruments: ['Drums'],
     influences: ['Led Zeppelin', 'Pink Floyd'],
-    favoriteSong: 'Étiquette',
+    favoriteTrackId: 'tftc:03-etiquette',
   },
   {
     id: 4,
@@ -90,7 +92,7 @@ const characters = ref<Character[]>([
     //scale: DEFAULT_SCALE,
     instruments: ['Bass'],
     influences: ['Red Hot Chili Peppers', 'Jimi Hendrix'],
-    favoriteSong: 'Misled',
+    favoriteTrackId: 'tftc:01-misled',
   },
 ])
 
@@ -214,6 +216,20 @@ interface LoadedModel {
 const loadedModels = shallowRef(new Map<number, LoadedModel>())
 
 const selectedCharacter = computed(() => characters.value[selectedIndex.value])
+
+const audioStore = useAudioStore()
+
+const favoriteSongTitle = computed(() => {
+  const trackId = selectedCharacter.value?.favoriteTrackId
+  if (!trackId) return ''
+  return getTrackById(trackId)?.title ?? ''
+})
+
+function playFavoriteSong() {
+  const trackId = selectedCharacter.value?.favoriteTrackId
+  if (!trackId) return
+  audioStore.startFromAbout(trackId)
+}
 
 // Stop auto-rotation on user interaction
 const stopAutoRotation = () => {
@@ -564,10 +580,13 @@ const modelContainerRef = ref<HTMLElement | null>(null)
 
           <div class="character-selection__info-section">
             <h4 class="character-selection__section-title">Favorite Frisches Song</h4>
-            <a href="#" class="character-selection__favorite-song-link" @click.prevent>
-              <span class="character-selection__favorite-song">{{
-                selectedCharacter.favoriteSong
-              }}</span>
+            <a
+              href="#"
+              class="character-selection__favorite-song-link"
+              data-testid="favorite-song-chip"
+              @click.prevent="playFavoriteSong"
+            >
+              <span class="character-selection__favorite-song">{{ favoriteSongTitle }}</span>
               <span class="character-selection__play-icon">▶</span>
             </a>
           </div>

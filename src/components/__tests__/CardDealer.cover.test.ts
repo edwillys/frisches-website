@@ -1,7 +1,8 @@
-import { mount } from '@vue/test-utils'
+import { mount, config } from '@vue/test-utils'
 import { describe, it, expect, vi } from 'vitest'
 import { ref, reactive } from 'vue'
 import CardDealer from '../CardDealer.vue'
+import { createPinia, setActivePinia } from 'pinia'
 
 // Mock @tresjs/cientos to avoid module resolution issues
 vi.mock('@tresjs/cientos', () => ({
@@ -70,6 +71,10 @@ vi.mock('gsap/CustomEase', () => {
 
 describe('CardDealer cover behavior', () => {
   it('emits palette-change as RGB array when About card is clicked', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    config.global.plugins = [pinia]
+
     // Set CSS vars used by the component
     document.documentElement.style.setProperty('--bg-cover-particles', '220, 40, 40')
     document.documentElement.style.setProperty('--bg-cover-about-dim', '0.36')

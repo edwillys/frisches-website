@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, config } from '@vue/test-utils'
 import { nextTick, ref, reactive } from 'vue'
 import CardDealer from '../CardDealer.vue'
 import MenuCard from '../MenuCard.vue'
+import { createPinia, setActivePinia } from 'pinia'
 
 // Mock @tresjs/cientos to avoid module resolution issues
 vi.mock('@tresjs/cientos', () => ({
@@ -126,6 +127,10 @@ describe('CardDealer', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    config.global.plugins = [pinia]
   })
 
   afterEach(() => {

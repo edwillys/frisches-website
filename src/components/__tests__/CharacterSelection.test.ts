@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mount, VueWrapper } from '@vue/test-utils'
+import { mount, VueWrapper, config } from '@vue/test-utils'
 import CharacterSelection from '../CharacterSelection.vue'
 import { nextTick, ref, reactive } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
+import { getTrackById } from '@/data/tracks'
 
 interface TimelineChain {
   to: (selector: string, props: unknown) => TimelineChain
@@ -46,7 +48,7 @@ type Character = {
   modelPath: string
   instruments: string[]
   influences: string[]
-  favoriteSong: string
+  favoriteTrackId: string
 }
 
 type ComponentVM = {
@@ -165,6 +167,10 @@ describe('CharacterSelection', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    config.global.plugins = [pinia]
   })
 
   afterEach(() => {
@@ -221,7 +227,7 @@ describe('CharacterSelection', () => {
     expect(badges).toHaveLength(vm.selectedCharacter.instruments.length)
 
     const favoriteSong = wrapper.find('.character-selection__favorite-song')
-    expect(favoriteSong.text()).toBe(vm.selectedCharacter.favoriteSong)
+    expect(favoriteSong.text()).toBe(getTrackById(vm.selectedCharacter.favoriteTrackId)?.title)
   })
 
   it('switches character when button is clicked', async () => {
@@ -249,7 +255,7 @@ describe('CharacterSelection', () => {
     expect(badges).toHaveLength(vm.selectedCharacter.instruments.length)
 
     const favoriteSong = wrapper.find('.character-selection__favorite-song')
-    expect(favoriteSong.text()).toBe(vm.selectedCharacter.favoriteSong)
+    expect(favoriteSong.text()).toBe(getTrackById(vm.selectedCharacter.favoriteTrackId)?.title)
   })
 
   it('displays character influences correctly', () => {
@@ -331,7 +337,7 @@ describe('CharacterSelection', () => {
     expect(vm.characters[0]).toHaveProperty('modelPath')
     expect(vm.characters[0]).toHaveProperty('instruments')
     expect(vm.characters[0]).toHaveProperty('influences')
-    expect(vm.characters[0]).toHaveProperty('favoriteSong')
+    expect(vm.characters[0]).toHaveProperty('favoriteTrackId')
   })
 
   it('starts with first character selected', () => {
@@ -781,7 +787,7 @@ describe('CharacterSelection', () => {
 
       expect(songLink.exists()).toBe(true)
       expect(songLink.find('.character-selection__favorite-song').text()).toBe(
-        vm.selectedCharacter.favoriteSong
+        getTrackById(vm.selectedCharacter.favoriteTrackId)?.title
       )
       expect(songLink.find('.character-selection__play-icon').exists()).toBe(true)
     })

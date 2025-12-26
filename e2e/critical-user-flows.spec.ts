@@ -65,6 +65,9 @@ test.describe('Frisches Website - Critical Flows', () => {
     // Verify music content
     const audioPlayer = page.locator('[data-testid="audio-player"]')
     await expect(audioPlayer).toBeVisible({ timeout: 10000 })
+
+    // Regression guard: album hero cover should be visible
+    await expect(page.locator('[data-testid="album-hero-cover"]')).toBeVisible({ timeout: 10000 })
     
     // Click back button
     const backButton = page.locator('.card-dealer__back-button').first()
@@ -85,6 +88,10 @@ test.describe('Frisches Website - Critical Flows', () => {
     
     const audioPlayer = page.locator('[data-testid="audio-player"]')
     await expect(audioPlayer).toBeVisible({ timeout: 10000 })
+
+    // Start playback via an explicit user gesture
+    await page.locator('[data-testid="btn-play-album"]').click()
+    await expect(page.locator('[data-testid="audio-mini-player"]')).toBeVisible({ timeout: 10000 })
     
     // Wait for audio element to exist and load metadata
     const hasLoadedAudio = await page.evaluate(async () => {
