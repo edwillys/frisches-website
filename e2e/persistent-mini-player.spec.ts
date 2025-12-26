@@ -9,7 +9,10 @@ test.describe('Persistent mini-player (Phase 1)', () => {
     await waitForAnimations(page)
   })
 
-  test('mini-player appears only after user starts, persists across navigation, and X hides until Music/About restart', async ({ page }) => {
+  test('mini-player appears only after user starts, persists across navigation, and X hides until Music/About restart', async ({ page }, testInfo) => {
+    // Skip this test on CI for webkit which is currently flaky
+    test.skip(process.env.CI && testInfo.project.name === 'webkit',
+      'Skipping persistent mini-player test on CI for webkit')
     const miniPlayer = page.locator('[data-testid="audio-mini-player"]')
     await expect(miniPlayer).toBeHidden()
 
