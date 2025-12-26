@@ -23,8 +23,14 @@ test.describe('Persistent mini-player (Phase 1)', () => {
     // Mini-player should still be hidden until play is pressed
     await expect(miniPlayer).toBeHidden()
 
+    // Wait for AudioPlayer to fully render
+    await expect(page.locator('[data-testid="album-rail-toggle"]')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('[data-testid="album-title"]')).toBeVisible({ timeout: 10000 })
+
     // Start playback from Music (explicit gesture)
-    await page.locator('[data-testid="btn-play-album"]').click()
+    const playButton = page.locator('[data-testid="btn-play-album"]')
+    await expect(playButton).toBeVisible({ timeout: 10000 })
+    await playButton.click()
     await expect(miniPlayer).toBeVisible({ timeout: 10000 })
 
     // Mini-player shows cover image when available

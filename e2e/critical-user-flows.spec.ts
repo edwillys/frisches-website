@@ -62,9 +62,10 @@ test.describe('Frisches Website - Critical Flows', () => {
     await musicCard.click()
     await waitForAnimations(page)
     
-    // Verify music content
-    const audioPlayer = page.locator('[data-testid="audio-player"]')
-    await expect(audioPlayer).toBeVisible({ timeout: 10000 })
+    // Verify music content - wait for AudioPlayer internal elements to render
+    await expect(page.locator('[data-testid="audio-player"]')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('[data-testid="album-rail-toggle"]')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('[data-testid="album-title"]')).toBeVisible({ timeout: 10000 })
 
     // Regression guard: album hero cover should be visible
     await expect(page.locator('[data-testid="album-hero-cover"]')).toBeVisible({ timeout: 10000 })
@@ -86,11 +87,15 @@ test.describe('Frisches Website - Critical Flows', () => {
     await musicCard.click()
     await waitForAnimations(page)
     
-    const audioPlayer = page.locator('[data-testid="audio-player"]')
-    await expect(audioPlayer).toBeVisible({ timeout: 10000 })
+    // Wait for AudioPlayer and its internal elements to be fully rendered
+    await expect(page.locator('[data-testid="audio-player"]')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('[data-testid="album-rail-toggle"]')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('[data-testid="album-title"]')).toBeVisible({ timeout: 10000 })
 
     // Start playback via an explicit user gesture
-    await page.locator('[data-testid="btn-play-album"]').click()
+    const playButton = page.locator('[data-testid="btn-play-album"]')
+    await expect(playButton).toBeVisible({ timeout: 10000 })
+    await playButton.click()
     await expect(page.locator('[data-testid="audio-mini-player"]')).toBeVisible({ timeout: 10000 })
     
     // Wait for audio element to exist and load metadata
@@ -196,20 +201,20 @@ test.describe('Frisches Website - Critical Flows', () => {
     const cards = page.locator('.menu-card')
     const cardCount = await cards.count()
 
-    // Click each card and return
+    // Click each card and return - with generous timeouts for sequential animations
     for (let i = 0; i < cardCount; i++) {
       const card = cards.nth(i)
       
       // Navigate to content
       await card.click()
-      await waitForAnimations(page)
+      await waitForAnimations(page, 15000) // Increased timeout for complex animations
       const contentView = page.locator('.card-dealer__content-view')
       await expect(contentView).toBeVisible({ timeout: 5000 })
 
       // Navigate back
       const backButton = page.locator('.card-dealer__back-button').first()
       await backButton.click()
-      await waitForAnimations(page)
+      await waitForAnimations(page, 15000) // Increased timeout
       await expect(page.locator('.card-dealer__cards')).toBeVisible({ timeout: 5000 })
     }
   })
