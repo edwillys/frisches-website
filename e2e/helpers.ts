@@ -8,7 +8,7 @@ import type { Page } from '@playwright/test'
  * @param timeout - Maximum time to wait in milliseconds (default: 10000)
  * @returns Promise that resolves when animations are complete
  */
-export async function waitForAnimations(page: Page, timeout = 20000): Promise<void> {
+export async function waitForAnimations(page: Page, timeout = 10000): Promise<void> {
   const cardDealer = page.locator('[data-testid="card-dealer"]')
   
   // Wait for the element to exist first

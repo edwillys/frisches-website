@@ -207,14 +207,14 @@ test.describe('Frisches Website - Critical Flows', () => {
       
       // Navigate to content
       await card.click()
-      await waitForAnimations(page, 30000) // Increased timeout for complex animations
+      await waitForAnimations(page, 15000) // Increased timeout for complex animations
       const contentView = page.locator('.card-dealer__content-view')
       await expect(contentView).toBeVisible({ timeout: 5000 })
 
       // Navigate back
       const backButton = page.locator('.card-dealer__back-button').first()
       await backButton.click()
-      await waitForAnimations(page, 30000) // Increased timeout
+      await waitForAnimations(page, 15000) // Increased timeout
       await expect(page.locator('.card-dealer__cards')).toBeVisible({ timeout: 5000 })
     }
   })
