@@ -27,7 +27,7 @@ export default defineConfig({
   /* Stop after first failure on local for faster feedback */
   maxFailures: process.env.CI ? undefined : 1,
   /* Parallel workers - limited to prevent resource contention */
-  workers: process.env.CI ? 2 : 4, // CI: 2 workers, local: 4 workers max
+  workers: process.env.CI ? 1 : 4, // CI: 2 workers, local: 4 workers max
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'line',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
