@@ -27,14 +27,15 @@ const activeLine = computed(() => {
   const lines = props.lyricsData.lyrics
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
-    if (currentTimeMs.value >= line.startTime && currentTimeMs.value <= line.endTime) {
+    if (line && currentTimeMs.value >= line.startTime && currentTimeMs.value <= line.endTime) {
       return line
     }
   }
   
   // If we're past the last line, return the last line
-  if (lines.length > 0 && currentTimeMs.value > lines[lines.length - 1].endTime) {
-    return lines[lines.length - 1]
+  const lastLine = lines[lines.length - 1]
+  if (lines.length > 0 && lastLine && currentTimeMs.value > lastLine.endTime) {
+    return lastLine
   }
   
   return null

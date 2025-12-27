@@ -6,6 +6,11 @@ import type { LyricsData } from '@/types/lyrics'
 
 describe('LyricsDisplay', () => {
   const mockLyricsData: LyricsData = {
+    meta: {
+      title: 'Test Song',
+      totalDurationMs: 8000,
+      version: '1.0'
+    },
     lyrics: [
       {
         id: 'line-1',
@@ -58,9 +63,9 @@ describe('LyricsDisplay', () => {
 
     const lines = wrapper.findAll('.lyrics-line')
     expect(lines).toHaveLength(3)
-    expect(lines[0].text()).toContain('First')
-    expect(lines[1].text()).toContain('Second')
-    expect(lines[2].text()).toContain('Third')
+    expect(lines[0]?.text()).toContain('First')
+    expect(lines[1]?.text()).toContain('Second')
+    expect(lines[2]?.text()).toContain('Third')
   })
 
   it('renders all words in each line', () => {
@@ -75,9 +80,9 @@ describe('LyricsDisplay', () => {
     const firstLine = wrapper.find('[data-line-index="0"]')
     const words = firstLine.findAll('.lyrics-word')
     expect(words).toHaveLength(3)
-    expect(words[0].text()).toBe('First')
-    expect(words[1].text()).toBe('line')
-    expect(words[2].text()).toBe('here')
+    expect(words[0]?.text()).toBe('First')
+    expect(words[1]?.text()).toBe('line')
+    expect(words[2]?.text()).toBe('here')
   })
 
   it('marks active line correctly', () => {
@@ -90,9 +95,9 @@ describe('LyricsDisplay', () => {
     })
 
     const lines = wrapper.findAll('.lyrics-line')
-    expect(lines[0].classes()).toContain('is-active')
-    expect(lines[1].classes()).not.toContain('is-active')
-    expect(lines[2].classes()).not.toContain('is-active')
+    expect(lines[0]?.classes()).toContain('is-active')
+    expect(lines[1]?.classes()).not.toContain('is-active')
+    expect(lines[2]?.classes()).not.toContain('is-active')
   })
 
   it('marks past lines correctly', () => {
@@ -105,9 +110,9 @@ describe('LyricsDisplay', () => {
     })
 
     const lines = wrapper.findAll('.lyrics-line')
-    expect(lines[0].classes()).toContain('is-past')
-    expect(lines[1].classes()).toContain('is-past')
-    expect(lines[2].classes()).toContain('is-active')
+    expect(lines[0]?.classes()).toContain('is-past')
+    expect(lines[1]?.classes()).toContain('is-past')
+    expect(lines[2]?.classes()).toContain('is-active')
   })
 
   it('marks future lines correctly', () => {
@@ -120,9 +125,9 @@ describe('LyricsDisplay', () => {
     })
 
     const lines = wrapper.findAll('.lyrics-line')
-    expect(lines[0].classes()).toContain('is-active')
-    expect(lines[1].classes()).toContain('is-future')
-    expect(lines[2].classes()).toContain('is-future')
+    expect(lines[0]?.classes()).toContain('is-active')
+    expect(lines[1]?.classes()).toContain('is-future')
+    expect(lines[2]?.classes()).toContain('is-future')
   })
 
   it('marks active word correctly', () => {
@@ -136,9 +141,9 @@ describe('LyricsDisplay', () => {
 
     const firstLine = wrapper.find('[data-line-index="0"]')
     const words = firstLine.findAll('.lyrics-word')
-    expect(words[0].classes()).not.toContain('is-active')
-    expect(words[1].classes()).toContain('is-active')
-    expect(words[2].classes()).not.toContain('is-active')
+    expect(words[0]?.classes()).not.toContain('is-active')
+    expect(words[1]?.classes()).toContain('is-active')
+    expect(words[2]?.classes()).not.toContain('is-active')
   })
 
   it('marks past words correctly', () => {
@@ -152,9 +157,9 @@ describe('LyricsDisplay', () => {
 
     const firstLine = wrapper.find('[data-line-index="0"]')
     const words = firstLine.findAll('.lyrics-word')
-    expect(words[0].classes()).toContain('is-past')
-    expect(words[1].classes()).toContain('is-past')
-    expect(words[2].classes()).toContain('is-active')
+    expect(words[0]?.classes()).toContain('is-past')
+    expect(words[1]?.classes()).toContain('is-past')
+    expect(words[2]?.classes()).toContain('is-active')
   })
 
   it('emits seek event when line is clicked', async () => {
@@ -264,6 +269,11 @@ describe('LyricsDisplay', () => {
 
   it('handles lyrics with empty words array', () => {
     const emptyWordsData: LyricsData = {
+      meta: {
+        title: 'Empty Words Test',
+        totalDurationMs: 2000,
+        version: '1.0'
+      },
       lyrics: [
         {
           id: 'line-1',
