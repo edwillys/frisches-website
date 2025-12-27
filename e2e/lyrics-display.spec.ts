@@ -63,7 +63,7 @@ test.describe('Lyrics Display Feature', () => {
     // Lyrics button should be enabled
     const lyricsBtn = page.locator('.mini-player__btn--lyrics')
     await expect(lyricsBtn).toBeVisible({ timeout: 3000 })
-    await expect(lyricsBtn).not.toBeDisabled()
+    await expect(lyricsBtn).toBeEnabled()
     await expect(lyricsBtn).not.toHaveClass(/is-disabled/)
   })
 
