@@ -1,30 +1,38 @@
-import { test, expect, Page } from '@playwright/test'
-import { waitForAnimations } from './helpers.js'
+import { test, expect, Page, type Locator } from '@playwright/test'
+import { waitForAnimations, clickAndWaitForAnimations } from './helpers.js'
 
 test.describe('Lyrics Display Feature', () => {
-  test.describe.configure({ timeout: 10_000 })
-
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('load')
     await page.locator('[data-testid="card-dealer"]').waitFor({ state: 'attached', timeout: 3000 })
-    await waitForAnimations(page)
+    // Avoid smooth scrolling / layout reflow causing Firefox scrollIntoViewIfNeeded stability timeouts.
+    await page.addStyleTag({ content: '* { scroll-behavior: auto !important; }' })
   })
 
+  async function scrollIntoViewQuick(locator: Locator) {
+    const target = locator.first()
+    await target.evaluate((el) => {
+      el.scrollIntoView({ block: 'center', inline: 'nearest' })
+    })
+  }
+
   async function navigateToMusicPlayer(page: Page) {
-    // Click logo to reveal cards
-    await page.locator('[data-testid="logo-button"]').click()
-    await waitForAnimations(page)
+    // Click logo to reveal cards and wait for the open animation to finish
+    await clickAndWaitForAnimations(page, '[data-testid="logo-button"]', 6000)
 
     // Click music card
     const musicCard = page.locator('[data-testid="card-/music"]')
     await expect(musicCard).toBeVisible({ timeout: 2000 })
     await musicCard.click()
-    await waitForAnimations(page)
+
+    // Wait until CardDealer finishes the card-selection animation.
+    // Without this, Firefox can report track rows as "not stable" for hover/click.
+    await waitForAnimations(page, 8000)
 
     // Wait for audio player
     const audioPlayer = page.locator('[data-testid="audio-player"]')
-    await expect(audioPlayer).toBeVisible({ timeout: 2000 })
+    await expect(audioPlayer).toBeVisible({ timeout: 5000 })
   }
 
   async function playTrackWithLyrics(page: Page) {
@@ -33,8 +41,8 @@ test.describe('Lyrics Display Feature', () => {
     await expect(witchHuntingRow).toBeVisible({ timeout: 2000 })
     
     // Click play button on the row (hover-rendered, so avoid Playwright auto-scroll click flakiness)
-    await witchHuntingRow.scrollIntoViewIfNeeded()
-    await witchHuntingRow.dispatchEvent('pointerenter')
+    await scrollIntoViewQuick(witchHuntingRow)
+    await witchHuntingRow.hover()
     const playBtn = witchHuntingRow.locator('.track-table__play-btn').first()
     await expect(playBtn).toBeVisible({ timeout: 2000 })
     await playBtn.evaluate((el) => (el as HTMLButtonElement).click())
@@ -53,8 +61,8 @@ test.describe('Lyrics Display Feature', () => {
     await expect(introRow).toBeVisible({ timeout: 2000 })
     
     // Click play button on the row
-    await introRow.scrollIntoViewIfNeeded()
-    await introRow.dispatchEvent('pointerenter')
+    await scrollIntoViewQuick(introRow)
+    await introRow.hover()
     const playBtn = introRow.locator('.track-table__play-btn').first()
     await expect(playBtn).toBeVisible({ timeout: 2000 })
     await playBtn.evaluate((el) => (el as HTMLButtonElement).click())
@@ -333,8 +341,8 @@ test.describe('Lyrics Display Feature', () => {
     await lyricsBtn.click()
 
     
-    await introRow.scrollIntoViewIfNeeded()
-    await introRow.dispatchEvent('pointerenter')
+    await scrollIntoViewQuick(introRow)
+    await introRow.hover()
     const playBtn = introRow.locator('.track-table__play-btn').first()
     await playBtn.evaluate((el) => (el as HTMLButtonElement).click())
 

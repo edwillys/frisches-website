@@ -61,6 +61,35 @@ const currentView = ref<'logo' | 'cards' | 'content'>('logo')
 const selectedCard = ref<number | null>(null)
 const isAnimating = ref(false)
 
+let animFallbackTimer: number | null = null
+let animToken = 0
+
+const clearAnimFallback = () => {
+  if (animFallbackTimer !== null) {
+    window.clearTimeout(animFallbackTimer)
+    animFallbackTimer = null
+  }
+}
+
+// Small safety net: if a GSAP timeline never fires onComplete (rare in headless/FF),
+// make sure we don't get stuck in an animating state that blocks all navigation.
+const startAnimating = (fallbackMs = 4500) => {
+  clearAnimFallback()
+  isAnimating.value = true
+
+  const token = ++animToken
+  animFallbackTimer = window.setTimeout(() => {
+    if (animToken !== token) return
+    if (!isAnimating.value) return
+    isAnimating.value = false
+  }, fallbackMs)
+}
+
+const stopAnimating = () => {
+  clearAnimFallback()
+  isAnimating.value = false
+}
+
 const audioStore = useAudioStore()
 
 const selectedItem = computed(() =>
@@ -191,14 +220,14 @@ const handleCardClick = (route: string) => {
   const cardIndex = menuItems.findIndex((item) => item.route === route)
   if (cardIndex === -1) return
 
-  isAnimating.value = true
+  startAnimating()
   selectedCard.value = cardIndex
   playCardSelection(cardIndex)
 }
 
 const handleLogoClick = () => {
   if (isAnimating.value || currentView.value !== 'logo') return
-  isAnimating.value = true
+  startAnimating()
 
   // Notify that logo will be hidden
   emit('logo-hide')
@@ -264,10 +293,10 @@ const handleBackClick = () => {
   }
 
   if (currentView.value == 'content') {
-    isAnimating.value = true
+    startAnimating()
     playContentCloseAndCardsReturn()
   } else if (currentView.value == 'cards') {
-    isAnimating.value = true
+    startAnimating()
     playCardCloseAndLogoReappear()
   }
 }
@@ -286,11 +315,11 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
 
   if (currentView.value === 'cards') {
     if (clickedInsideCards) return
-    isAnimating.value = true
+    startAnimating()
     playCardCloseAndLogoReappear()
   } else if (currentView.value === 'content') {
     if (clickedInsideContent || clickedBackButton || clickedMiniCard) return
-    isAnimating.value = true
+    startAnimating()
     playContentCloseAndCardsReturn()
   }
 }
@@ -298,7 +327,7 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
 const playLogoCloseAndCardOpen = () => {
   const logoEl = getLogoElement()
   if (!logoEl) {
-    isAnimating.value = false
+    stopAnimating()
     return
   }
 
@@ -349,13 +378,13 @@ const playLogoCloseAndCardOpen = () => {
 const playCardOpen = () => {
   const cards = getCardElements()
   if (cards.length === 0) {
-    isAnimating.value = false
+    stopAnimating()
     return
   }
 
   const container = cardsContainerRef.value
   if (!container) {
-    isAnimating.value = false
+    stopAnimating()
     return
   }
 
@@ -368,7 +397,7 @@ const playCardOpen = () => {
         // Don't clear opacity as it defaults to 0 in CSS
         gsap.set(card, { clearProps: 'transform,visibility,zIndex' })
       })
-      isAnimating.value = false
+      stopAnimating()
     },
   })
 
@@ -440,7 +469,7 @@ const playCardCloseAndLogoReappear = () => {
 
   const container = cardsContainerRef.value
   if (!container) {
-    isAnimating.value = false
+    stopAnimating()
     return
   }
 
@@ -511,7 +540,7 @@ const playCardCloseAndLogoReappear = () => {
 const playLogoReappear = () => {
   const logoEl = getLogoElement()
   if (!logoEl) {
-    isAnimating.value = false
+    stopAnimating()
     return
   }
 
@@ -534,7 +563,7 @@ const playLogoReappear = () => {
 
   const tl = gsap.timeline({
     onComplete: () => {
-      isAnimating.value = false
+      stopAnimating()
       // Clear props to return to CSS positioning if needed,
       // but we want it to stay at bottom.
       // Since we animated 'y' back to 0 (relative to original position),
@@ -571,7 +600,7 @@ const playContentCloseAndCardsReturn = () => {
   const container = cardsContainerRef.value
 
   if (!container) {
-    isAnimating.value = false
+    stopAnimating()
     return
   }
 
@@ -593,7 +622,7 @@ const playContentCloseAndCardsReturn = () => {
       )
       selectedCard.value = null
       currentView.value = 'cards'
-      isAnimating.value = false
+      stopAnimating()
     },
   })
 
@@ -755,7 +784,7 @@ const playContentCloseAndCardsReturn = () => {
 const playCardSelection = (cardIndex: number) => {
   const cards = getCardElements()
   if (cards.length === 0 || !cards[cardIndex]) {
-    isAnimating.value = false
+    stopAnimating()
     return
   }
 
@@ -786,7 +815,7 @@ const playCardSelection = (cardIndex: number) => {
     const tl = gsap.timeline({
       defaults: { ease: deckSpreadEase },
       onComplete: () => {
-        isAnimating.value = false
+        stopAnimating()
       },
     })
 
