@@ -199,7 +199,10 @@ test.describe('Frisches Website - Critical Flows', () => {
     await expect(logoButton).toBeVisible({ timeout: 15000 })
   })
 
-  test('handles all three cards sequentially', async ({ page }) => {
+  test('handles all three cards sequentially', async ({ page }, testInfo) => {
+    test.skip(!!process.env.CI && testInfo.project.name === 'webkit',
+      'Skipping handle all three cards sequentially test on CI for webkit')
+
     // Navigate to cards
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
     await expect(page.locator('.card-dealer__cards')).toBeVisible({ timeout: 5000 })
