@@ -15,72 +15,92 @@ const emit = defineEmits<{
 }>()
 
 const lyricsContainer = ref<HTMLElement | null>(null)
-const isUserScrolling = ref(false)
 const isSyncMode = ref(true)
-const userScrollTimeout = ref<number | null>(null)
+
+let ignoreScrollUntil = 0
+
+function setIgnoreScrollWindow(ms: number) {
+  ignoreScrollUntil = Date.now() + ms
+}
 
 const currentTimeMs = computed(() => props.currentTime * 1000)
 
 const activeLine = computed(() => {
   if (!props.lyricsData) return null
-  
+
   const lines = props.lyricsData.lyrics
+  // Before the first line starts, keep the first line "active" (Spotify-style).
+  const firstLine = lines[0]
+  if (firstLine && currentTimeMs.value < firstLine.startTime) {
+    return firstLine
+  }
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     if (line && currentTimeMs.value >= line.startTime && currentTimeMs.value <= line.endTime) {
       return line
     }
   }
-  
+
   // If we're past the last line, return the last line
   const lastLine = lines[lines.length - 1]
   if (lines.length > 0 && lastLine && currentTimeMs.value > lastLine.endTime) {
     return lastLine
   }
-  
+
   return null
 })
 
 const activeLineIndex = computed(() => {
   if (!props.lyricsData || !activeLine.value) return -1
-  return props.lyricsData.lyrics.findIndex(line => line.id === activeLine.value!.id)
+  return props.lyricsData.lyrics.findIndex((line) => line.id === activeLine.value!.id)
+})
+
+// Index of last fully-past line, independent of whether we're currently "inside" a line.
+// This prevents the "everything becomes unread" glitch when there's a timing gap between lines.
+const pastLineIndex = computed(() => {
+  const lines = props.lyricsData?.lyrics
+  if (!lines || lines.length === 0) return -1
+
+  let lastPast = -1
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    if (!line) continue
+    if (currentTimeMs.value > line.endTime) {
+      lastPast = i
+      continue
+    }
+    break
+  }
+  return lastPast
+})
+
+const anchorLineIndex = computed(() => {
+  return activeLineIndex.value >= 0 ? activeLineIndex.value : pastLineIndex.value
 })
 
 function isWordActive(word: Word): boolean {
-  return currentTimeMs.value >= word.startTime && currentTimeMs.value <= word.endTime
+  // Strict start: when seeking exactly to a word start, don't immediately mark it as active.
+  return currentTimeMs.value > word.startTime && currentTimeMs.value <= word.endTime
 }
 
 function isPastWord(word: Word): boolean {
   return currentTimeMs.value > word.endTime
 }
 
-function getWordProgress(word: Word): number {
-  if (currentTimeMs.value < word.startTime) return 0
-  if (currentTimeMs.value > word.endTime) return 1
-  return (currentTimeMs.value - word.startTime) / word.duration
-}
-
 function handleLineClick(line: Line) {
-  // Seek to the start of the line (convert ms to seconds)
-  emit('seek', line.startTime / 1000)
+  // Seek to just before the first word so it isn't immediately highlighted.
+  const firstWordStart = line.words?.[0]?.startTime ?? line.startTime
+  emit('seek', firstWordStart / 1000)
 }
 
 function handleScroll() {
   if (!lyricsContainer.value) return
-  
-  // User is scrolling manually
-  isUserScrolling.value = true
+
+  // Ignore scroll events caused by our own auto-scrolling.
+  if (Date.now() < ignoreScrollUntil) return
+
   isSyncMode.value = false
-  
-  // Clear existing timeout
-  if (userScrollTimeout.value) {
-    clearTimeout(userScrollTimeout.value)
-  }
-  
-  // After 150ms of no scrolling, mark as not scrolling
-  userScrollTimeout.value = window.setTimeout(() => {
-    isUserScrolling.value = false
-  }, 150)
 }
 
 function syncToActiveLine() {
@@ -90,13 +110,18 @@ function syncToActiveLine() {
 
 function scrollToActiveLine() {
   if (!lyricsContainer.value || activeLineIndex.value === -1) return
-  
+
   nextTick(() => {
-    const activeElement = lyricsContainer.value?.querySelector(`[data-line-index="${activeLineIndex.value}"]`)
+    // Prevent our own scroll from disabling sync mode.
+    setIgnoreScrollWindow(2000)
+
+    const activeElement = lyricsContainer.value?.querySelector(
+      `[data-line-index="${activeLineIndex.value}"]`
+    )
     if (activeElement) {
       activeElement.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
+        behavior: 'auto',
+        block: 'center',
       })
     }
   })
@@ -110,11 +135,14 @@ watch(activeLineIndex, (newIndex, oldIndex) => {
 })
 
 // Re-enable sync mode when playback starts
-watch(() => props.isPlaying, (playing) => {
-  if (playing && !isSyncMode.value) {
-    // Don't auto-enable, let user choose
+watch(
+  () => props.isPlaying,
+  (playing) => {
+    if (playing && !isSyncMode.value) {
+      // Don't auto-enable, let user choose
+    }
   }
-})
+)
 
 onMounted(() => {
   lyricsContainer.value?.addEventListener('scroll', handleScroll, { passive: true })
@@ -122,19 +150,12 @@ onMounted(() => {
 
 onUnmounted(() => {
   lyricsContainer.value?.removeEventListener('scroll', handleScroll)
-  if (userScrollTimeout.value) {
-    clearTimeout(userScrollTimeout.value)
-  }
 })
 </script>
 
 <template>
   <div class="lyrics-display">
-    <div 
-      ref="lyricsContainer" 
-      class="lyrics-container"
-      :class="{ 'is-syncing': isSyncMode }"
-    >
+    <div ref="lyricsContainer" class="lyrics-container" :class="{ 'is-syncing': isSyncMode }">
       <div class="lyrics-content">
         <div
           v-for="(line, index) in lyricsData?.lyrics"
@@ -142,9 +163,9 @@ onUnmounted(() => {
           :data-line-index="index"
           class="lyrics-line"
           :class="{
-            'is-active': line.id === activeLine?.id,
-            'is-past': lyricsData && index < activeLineIndex,
-            'is-future': lyricsData && index > activeLineIndex
+            'is-active': index === activeLineIndex,
+            'is-past': lyricsData && index <= pastLineIndex,
+            'is-future': lyricsData && index > anchorLineIndex,
           }"
           @click="handleLineClick(line)"
         >
@@ -153,23 +174,20 @@ onUnmounted(() => {
               v-for="(word, wordIndex) in line.words"
               :key="`${line.id}-${wordIndex}`"
               class="lyrics-word"
-              :class="{ 
-                'is-active': line.id === activeLine?.id && isWordActive(word),
-                'is-past': line.id === activeLine?.id && isPastWord(word)
+              :class="{
+                'is-active': index === activeLineIndex && isWordActive(word),
+                'is-past': index === activeLineIndex && isPastWord(word),
               }"
-              :style="{
-                '--word-progress': line.id === activeLine?.id ? getWordProgress(word) : 0,
-                '--word-duration': `${word.duration}ms`
-              }"
-            >{{ word.text }}</span>
+              >{{ word.text }}</span
+            >
           </div>
         </div>
-        
+
         <!-- Spacer at bottom -->
         <div class="lyrics-spacer"></div>
       </div>
     </div>
-    
+
     <!-- Sync button when out of sync -->
     <transition name="sync-button">
       <button
@@ -178,10 +196,20 @@ onUnmounted(() => {
         @click="syncToActiveLine"
         title="Sync to current lyrics"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="1 4 1 10 7 10"/>
-          <polyline points="23 20 23 14 17 14"/>
-          <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="1 4 1 10 7 10" />
+          <polyline points="23 20 23 14 17 14" />
+          <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
         </svg>
         <span>Sync</span>
       </button>
@@ -255,7 +283,6 @@ onUnmounted(() => {
   position: relative;
   display: inline-block;
   margin-right: 0.3em;
-  transition: color 0.1s ease;
   color: inherit;
 }
 
@@ -263,25 +290,10 @@ onUnmounted(() => {
   color: rgba(255, 255, 255, 0.5);
 }
 
-/* Past words stay cyan */
-.lyrics-word.is-past {
-  color: var(--color-neon-cyan) !important;
-}
-
-/* Current word gets gradient animation */
+/* Past + current word are cyan (no gradient/progress effects). */
+.lyrics-word.is-past,
 .lyrics-word.is-active {
-  position: relative;
-  background: linear-gradient(
-    90deg,
-    var(--color-neon-cyan) 0%,
-    var(--color-neon-cyan) calc(var(--word-progress) * 100%),
-    rgba(255, 255, 255, 0.5) calc(var(--word-progress) * 100%),
-    rgba(255, 255, 255, 0.5) 100%
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-fill-color: transparent;
+  color: var(--color-neon-cyan) !important;
 }
 
 .lyrics-spacer {
@@ -291,7 +303,7 @@ onUnmounted(() => {
 /* Sync Button */
 .sync-button {
   position: absolute;
-  bottom: 24px;
+  bottom: calc(var(--mini-player-offset, 0px) + 24px);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -340,11 +352,11 @@ onUnmounted(() => {
   .lyrics-content {
     padding: 40px 16px 280px;
   }
-  
+
   .lyrics-line-content {
     font-size: 22px;
   }
-  
+
   .lyrics-line {
     margin: 16px 0;
     padding: 8px 12px;

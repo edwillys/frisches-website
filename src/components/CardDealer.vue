@@ -56,9 +56,12 @@ const logoButtonRef = ref<HTMLElement | Record<string, unknown> | null>(null)
 const backButtonRef = ref<HTMLElement | null>(null)
 const miniCardRef = ref<HTMLElement | null>(null)
 const headerTitleRef = ref<HTMLElement | null>(null)
+import { useAudioStore } from '@/stores/audio'
 const currentView = ref<'logo' | 'cards' | 'content'>('logo')
 const selectedCard = ref<number | null>(null)
 const isAnimating = ref(false)
+
+const audioStore = useAudioStore()
 
 const selectedItem = computed(() =>
   selectedCard.value !== null ? (menuItems[selectedCard.value] ?? null) : null
@@ -254,6 +257,12 @@ const setDeckMask = (cards: HTMLElement[], maskNonLead: boolean) => {
 
 const handleBackClick = () => {
   if (isAnimating.value) return
+
+  // Leaving the Music screen should always exit karaoke mode.
+  if (currentView.value === 'content' && selectedItem.value?.route === '/music') {
+    audioStore.closeLyrics()
+  }
+
   if (currentView.value == 'content') {
     isAnimating.value = true
     playContentCloseAndCardsReturn()

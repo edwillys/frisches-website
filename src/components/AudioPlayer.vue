@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import type { Track } from '@/data/tracks'
 import type { LyricsData } from '@/types/lyrics'
 import { useAudioStore } from '@/stores/audio'
@@ -76,6 +76,13 @@ function toggleShuffle() {
 }
 
 function playOrToggle(track: Track) {
+  // If the mini-player was explicitly dismissed, toggling is disabled.
+  // Treat any play intent from the Music UI as an explicit restart.
+  if (audioStore.isStopped) {
+    audioStore.startFromMusic(track.trackId)
+    return
+  }
+
   if (isCurrentTrack(track)) {
     audioStore.togglePlayPause()
     return
@@ -113,6 +120,13 @@ function isCurrentTrack(track: Track): boolean {
   return currentTrack.value?.trackId === track.trackId
 }
 
+onMounted(() => {
+  // When entering the Music screen, highlight the currently playing track.
+  if (audioStore.currentTrackId) {
+    selectedTrackId.value = audioStore.currentTrackId
+  }
+})
+
 // Watch for showLyrics changes from store (triggered by mini-player button)
 watch(
   () => audioStore.showLyrics,
@@ -126,10 +140,9 @@ watch(
 // Watch for track changes to clear selected track and reload lyrics if needed
 watch(currentTrack, async (newTrack, oldTrack) => {
   if (newTrack?.trackId !== oldTrack?.trackId) {
-    // Clear selected track when playing track changes
-    if (selectedTrackId.value === oldTrack?.trackId) {
-      selectedTrackId.value = null
-    }
+    // Keep selection synced to the currently playing track.
+    selectedTrackId.value = newTrack?.trackId ?? null
+    hoveredTrackId.value = null
 
     // Reload lyrics if lyrics view is open
     if (audioStore.showLyrics) {
@@ -454,12 +467,8 @@ watch(currentTrack, async (newTrack, oldTrack) => {
           :isPlaying="audioStore.isPlaying"
           @seek="handleLyricsSeek"
         />
-        <div v-else-if="isLoadingLyrics" class="lyrics-loading">
-          Loading lyrics...
-        </div>
-        <div v-else class="lyrics-empty">
-          No lyrics available for this track
-        </div>
+        <div v-else-if="isLoadingLyrics" class="lyrics-loading">Loading lyrics...</div>
+        <div v-else class="lyrics-empty">No lyrics available for this track</div>
       </div>
     </main>
   </div>
@@ -984,4 +993,3 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   font-size: 16px;
 }
 </style>
-

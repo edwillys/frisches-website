@@ -44,7 +44,7 @@ function safeSetAudioCurrentTime(nextTime: number) {
   if (!el) return
   if (!Number.isFinite(nextTime)) return
   // Avoid tiny oscillation loops between watcher and timeupdate.
-  if (Math.abs(el.currentTime - nextTime) < 0.35) return
+  if (Math.abs(el.currentTime - nextTime) < 0.05) return
   el.currentTime = nextTime
 }
 
@@ -166,6 +166,8 @@ watch(
   shouldShowMiniPlayer,
   (show) => {
     if (!show) {
+      // If the player is dismissed, also dismiss the overlay lyrics.
+      showLyrics.value = false
       setMiniPlayerOffset(0)
       miniPlayerResizeObserver?.disconnect()
       miniPlayerResizeObserver = null
@@ -248,9 +250,9 @@ function onSeek(e: Event) {
 
 async function toggleLyrics() {
   if (!currentTrackHasLyrics.value) return
-  
+
   showLyrics.value = !showLyrics.value
-  
+
   // Load lyrics if showing and not already loaded
   if (showLyrics.value && !lyricsData.value && audioStore.currentTrack?.lyricsPath) {
     await loadLyrics(audioStore.currentTrack.lyricsPath)
@@ -478,12 +480,18 @@ watch(
               <path d="M21 13v2a4 4 0 0 1-4 4H3" />
             </svg>
           </button>
-          
+
           <button
             class="mini-player__btn mini-player__btn--lyrics"
             :class="{ 'is-active': showLyrics, 'is-disabled': !currentTrackHasLyrics }"
             type="button"
-            :title="!currentTrackHasLyrics ? 'No lyrics available' : showLyrics ? 'Hide lyrics' : 'Show lyrics'"
+            :title="
+              !currentTrackHasLyrics
+                ? 'No lyrics available'
+                : showLyrics
+                  ? 'Hide lyrics'
+                  : 'Show lyrics'
+            "
             :aria-label="showLyrics ? 'Hide lyrics' : 'Show lyrics'"
             :disabled="!currentTrackHasLyrics"
             @click="toggleLyrics"
@@ -528,7 +536,13 @@ watch(
           class="mini-player__btn mini-player__btn--lyrics"
           :class="{ 'is-active': audioStore.showLyrics, 'is-disabled': !currentTrackHasLyrics }"
           type="button"
-          :title="!currentTrackHasLyrics ? 'No lyrics available' : audioStore.showLyrics ? 'Hide lyrics' : 'Show lyrics'"
+          :title="
+            !currentTrackHasLyrics
+              ? 'No lyrics available'
+              : audioStore.showLyrics
+                ? 'Hide lyrics'
+                : 'Show lyrics'
+          "
           :aria-label="audioStore.showLyrics ? 'Hide lyrics' : 'Show lyrics'"
           :disabled="!currentTrackHasLyrics"
           data-testid="mini-lyrics"
@@ -550,7 +564,7 @@ watch(
             <circle cx="18" cy="16" r="3" />
           </svg>
         </button>
-        
+
         <button
           class="mini-player__btn mini-player__close"
           type="button"
@@ -574,7 +588,7 @@ watch(
         </button>
       </div>
     </div>
-    
+
     <!-- Lyrics Overlay -->
     <transition name="lyrics-overlay">
       <div v-if="showLyrics" class="lyrics-overlay" data-testid="lyrics-overlay">
@@ -585,9 +599,17 @@ watch(
             aria-label="Close lyrics"
             data-testid="lyrics-close"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
           <div class="lyrics-overlay__track-info">
@@ -595,7 +617,7 @@ watch(
             <div class="lyrics-overlay__artist">{{ currentArtist }}</div>
           </div>
         </div>
-        
+
         <LyricsDisplay
           v-if="lyricsData"
           :lyricsData="lyricsData"
@@ -719,6 +741,7 @@ audio {
 }
 
 .mini-player__btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -865,11 +888,6 @@ audio {
   gap: 8px;
 }
 
-.mini-player__btn--lyrics.is-active {
-  background: var(--color-neon-cyan);
-  color: black;
-}
-
 .mini-player__btn--lyrics.is-disabled {
   opacity: 0.3;
   cursor: not-allowed;
@@ -966,7 +984,9 @@ audio {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Lyrics overlay transitions */
