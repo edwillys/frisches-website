@@ -9,7 +9,7 @@ describe('LyricsDisplay', () => {
     meta: {
       title: 'Test Song',
       totalDurationMs: 8000,
-      version: '1.0'
+      version: '1.0',
     },
     lyrics: [
       {
@@ -20,8 +20,8 @@ describe('LyricsDisplay', () => {
         words: [
           { text: 'First', startTime: 1000, endTime: 1500, duration: 500 },
           { text: 'line', startTime: 1500, endTime: 2000, duration: 500 },
-          { text: 'here', startTime: 2000, endTime: 3000, duration: 1000 }
-        ]
+          { text: 'here', startTime: 2000, endTime: 3000, duration: 1000 },
+        ],
       },
       {
         id: 'line-2',
@@ -31,8 +31,8 @@ describe('LyricsDisplay', () => {
         words: [
           { text: 'Second', startTime: 3500, endTime: 4000, duration: 500 },
           { text: 'line', startTime: 4000, endTime: 4500, duration: 500 },
-          { text: 'test', startTime: 4500, endTime: 5500, duration: 1000 }
-        ]
+          { text: 'test', startTime: 4500, endTime: 5500, duration: 1000 },
+        ],
       },
       {
         id: 'line-3',
@@ -42,10 +42,10 @@ describe('LyricsDisplay', () => {
         words: [
           { text: 'Third', startTime: 6000, endTime: 6500, duration: 500 },
           { text: 'line', startTime: 6500, endTime: 7000, duration: 500 },
-          { text: 'words', startTime: 7000, endTime: 8000, duration: 1000 }
-        ]
-      }
-    ]
+          { text: 'words', startTime: 7000, endTime: 8000, duration: 1000 },
+        ],
+      },
+    ],
   }
 
   beforeEach(() => {
@@ -57,8 +57,8 @@ describe('LyricsDisplay', () => {
       props: {
         lyricsData: mockLyricsData,
         currentTime: 0,
-        isPlaying: false
-      }
+        isPlaying: false,
+      },
     })
 
     const lines = wrapper.findAll('.lyrics-line')
@@ -73,8 +73,8 @@ describe('LyricsDisplay', () => {
       props: {
         lyricsData: mockLyricsData,
         currentTime: 0,
-        isPlaying: false
-      }
+        isPlaying: false,
+      },
     })
 
     const firstLine = wrapper.find('[data-line-index="0"]')
@@ -90,8 +90,8 @@ describe('LyricsDisplay', () => {
       props: {
         lyricsData: mockLyricsData,
         currentTime: 2, // 2 seconds = 2000ms, in first line
-        isPlaying: true
-      }
+        isPlaying: true,
+      },
     })
 
     const lines = wrapper.findAll('.lyrics-line')
@@ -105,8 +105,8 @@ describe('LyricsDisplay', () => {
       props: {
         lyricsData: mockLyricsData,
         currentTime: 7, // 7 seconds = 7000ms, in third line
-        isPlaying: true
-      }
+        isPlaying: true,
+      },
     })
 
     const lines = wrapper.findAll('.lyrics-line')
@@ -120,8 +120,8 @@ describe('LyricsDisplay', () => {
       props: {
         lyricsData: mockLyricsData,
         currentTime: 2, // In first line
-        isPlaying: true
-      }
+        isPlaying: true,
+      },
     })
 
     const lines = wrapper.findAll('.lyrics-line')
@@ -135,8 +135,8 @@ describe('LyricsDisplay', () => {
       props: {
         lyricsData: mockLyricsData,
         currentTime: 1.75, // 1750ms, in "line" word of first line
-        isPlaying: true
-      }
+        isPlaying: true,
+      },
     })
 
     const firstLine = wrapper.find('[data-line-index="0"]')
@@ -151,8 +151,8 @@ describe('LyricsDisplay', () => {
       props: {
         lyricsData: mockLyricsData,
         currentTime: 2.5, // 2500ms, in "here" word, past "First" and "line"
-        isPlaying: true
-      }
+        isPlaying: true,
+      },
     })
 
     const firstLine = wrapper.find('[data-line-index="0"]')
@@ -167,8 +167,8 @@ describe('LyricsDisplay', () => {
       props: {
         lyricsData: mockLyricsData,
         currentTime: 0,
-        isPlaying: false
-      }
+        isPlaying: false,
+      },
     })
 
     const secondLine = wrapper.find('[data-line-index="1"]')
@@ -183,8 +183,8 @@ describe('LyricsDisplay', () => {
       props: {
         lyricsData: mockLyricsData,
         currentTime: 2,
-        isPlaying: true
-      }
+        isPlaying: true,
+      },
     })
 
     // Initially in sync mode, no button
@@ -204,8 +204,8 @@ describe('LyricsDisplay', () => {
       props: {
         lyricsData: mockLyricsData,
         currentTime: 2,
-        isPlaying: false
-      }
+        isPlaying: false,
+      },
     })
 
     // Simulate manual scroll
@@ -222,8 +222,8 @@ describe('LyricsDisplay', () => {
       props: {
         lyricsData: mockLyricsData,
         currentTime: 2,
-        isPlaying: true
-      }
+        isPlaying: true,
+      },
     })
 
     // Simulate manual scroll to show sync button
@@ -240,19 +240,18 @@ describe('LyricsDisplay', () => {
     expect(wrapper.find('.sync-button').exists()).toBe(false)
   })
 
-  it('calculates word progress correctly', () => {
+  it('does not mark a word active at its exact start time', () => {
     const wrapper = mount(LyricsDisplay, {
       props: {
         lyricsData: mockLyricsData,
-        currentTime: 1.25, // 1250ms, 50% through "First" word (1000-1500ms)
-        isPlaying: true
-      }
+        currentTime: 1, // 1000ms, exactly at the start of "First"
+        isPlaying: true,
+      },
     })
 
-    const firstWord = wrapper.find('.lyrics-word')
-    const style = firstWord.attributes('style')
-    expect(style).toContain('--word-progress')
-    // Progress should be 0.5 (50%)
+    const firstLine = wrapper.find('[data-line-index="0"]')
+    const words = firstLine.findAll('.lyrics-word')
+    expect(words[0]?.classes()).not.toContain('is-active')
   })
 
   it('renders empty state when no lyrics data', () => {
@@ -260,8 +259,8 @@ describe('LyricsDisplay', () => {
       props: {
         lyricsData: null,
         currentTime: 0,
-        isPlaying: false
-      }
+        isPlaying: false,
+      },
     })
 
     expect(wrapper.find('.lyrics-line').exists()).toBe(false)
@@ -272,7 +271,7 @@ describe('LyricsDisplay', () => {
       meta: {
         title: 'Empty Words Test',
         totalDurationMs: 2000,
-        version: '1.0'
+        version: '1.0',
       },
       lyrics: [
         {
@@ -280,17 +279,17 @@ describe('LyricsDisplay', () => {
           startTime: 1000,
           endTime: 2000,
           text: 'Test',
-          words: []
-        }
-      ]
+          words: [],
+        },
+      ],
     }
 
     const wrapper = mount(LyricsDisplay, {
       props: {
         lyricsData: emptyWordsData,
         currentTime: 1.5,
-        isPlaying: true
-      }
+        isPlaying: true,
+      },
     })
 
     const line = wrapper.find('.lyrics-line')

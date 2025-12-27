@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils'
 import { describe, it, expect } from 'vitest'
 import { vi } from 'vitest'
 import { ref, reactive } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
 import CardDealer from '../CardDealer.vue'
 
 // Mock @tresjs/cientos to avoid module resolution issues
@@ -19,6 +20,9 @@ vi.mock('@tresjs/core', () => ({
 
 describe('CardDealer social links', () => {
   it('renders social anchors and respects provided URLs', () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
     const socialLinks = {
       instagram: 'https://instagram.com/frisches',
       spotify: 'https://open.spotify.com/artist/example',
@@ -28,6 +32,7 @@ describe('CardDealer social links', () => {
     const wrapper = mount(CardDealer, {
       props: { socialLinks },
       global: {
+        plugins: [pinia],
         stubs: {
           MenuCard: true,
           LogoButton: true,

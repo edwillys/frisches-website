@@ -119,10 +119,13 @@ function scrollToActiveLine() {
       `[data-line-index="${activeLineIndex.value}"]`
     )
     if (activeElement) {
-      activeElement.scrollIntoView({
-        behavior: 'auto',
-        block: 'center',
-      })
+      const el = activeElement as HTMLElement & { scrollIntoView?: (options?: unknown) => void }
+      if (typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({
+          behavior: 'auto',
+          block: 'center',
+        })
+      }
     }
   })
 }
