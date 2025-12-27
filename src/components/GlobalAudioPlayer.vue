@@ -4,6 +4,18 @@ import { useAudioStore } from '@/stores/audio'
 import type { LyricsData } from '@/types/lyrics'
 import LyricsDisplay from './LyricsDisplay.vue'
 
+// Icon imports
+import lyricsSvg from '@/assets/icons/lyrics.svg?raw'
+import shuffleSvg from '@/assets/icons/shuffle.svg?raw'
+import previousSvg from '@/assets/icons/previous.svg?raw'
+import playSvg from '@/assets/icons/play.svg?raw'
+import pauseSvg from '@/assets/icons/pause.svg?raw'
+import nextSvg from '@/assets/icons/next.svg?raw'
+import repeatSvg from '@/assets/icons/repeat.svg?raw'
+import repeatOneSvg from '@/assets/icons/repeat-one.svg?raw'
+import closeSvg from '@/assets/icons/close.svg?raw'
+import closeLgSvg from '@/assets/icons/close-lg.svg?raw'
+
 const audioStore = useAudioStore()
 
 const audioEl = ref<HTMLAudioElement | null>(null)
@@ -344,23 +356,7 @@ watch(
             @click="audioStore.toggleShuffle()"
             data-testid="mini-shuffle"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polyline points="16 3 21 3 21 8" />
-              <line x1="4" y1="20" x2="21" y2="3" />
-              <polyline points="21 16 21 21 16 21" />
-              <line x1="15" y1="15" x2="21" y2="21" />
-              <line x1="4" y1="4" x2="9" y2="9" />
-            </svg>
+            <span class="mini-player__icon" aria-hidden="true" v-html="shuffleSvg" />
           </button>
 
           <button
@@ -370,15 +366,7 @@ watch(
             aria-label="Previous"
             @click="audioStore.prev"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M11 19V5l-7 7 7 7zm9 0V5l-7 7 7 7z" />
-            </svg>
+            <span class="mini-player__icon" aria-hidden="true" v-html="previousSvg" />
           </button>
 
           <button
@@ -389,26 +377,11 @@ watch(
             @click="audioStore.togglePlayPause"
             data-testid="mini-play-pause"
           >
-            <svg
-              v-if="audioStore.isPlaying"
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-            </svg>
-            <svg
-              v-else
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M8 5v14l11-7z" />
-            </svg>
+            <span
+              class="mini-player__icon"
+              aria-hidden="true"
+              v-html="audioStore.isPlaying ? pauseSvg : playSvg"
+            />
           </button>
 
           <button
@@ -418,15 +391,7 @@ watch(
             aria-label="Next"
             @click="audioStore.next"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M13 19V5l7 7-7 7zm-9 0V5l7 7-7 7z" />
-            </svg>
+            <span class="mini-player__icon" aria-hidden="true" v-html="nextSvg" />
           </button>
 
           <button
@@ -444,41 +409,11 @@ watch(
             @click="audioStore.cycleRepeatMode()"
             data-testid="mini-repeat"
           >
-            <svg
-              v-if="audioStore.repeatMode === 'one'"
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polyline points="17 1 21 5 17 9" />
-              <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-              <polyline points="7 23 3 19 7 15" />
-              <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-              <text x="10" y="15" font-size="8" fill="currentColor" font-weight="bold">1</text>
-            </svg>
-            <svg
-              v-else
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polyline points="17 1 21 5 17 9" />
-              <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-              <polyline points="7 23 3 19 7 15" />
-              <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-            </svg>
+            <span
+              class="mini-player__icon"
+              aria-hidden="true"
+              v-html="audioStore.repeatMode === 'one' ? repeatOneSvg : repeatSvg"
+            />
           </button>
 
           <button
@@ -497,21 +432,7 @@ watch(
             @click="toggleLyrics"
             data-testid="mini-lyrics"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M9 18V5l12-2v13" />
-              <circle cx="6" cy="18" r="3" />
-              <circle cx="18" cy="16" r="3" />
-            </svg>
+            <span class="mini-player__icon" aria-hidden="true" v-html="lyricsSvg" />
           </button>
         </div>
 
@@ -548,21 +469,7 @@ watch(
           data-testid="mini-lyrics"
           @click="audioStore.toggleLyrics"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M9 18V5l12-2v13" />
-            <circle cx="6" cy="18" r="3" />
-            <circle cx="18" cy="16" r="3" />
-          </svg>
+          <span class="mini-player__icon" aria-hidden="true" v-html="lyricsSvg" />
         </button>
 
         <button
@@ -573,18 +480,7 @@ watch(
           data-testid="audio-mini-close"
           @click="audioStore.stopAndHide"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
+          <span class="mini-player__icon" aria-hidden="true" v-html="closeSvg" />
         </button>
       </div>
     </div>
@@ -599,18 +495,7 @@ watch(
             aria-label="Close lyrics"
             data-testid="lyrics-close"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            <span class="lyrics-overlay__icon" aria-hidden="true" v-html="closeLgSvg" />
           </button>
           <div class="lyrics-overlay__track-info">
             <div class="lyrics-overlay__title">{{ currentTitle }}</div>
@@ -666,6 +551,18 @@ audio {
   background: rgba(0, 0, 0, 0.92);
   backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:deep(.mini-player__icon svg) {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+:deep(.lyrics-overlay__icon svg) {
+  display: block;
+  width: 24px;
+  height: 24px;
 }
 
 /* Left: Track Info */
