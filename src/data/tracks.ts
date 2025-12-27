@@ -8,6 +8,7 @@ export interface Track {
   fallbackCover?: string
   url: string
   duration?: string
+  lyricsPath?: string // Path to lyrics JSON file
 }
 
 export const tracks: Track[] = [
@@ -94,6 +95,10 @@ export const tracks: Track[] = [
       import.meta.url
     ).href,
     duration: '3:45',
+    lyricsPath: new URL(
+      '../assets/private/audio/TalesFromTheCellar/lyrics/05 - Witch Hunting - Mastered.json',
+      import.meta.url
+    ).href,
   },
   {
     id: 6,

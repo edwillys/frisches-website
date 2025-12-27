@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAudioStore } from '@/stores/audio'
+import type { LyricsData } from '@/types/lyrics'
+import LyricsDisplay from './LyricsDisplay.vue'
 
 const audioStore = useAudioStore()
 
@@ -8,6 +10,11 @@ const audioEl = ref<HTMLAudioElement | null>(null)
 const miniPlayerEl = ref<HTMLElement | null>(null)
 let miniPlayerResizeObserver: ResizeObserver | null = null
 let lastMiniPlayerOffsetPx = -1
+
+// Lyrics state
+const showLyrics = ref(false)
+const lyricsData = ref<LyricsData | null>(null)
+const isLoadingLyrics = ref(false)
 
 const shouldShowMiniPlayer = computed(
   () => audioStore.persistAcrossPages && audioStore.hasUserStartedPlayback && !audioStore.isStopped
@@ -19,6 +26,10 @@ const currentArtist = computed(() => audioStore.currentTrack?.artist ?? '')
 const currentCover = computed(() => {
   const t = audioStore.currentTrack
   return t?.cover || t?.fallbackCover || ''
+})
+
+const currentTrackHasLyrics = computed(() => {
+  return !!audioStore.currentTrack?.lyricsPath
 })
 
 function formatTime(seconds: number) {
@@ -234,6 +245,54 @@ function onSeek(e: Event) {
   const time = parseFloat(target.value)
   audioStore.seek(time)
 }
+
+async function toggleLyrics() {
+  if (!currentTrackHasLyrics.value) return
+  
+  showLyrics.value = !showLyrics.value
+  
+  // Load lyrics if showing and not already loaded
+  if (showLyrics.value && !lyricsData.value && audioStore.currentTrack?.lyricsPath) {
+    await loadLyrics(audioStore.currentTrack.lyricsPath)
+  }
+}
+
+async function loadLyrics(lyricsPath: string) {
+  try {
+    isLoadingLyrics.value = true
+    const response = await fetch(lyricsPath)
+    if (!response.ok) throw new Error('Failed to load lyrics')
+    lyricsData.value = await response.json()
+  } catch (error) {
+    console.error('Error loading lyrics:', error)
+    lyricsData.value = null
+  } finally {
+    isLoadingLyrics.value = false
+  }
+}
+
+function handleLyricsSeek(time: number) {
+  audioStore.seek(time)
+}
+
+// Watch for track changes to load lyrics automatically if lyrics view is open
+watch(
+  () => audioStore.currentTrack,
+  async (newTrack, oldTrack) => {
+    if (newTrack?.trackId !== oldTrack?.trackId) {
+      // Load new track lyrics if lyrics view is open
+      if (showLyrics.value) {
+        lyricsData.value = null
+        if (newTrack?.lyricsPath) {
+          await loadLyrics(newTrack.lyricsPath)
+        } else {
+          // Hide lyrics if new track doesn't have lyrics
+          showLyrics.value = false
+        }
+      }
+    }
+  }
+)
 </script>
 
 <template>
@@ -419,6 +478,33 @@ function onSeek(e: Event) {
               <path d="M21 13v2a4 4 0 0 1-4 4H3" />
             </svg>
           </button>
+          
+          <button
+            class="mini-player__btn mini-player__btn--lyrics"
+            :class="{ 'is-active': showLyrics, 'is-disabled': !currentTrackHasLyrics }"
+            type="button"
+            :title="!currentTrackHasLyrics ? 'No lyrics available' : showLyrics ? 'Hide lyrics' : 'Show lyrics'"
+            :aria-label="showLyrics ? 'Hide lyrics' : 'Show lyrics'"
+            :disabled="!currentTrackHasLyrics"
+            @click="toggleLyrics"
+            data-testid="mini-lyrics"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M9 18V5l12-2v13" />
+              <circle cx="6" cy="18" r="3" />
+              <circle cx="18" cy="16" r="3" />
+            </svg>
+          </button>
         </div>
 
         <div class="mini-player__progress-row">
@@ -436,8 +522,35 @@ function onSeek(e: Event) {
         </div>
       </div>
 
-      <!-- Right: Volume + Close -->
+      <!-- Right: Lyrics + Close -->
       <div class="mini-player__right">
+        <button
+          class="mini-player__btn mini-player__btn--lyrics"
+          :class="{ 'is-active': audioStore.showLyrics, 'is-disabled': !currentTrackHasLyrics }"
+          type="button"
+          :title="!currentTrackHasLyrics ? 'No lyrics available' : audioStore.showLyrics ? 'Hide lyrics' : 'Show lyrics'"
+          :aria-label="audioStore.showLyrics ? 'Hide lyrics' : 'Show lyrics'"
+          :disabled="!currentTrackHasLyrics"
+          data-testid="mini-lyrics"
+          @click="audioStore.toggleLyrics"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M9 18V5l12-2v13" />
+            <circle cx="6" cy="18" r="3" />
+            <circle cx="18" cy="16" r="3" />
+          </svg>
+        </button>
+        
         <button
           class="mini-player__btn mini-player__close"
           type="button"
@@ -461,6 +574,44 @@ function onSeek(e: Event) {
         </button>
       </div>
     </div>
+    
+    <!-- Lyrics Overlay -->
+    <transition name="lyrics-overlay">
+      <div v-if="showLyrics" class="lyrics-overlay" data-testid="lyrics-overlay">
+        <div class="lyrics-overlay__header">
+          <button
+            class="lyrics-overlay__close"
+            @click="showLyrics = false"
+            aria-label="Close lyrics"
+            data-testid="lyrics-close"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+          <div class="lyrics-overlay__track-info">
+            <div class="lyrics-overlay__title">{{ currentTitle }}</div>
+            <div class="lyrics-overlay__artist">{{ currentArtist }}</div>
+          </div>
+        </div>
+        
+        <LyricsDisplay
+          v-if="lyricsData"
+          :lyricsData="lyricsData"
+          :currentTime="audioStore.currentTime"
+          :isPlaying="audioStore.isPlaying"
+          @seek="handleLyricsSeek"
+        />
+        <div v-else-if="isLoadingLyrics" class="lyrics-loading">
+          <div class="lyrics-loading__spinner"></div>
+          <p>Loading lyrics...</p>
+        </div>
+        <div v-else class="lyrics-empty">
+          <p>No lyrics available for this track</p>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -599,12 +750,14 @@ audio {
 }
 
 .mini-player__btn--shuffle.is-active,
-.mini-player__btn--repeat.is-active {
+.mini-player__btn--repeat.is-active,
+.mini-player__btn--lyrics.is-active {
   color: var(--color-neon-cyan);
 }
 
 .mini-player__btn--shuffle.is-active::after,
-.mini-player__btn--repeat.is-active::after {
+.mini-player__btn--repeat.is-active::after,
+.mini-player__btn--lyrics.is-active::after {
   content: '';
   position: absolute;
   bottom: -2px;
@@ -614,6 +767,16 @@ audio {
   height: 4px;
   border-radius: 50%;
   background: var(--color-neon-cyan);
+}
+
+.mini-player__btn--lyrics.is-disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.mini-player__btn--lyrics.is-disabled:hover {
+  color: var(--color-text-secondary);
+  transform: none;
 }
 
 .mini-player__progress-row {
@@ -702,9 +865,124 @@ audio {
   gap: 8px;
 }
 
+.mini-player__btn--lyrics.is-active {
+  background: var(--color-neon-cyan);
+  color: black;
+}
+
+.mini-player__btn--lyrics.is-disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .mini-player__close {
   width: 32px;
   height: 32px;
+}
+
+/* Lyrics Overlay */
+.lyrics-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--color-background);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+}
+
+.lyrics-overlay__header {
+  display: flex;
+  align-items: center;
+  padding: 16px 24px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 16px;
+}
+
+.lyrics-overlay__close {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--color-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.lyrics-overlay__close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.1);
+}
+
+.lyrics-overlay__track-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.lyrics-overlay__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lyrics-overlay__artist {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lyrics-loading,
+.lyrics-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-text-secondary);
+  gap: 16px;
+}
+
+.lyrics-loading__spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--color-neon-cyan);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Lyrics overlay transitions */
+.lyrics-overlay-enter-active,
+.lyrics-overlay-leave-active {
+  transition: all 0.3s ease;
+}
+
+.lyrics-overlay-enter-from {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.lyrics-overlay-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
 }
 
 /* Responsive */

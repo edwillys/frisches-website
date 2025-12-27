@@ -22,6 +22,9 @@ export const useAudioStore = defineStore('audio', () => {
   // Mini-player visibility state
   const hasUserStartedPlayback = ref(false)
   const isStopped = ref(false)
+  
+  // Lyrics display state
+  const showLyrics = ref(false)
 
   const currentTrack = computed<Track | null>(() => {
     if (!currentTrackId.value) return null
@@ -168,6 +171,15 @@ export const useAudioStore = defineStore('audio', () => {
     seek(0)
     hasUserStartedPlayback.value = false
     isStopped.value = true
+    showLyrics.value = false // Close lyrics when hiding mini-player
+  }
+
+  function toggleLyrics() {
+    showLyrics.value = !showLyrics.value
+  }
+
+  function closeLyrics() {
+    showLyrics.value = false
   }
 
   return {
@@ -184,6 +196,7 @@ export const useAudioStore = defineStore('audio', () => {
     repeatMode,
     hasUserStartedPlayback,
     isStopped,
+    showLyrics,
     setCurrentTrack,
     setPlaylistByTrackIds,
     setVolume,
@@ -200,5 +213,7 @@ export const useAudioStore = defineStore('audio', () => {
     prev,
     handleEnded,
     stopAndHide,
+    toggleLyrics,
+    closeLyrics,
   }
 })

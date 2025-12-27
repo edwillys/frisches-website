@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { Track } from '@/data/tracks'
+import type { LyricsData } from '@/types/lyrics'
 import { useAudioStore } from '@/stores/audio'
 import {
   albums,
@@ -9,6 +10,7 @@ import {
   getAlbumTotalDurationSeconds,
   formatSecondsAsAlbumDuration,
 } from '@/data/albums'
+import LyricsDisplay from './LyricsDisplay.vue'
 
 const audioStore = useAudioStore()
 
@@ -17,6 +19,10 @@ const selectedAlbumId = ref('tftc')
 const isAlbumDrawerExpanded = ref(false)
 const selectedTrackId = ref<string | null>(null)
 const hoveredTrackId = ref<string | null>(null)
+
+// Lyrics data
+const lyricsData = ref<LyricsData | null>(null)
+const isLoadingLyrics = ref(false)
 
 const selectedAlbum = computed(() => getAlbumById(selectedAlbumId.value))
 const albumTracks = computed(() => getAlbumTracks(selectedAlbumId.value))
@@ -81,6 +87,24 @@ function selectTrack(track: Track) {
   selectedTrackId.value = track.trackId
 }
 
+async function loadLyrics(lyricsPath: string) {
+  try {
+    isLoadingLyrics.value = true
+    const response = await fetch(lyricsPath)
+    if (!response.ok) throw new Error('Failed to load lyrics')
+    lyricsData.value = await response.json()
+  } catch (error) {
+    console.error('Error loading lyrics:', error)
+    lyricsData.value = null
+  } finally {
+    isLoadingLyrics.value = false
+  }
+}
+
+function handleLyricsSeek(time: number) {
+  audioStore.seek(time)
+}
+
 function formatDuration(duration?: string): string {
   return duration ?? '0:00'
 }
@@ -88,6 +112,37 @@ function formatDuration(duration?: string): string {
 function isCurrentTrack(track: Track): boolean {
   return currentTrack.value?.trackId === track.trackId
 }
+
+// Watch for showLyrics changes from store (triggered by mini-player button)
+watch(
+  () => audioStore.showLyrics,
+  async (show) => {
+    if (show && currentTrack.value?.lyricsPath) {
+      await loadLyrics(currentTrack.value.lyricsPath)
+    }
+  }
+)
+
+// Watch for track changes to clear selected track and reload lyrics if needed
+watch(currentTrack, async (newTrack, oldTrack) => {
+  if (newTrack?.trackId !== oldTrack?.trackId) {
+    // Clear selected track when playing track changes
+    if (selectedTrackId.value === oldTrack?.trackId) {
+      selectedTrackId.value = null
+    }
+
+    // Reload lyrics if lyrics view is open
+    if (audioStore.showLyrics) {
+      lyricsData.value = null
+      if (newTrack?.lyricsPath) {
+        await loadLyrics(newTrack.lyricsPath)
+      } else {
+        // Close lyrics if new track doesn't have lyrics
+        audioStore.closeLyrics()
+      }
+    }
+  }
+})
 </script>
 
 <template>
@@ -138,7 +193,7 @@ function isCurrentTrack(track: Track): boolean {
     <!-- Main Content -->
     <main class="main-content">
       <!-- Hero Header with Album Info -->
-      <header class="album-hero">
+      <header v-show="!audioStore.showLyrics" class="album-hero">
         <div class="album-hero__cover-wrapper">
           <img
             v-if="selectedAlbum?.coverUrl"
@@ -166,7 +221,7 @@ function isCurrentTrack(track: Track): boolean {
       </header>
 
       <!-- Actions Row -->
-      <div class="actions-row">
+      <div v-show="!audioStore.showLyrics" class="actions-row">
         <button
           class="btn-play-big"
           @click="playAlbum"
@@ -225,7 +280,7 @@ function isCurrentTrack(track: Track): boolean {
       </div>
 
       <!-- Track Table -->
-      <div class="track-table">
+      <div v-show="!audioStore.showLyrics" class="track-table">
         <div class="track-table__header">
           <div class="track-table__col track-table__col--index">#</div>
           <div class="track-table__col track-table__col--title">Title</div>
@@ -389,6 +444,23 @@ function isCurrentTrack(track: Track): boolean {
           </div>
         </div>
       </div>
+
+      <!-- Lyrics View -->
+      <div v-if="audioStore.showLyrics" class="lyrics-view">
+        <LyricsDisplay
+          v-if="lyricsData && !isLoadingLyrics"
+          :lyricsData="lyricsData"
+          :currentTime="audioStore.currentTime"
+          :isPlaying="audioStore.isPlaying"
+          @seek="handleLyricsSeek"
+        />
+        <div v-else-if="isLoadingLyrics" class="lyrics-loading">
+          Loading lyrics...
+        </div>
+        <div v-else class="lyrics-empty">
+          No lyrics available for this track
+        </div>
+      </div>
     </main>
   </div>
 </template>
@@ -525,11 +597,11 @@ function isCurrentTrack(track: Track): boolean {
 /* Album Hero Header */
 .album-hero {
   background: linear-gradient(180deg, #d4711c 0%, #8b4f1a 40%, var(--color-background) 100%);
-  padding: 24px;
+  padding: 24px 24px 48px;
   display: flex;
   gap: 24px;
-  align-items: flex-end;
-  min-height: 340px;
+  align-items: center;
+  min-height: 280px;
 }
 
 .album-hero__cover-wrapper {
@@ -551,7 +623,6 @@ function isCurrentTrack(track: Track): boolean {
   flex-direction: column;
   gap: 8px;
   color: white;
-  padding-bottom: 12px;
 }
 
 .album-hero__label {
@@ -559,6 +630,7 @@ function isCurrentTrack(track: Track): boolean {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  text-align: left;
 }
 
 .album-hero__title {
@@ -595,16 +667,16 @@ function isCurrentTrack(track: Track): boolean {
 
 /* Actions Row */
 .actions-row {
-  padding: 24px;
+  padding: 0 24px 24px;
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 16px;
   background: var(--color-background);
 }
 
 .btn-play-big {
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-secondary-dark) 100%);
   border: none;
@@ -627,8 +699,8 @@ function isCurrentTrack(track: Track): boolean {
 }
 
 .btn-shuffle {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: transparent;
   border: 1px solid var(--color-text-secondary);
@@ -891,4 +963,25 @@ function isCurrentTrack(track: Track): boolean {
     transform: translateX(-50%) translateY(0);
   }
 }
+
+/* Lyrics View */
+.lyrics-view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lyrics-loading,
+.lyrics-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: var(--color-text-secondary);
+  font-size: 16px;
+}
 </style>
+
