@@ -2,6 +2,41 @@ import { test, expect, Page, type Locator } from '@playwright/test'
 import { waitForAnimations, clickAndWaitForAnimations } from './helpers.js'
 
 test.describe('Lyrics Display Feature', () => {
+  async function clickRobust(locator: Locator) {
+    try {
+      await locator.click({ timeout: 5000 })
+    } catch {
+      // Some browsers (notably WebKit) can get stuck on "stable" checks even when clickable.
+      await locator.evaluate((el) => (el as HTMLElement).click())
+    }
+  }
+
+  async function hoverRevealRow(row: Locator) {
+    await scrollIntoViewQuick(row)
+    try {
+      await row.hover({ force: true, timeout: 3000 })
+    } catch {
+      // Ignore hover failures; we'll still try to trigger pointerenter below.
+    }
+
+    // Vue uses @pointerenter for hovered state; WebKit can miss hover-triggered pointer events.
+    await row.evaluate((el) => {
+      try {
+        el.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true, pointerType: 'mouse' }))
+      } catch {
+        // Older engines may not support PointerEvent constructor.
+      }
+      el.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }))
+    })
+  }
+
+  async function clickRowPlayButton(row: Locator) {
+    await hoverRevealRow(row)
+    const playBtn = row.locator('.track-table__play-btn').first()
+    await expect(playBtn).toBeVisible({ timeout: 4000 })
+    await clickRobust(playBtn)
+  }
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('load')
@@ -41,11 +76,7 @@ test.describe('Lyrics Display Feature', () => {
     await expect(witchHuntingRow).toBeVisible({ timeout: 2000 })
     
     // Click play button on the row (hover-rendered, so avoid Playwright auto-scroll click flakiness)
-    await scrollIntoViewQuick(witchHuntingRow)
-    await witchHuntingRow.hover()
-    const playBtn = witchHuntingRow.locator('.track-table__play-btn').first()
-    await expect(playBtn).toBeVisible({ timeout: 2000 })
-    await playBtn.evaluate((el) => (el as HTMLButtonElement).click())
+    await clickRowPlayButton(witchHuntingRow)
 
 
     // Wait for mini-player to appear
@@ -61,11 +92,7 @@ test.describe('Lyrics Display Feature', () => {
     await expect(introRow).toBeVisible({ timeout: 2000 })
     
     // Click play button on the row
-    await scrollIntoViewQuick(introRow)
-    await introRow.hover()
-    const playBtn = introRow.locator('.track-table__play-btn').first()
-    await expect(playBtn).toBeVisible({ timeout: 2000 })
-    await playBtn.evaluate((el) => (el as HTMLButtonElement).click())
+    await clickRowPlayButton(introRow)
 
     // Lyrics button should be disabled
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
@@ -95,7 +122,7 @@ test.describe('Lyrics Display Feature', () => {
 
     // Click lyrics button
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
-    await lyricsBtn.click()
+    await clickRobust(lyricsBtn)
 
 
     // Track table should be hidden
@@ -115,7 +142,7 @@ test.describe('Lyrics Display Feature', () => {
 
     // Open lyrics
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
-    await lyricsBtn.click()
+    await clickRobust(lyricsBtn)
 
 
     // Lyrics lines should be visible
@@ -139,7 +166,7 @@ test.describe('Lyrics Display Feature', () => {
 
     // Open lyrics
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
-    await lyricsBtn.click()
+    await clickRobust(lyricsBtn)
 
 
     // Verify lyrics are shown
@@ -147,7 +174,7 @@ test.describe('Lyrics Display Feature', () => {
     await expect(lyricsView).toBeVisible()
 
     // Click again to close
-    await lyricsBtn.click()
+    await clickRobust(lyricsBtn)
 
 
     // Lyrics should be hidden
@@ -167,7 +194,7 @@ test.describe('Lyrics Display Feature', () => {
 
     // Open lyrics
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
-    await lyricsBtn.click()
+    await clickRobust(lyricsBtn)
 
 
     // Verify lyrics are shown
@@ -176,7 +203,7 @@ test.describe('Lyrics Display Feature', () => {
 
     // Close mini-player
     const closeBtn = page.locator('[data-testid="audio-mini-close"]')
-    await closeBtn.click()
+    await clickRobust(closeBtn)
 
 
     // Mini-player should be hidden
@@ -195,7 +222,7 @@ test.describe('Lyrics Display Feature', () => {
 
     // Open lyrics
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
-    await lyricsBtn.click()
+    await clickRobust(lyricsBtn)
 
 
     // Get a future line (not the first one)
@@ -221,7 +248,7 @@ test.describe('Lyrics Display Feature', () => {
 
     // Open lyrics
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
-    await lyricsBtn.click()
+    await clickRobust(lyricsBtn)
 
 
     // Initially sync button should not be visible
@@ -245,7 +272,7 @@ test.describe('Lyrics Display Feature', () => {
 
     // Open lyrics
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
-    await lyricsBtn.click()
+    await clickRobust(lyricsBtn)
 
 
     // Manually scroll away
@@ -273,7 +300,7 @@ test.describe('Lyrics Display Feature', () => {
 
     // Open lyrics
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
-    await lyricsBtn.click()
+    await clickRobust(lyricsBtn)
 
 
     // At least one line should have is-active class
@@ -292,7 +319,7 @@ test.describe('Lyrics Display Feature', () => {
 
     // Open lyrics
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
-    await lyricsBtn.click()
+    await clickRobust(lyricsBtn)
 
     // Force time forward (headless audio may not advance reliably).
     await page.evaluate(() => {
@@ -327,7 +354,7 @@ test.describe('Lyrics Display Feature', () => {
 
     // Open lyrics
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
-    await lyricsBtn.click()
+    await clickRobust(lyricsBtn)
 
 
     // Verify lyrics are shown
@@ -338,13 +365,10 @@ test.describe('Lyrics Display Feature', () => {
     const introRow = page.locator('.track-table__row').filter({ hasText: 'Intro' })
     
     // We need to close lyrics first to see the track table
-    await lyricsBtn.click()
+    await clickRobust(lyricsBtn)
 
     
-    await scrollIntoViewQuick(introRow)
-    await introRow.hover()
-    const playBtn = introRow.locator('.track-table__play-btn').first()
-    await playBtn.evaluate((el) => (el as HTMLButtonElement).click())
+    await clickRowPlayButton(introRow)
 
 
     // Lyrics button should be disabled
