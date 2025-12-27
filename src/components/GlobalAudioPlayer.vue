@@ -5,7 +5,7 @@ import type { LyricsData } from '@/types/lyrics'
 import LyricsDisplay from './LyricsDisplay.vue'
 
 // Icon imports
-import lyricsSvg from '@/assets/icons/lyrics.svg?raw'
+import lyricsSvg from '@/assets/icons/song-lyrics.svg?raw'
 import shuffleSvg from '@/assets/icons/shuffle.svg?raw'
 import previousSvg from '@/assets/icons/previous.svg?raw'
 import playSvg from '@/assets/icons/play.svg?raw'
