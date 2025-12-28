@@ -132,6 +132,14 @@ test.describe('Frisches Website - Critical Flows', () => {
     
     const charSelection = page.locator('[data-testid="character-selection"]')
     await expect(charSelection).toBeVisible({ timeout: 20000 })
+
+    // CI Firefox often runs without a working WebGL stack (no GPU / missing GL drivers).
+    // When WebGL can't initialize, Three.js never renders and the loading spinner never hides.
+    const hasWebGL = await page.evaluate(() => {
+      const canvas = document.createElement('canvas')
+      return Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'))
+    })
+    test.skip(!hasWebGL, 'Skipping 3D model rendering test: WebGL unavailable in this environment')
     
     // Wait for loading spinner to disappear (means model loaded successfully)
     // This will fail if Git LFS files aren't pulled (.glb will be a pointer file and fail to load)
