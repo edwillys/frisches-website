@@ -192,6 +192,7 @@ describe('LyricsDisplay', () => {
 
     // Simulate manual scroll
     const container = wrapper.find('.lyrics-container')
+    await container.trigger('wheel')
     await container.trigger('scroll')
     await nextTick()
 
@@ -210,6 +211,7 @@ describe('LyricsDisplay', () => {
 
     // Simulate manual scroll
     const container = wrapper.find('.lyrics-container')
+    await container.trigger('wheel')
     await container.trigger('scroll')
     await nextTick()
 
@@ -228,6 +230,7 @@ describe('LyricsDisplay', () => {
 
     // Simulate manual scroll to show sync button
     const container = wrapper.find('.lyrics-container')
+    await container.trigger('wheel')
     await container.trigger('scroll')
     await nextTick()
 
@@ -237,6 +240,96 @@ describe('LyricsDisplay', () => {
     await nextTick()
 
     // Sync button should disappear
+    expect(wrapper.find('.sync-button').exists()).toBe(false)
+  })
+
+  it('does not disable sync on programmatic scroll', async () => {
+    const wrapper = mount(LyricsDisplay, {
+      props: {
+        lyricsData: mockLyricsData,
+        currentTime: 2,
+        isPlaying: true,
+      },
+      attachTo: document.body,
+    })
+
+    // Programmatic scroll: emit scroll without user intent
+    const container = wrapper.find('.lyrics-container')
+    await container.trigger('scroll')
+    await nextTick()
+
+    expect(wrapper.find('.sync-button').exists()).toBe(false)
+  })
+
+  it('auto re-enables sync when lyrics catch up into view', async () => {
+    const wrapper = mount(LyricsDisplay, {
+      props: {
+        lyricsData: mockLyricsData,
+        currentTime: 2,
+        isPlaying: true,
+      },
+      attachTo: document.body,
+    })
+
+    const container = wrapper.find('.lyrics-container')
+
+    // Stub layout geometry (jsdom returns 0s otherwise)
+    ;(container.element as HTMLElement).getBoundingClientRect = () =>
+      ({
+        top: 0,
+        left: 0,
+        bottom: 200,
+        right: 300,
+        width: 300,
+        height: 200,
+        x: 0,
+        y: 0,
+        toJSON: () => {},
+      }) as DOMRect
+
+    const line0 = wrapper.find('[data-line-index="0"]').element as HTMLElement
+    const line1 = wrapper.find('[data-line-index="1"]').element as HTMLElement
+
+    // Start with active line (0) out of the sync window
+    line0.getBoundingClientRect = () =>
+      ({
+        top: -600,
+        left: 0,
+        bottom: -560,
+        right: 300,
+        width: 300,
+        height: 40,
+        x: 0,
+        y: -600,
+        toJSON: () => {},
+      }) as DOMRect
+    // When line 1 becomes active, pretend it's centered
+    line1.getBoundingClientRect = () =>
+      ({
+        top: 80,
+        left: 0,
+        bottom: 120,
+        right: 300,
+        width: 300,
+        height: 40,
+        x: 0,
+        y: 80,
+        toJSON: () => {},
+      }) as DOMRect
+
+    // Ensure scrollIntoView exists (used when re-syncing)
+    ;(line1 as unknown as { scrollIntoView?: () => void }).scrollIntoView = vi.fn()
+
+    // User manually scrolls -> sync disabled -> button visible
+    await container.trigger('wheel')
+    await container.trigger('scroll')
+    await nextTick()
+    expect(wrapper.find('.sync-button').exists()).toBe(true)
+
+    // As time advances, active line becomes visible/centered -> auto re-sync
+    await wrapper.setProps({ currentTime: 3.6 })
+    await nextTick()
+
     expect(wrapper.find('.sync-button').exists()).toBe(false)
   })
 

@@ -17,10 +17,41 @@ const emit = defineEmits<{
 const lyricsContainer = ref<HTMLElement | null>(null)
 const isSyncMode = ref(true)
 
-let ignoreScrollUntil = 0
+const USER_INTENT_WINDOW_MS = 400
+const RESYNC_DEBOUNCE_MS = 180
+const SYNC_CENTER_TOLERANCE_RATIO = 0.25
 
-function setIgnoreScrollWindow(ms: number) {
-  ignoreScrollUntil = Date.now() + ms
+let lastUserIntentAt = 0
+let resyncTimer: number | null = null
+
+function markUserIntent() {
+  lastUserIntentAt = Date.now()
+}
+
+function clearResyncTimer() {
+  if (resyncTimer !== null) {
+    window.clearTimeout(resyncTimer)
+    resyncTimer = null
+  }
+}
+
+function isActiveLineInSyncWindow(): boolean {
+  if (!lyricsContainer.value) return false
+  if (activeLineIndex.value === -1) return false
+
+  const activeElement = lyricsContainer.value.querySelector(
+    `[data-line-index="${activeLineIndex.value}"]`
+  ) as HTMLElement | null
+  if (!activeElement) return false
+
+  const containerRect = lyricsContainer.value.getBoundingClientRect()
+  const activeRect = activeElement.getBoundingClientRect()
+
+  const containerCenterY = containerRect.top + containerRect.height / 2
+  const activeCenterY = activeRect.top + activeRect.height / 2
+  const tolerance = containerRect.height * SYNC_CENTER_TOLERANCE_RATIO
+
+  return Math.abs(activeCenterY - containerCenterY) <= tolerance
 }
 
 const currentTimeMs = computed(() => props.currentTime * 1000)
@@ -97,10 +128,22 @@ function handleLineClick(line: Line) {
 function handleScroll() {
   if (!lyricsContainer.value) return
 
-  // Ignore scroll events caused by our own auto-scrolling.
-  if (Date.now() < ignoreScrollUntil) return
+  // Only treat scroll as a user action if we saw a recent user intent event.
+  // This avoids programmatic auto-scroll (scrollIntoView) randomly disabling sync.
+  if (Date.now() - lastUserIntentAt > USER_INTENT_WINDOW_MS) return
 
-  isSyncMode.value = false
+  if (isSyncMode.value) {
+    isSyncMode.value = false
+  }
+
+  // If the user scrolls and lands back on the active line, automatically re-enable.
+  // Debounced so it doesn't flap during momentum scrolling.
+  clearResyncTimer()
+  resyncTimer = window.setTimeout(() => {
+    if (!isSyncMode.value && props.isPlaying && isActiveLineInSyncWindow()) {
+      syncToActiveLine()
+    }
+  }, RESYNC_DEBOUNCE_MS)
 }
 
 function syncToActiveLine() {
@@ -112,9 +155,6 @@ function scrollToActiveLine() {
   if (!lyricsContainer.value || activeLineIndex.value === -1) return
 
   nextTick(() => {
-    // Prevent our own scroll from disabling sync mode.
-    setIgnoreScrollWindow(2000)
-
     const activeElement = lyricsContainer.value?.querySelector(
       `[data-line-index="${activeLineIndex.value}"]`
     )
@@ -132,8 +172,16 @@ function scrollToActiveLine() {
 
 // Watch for active line changes to auto-scroll
 watch(activeLineIndex, (newIndex, oldIndex) => {
-  if (newIndex !== oldIndex && isSyncMode.value) {
+  if (newIndex === oldIndex) return
+
+  if (isSyncMode.value) {
     scrollToActiveLine()
+    return
+  }
+
+  // If the user scrolled ahead and the song caught up, automatically re-enable sync.
+  if (props.isPlaying && isActiveLineInSyncWindow()) {
+    syncToActiveLine()
   }
 })
 
@@ -149,10 +197,22 @@ watch(
 
 onMounted(() => {
   lyricsContainer.value?.addEventListener('scroll', handleScroll, { passive: true })
+
+  // Track user intent separately so we can ignore programmatic auto-scroll.
+  lyricsContainer.value?.addEventListener('wheel', markUserIntent, { passive: true })
+  lyricsContainer.value?.addEventListener('touchstart', markUserIntent, { passive: true })
+  lyricsContainer.value?.addEventListener('pointerdown', markUserIntent, { passive: true })
+  lyricsContainer.value?.addEventListener('keydown', markUserIntent)
 })
 
 onUnmounted(() => {
   lyricsContainer.value?.removeEventListener('scroll', handleScroll)
+  lyricsContainer.value?.removeEventListener('wheel', markUserIntent)
+  lyricsContainer.value?.removeEventListener('touchstart', markUserIntent)
+  lyricsContainer.value?.removeEventListener('pointerdown', markUserIntent)
+  lyricsContainer.value?.removeEventListener('keydown', markUserIntent)
+
+  clearResyncTimer()
 })
 </script>
 

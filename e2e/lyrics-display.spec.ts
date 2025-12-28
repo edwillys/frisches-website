@@ -255,11 +255,10 @@ test.describe('Lyrics Display Feature', () => {
     const syncButton = page.locator('.sync-button')
     await expect(syncButton).toBeHidden()
 
-    // Manually scroll the lyrics container
+    // Manually scroll the lyrics container (real user-like wheel scroll)
     const lyricsContainer = page.locator('.lyrics-container')
-    await lyricsContainer.evaluate((el) => {
-      el.scrollTop = 500
-    })
+    await lyricsContainer.hover()
+    await page.mouse.wheel(0, 600)
 
 
     // Sync button should appear
@@ -275,11 +274,10 @@ test.describe('Lyrics Display Feature', () => {
     await clickRobust(lyricsBtn)
 
 
-    // Manually scroll away
+    // Manually scroll away (real user-like wheel scroll)
     const lyricsContainer = page.locator('.lyrics-container')
-    await lyricsContainer.evaluate((el) => {
-      el.scrollTop = 500
-    })
+    await lyricsContainer.hover()
+    await page.mouse.wheel(0, 600)
 
 
     // Sync button should appear
