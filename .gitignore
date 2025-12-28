@@ -43,3 +43,5 @@ public/videos/*.mp4
 resources/*.mp4
 
 .vercel
+
+public/draco

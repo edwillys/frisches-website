@@ -6,8 +6,21 @@ test.describe('Lyrics Display Feature', () => {
     try {
       await locator.click({ timeout: 5000 })
     } catch {
-      // Some browsers (notably WebKit) can get stuck on "stable" checks even when clickable.
-      await locator.evaluate((el) => (el as HTMLElement).click())
+      // Some browsers can get stuck on "stable" checks even when clickable.
+      // Avoid `locator.evaluate()` here because it can re-wait for the element and hang until the
+      // *test* timeout if the DOM re-renders (common in Firefox after view toggles).
+      try {
+        await locator.click({ timeout: 2000, force: true })
+        return
+      } catch {
+        const handle = await locator.elementHandle({ timeout: 2000 })
+        if (!handle) throw new Error('clickRobust: element not found')
+        try {
+          await handle.evaluate((el) => (el as HTMLElement).click())
+        } finally {
+          await handle.dispose()
+        }
+      }
     }
   }
 
@@ -364,6 +377,10 @@ test.describe('Lyrics Display Feature', () => {
     
     // We need to close lyrics first to see the track table
     await clickRobust(lyricsBtn)
+
+    const trackTable = page.locator('.track-table')
+    await expect(trackTable).toBeVisible({ timeout: 4000 })
+    await expect(introRow).toBeVisible({ timeout: 4000 })
 
     
     await clickRowPlayButton(introRow)
