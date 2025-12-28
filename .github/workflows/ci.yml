@@ -39,8 +39,8 @@ jobs:
       - name: Run type check
         run: npm run type-check
 
-      - name: Run unit tests
-        run: npm run test:unit -- --run
+      - name: Run unit tests (with coverage)
+        run: npm run test:coverage -- --run
 
       - name: Build
         run: npm run build
@@ -57,3 +57,4 @@ jobs:
           files: ./coverage/coverage-final.json
           flags: unittests
           name: codecov-umbrella
+          token: ${{ secrets.CODECOV_TOKEN }}
