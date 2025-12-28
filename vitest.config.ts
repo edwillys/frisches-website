@@ -12,7 +12,7 @@ export default mergeConfig(
       root: fileURLToPath(new URL('./', import.meta.url)),
       setupFiles: ['./src/test/setup.ts'],
       coverage: {
-        provider: 'istanbul',
+        provider: 'v8',
         reporter: ['json', 'lcov', 'text'],
         reportsDirectory: 'coverage',
       },
