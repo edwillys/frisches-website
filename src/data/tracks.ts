@@ -38,18 +38,26 @@ export const tracks: Track[] = [
       '../assets/private/audio/TalesFromTheCellar/01 - Misled - Mastered.mp3',
       import.meta.url
     ).href,
+    lyricsPath: new URL(
+      '../assets/private/audio/TalesFromTheCellar/lyrics/01 - Misled - Mastered.json',
+      import.meta.url
+    ).href,
     duration: '3:12',
   },
   {
     id: 2,
     trackId: 'tftc:02-tojd',
-    title: 'TOJD',
+    title: 'Tears Of Joyful Despair',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
     fallbackCover: new URL('../assets/private/audio/TalesFromTheCellar/Cover.png', import.meta.url)
       .href,
     url: new URL(
       '../assets/private/audio/TalesFromTheCellar/02 - TOJD - Mastered.mp3',
+      import.meta.url
+    ).href,
+    lyricsPath: new URL(
+      '../assets/private/audio/TalesFromTheCellar/lyrics/02 - TOJD - Mastered.json',
       import.meta.url
     ).href,
     duration: '2:58',
@@ -66,18 +74,26 @@ export const tracks: Track[] = [
       '../assets/private/audio/TalesFromTheCellar/03 - Etiquette - Mastered.mp3',
       import.meta.url
     ).href,
+    lyricsPath: new URL(
+      '../assets/private/audio/TalesFromTheCellar/lyrics/03 - Etiquette - Mastered.json',
+      import.meta.url
+    ).href,
     duration: '3:05',
   },
   {
     id: 4,
     trackId: 'tftc:04-mr-red-jacket',
-    title: 'Mr Red Jacket',
+    title: 'Mr. Red Jacket',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
     fallbackCover: new URL('../assets/private/audio/TalesFromTheCellar/Cover.png', import.meta.url)
       .href,
     url: new URL(
       '../assets/private/audio/TalesFromTheCellar/04 - Mr Red Jacket - Mastered.mp3',
+      import.meta.url
+    ).href,
+    lyricsPath: new URL(
+      '../assets/private/audio/TalesFromTheCellar/lyrics/04 - Mr Red Jacket - Mastered.json',
       import.meta.url
     ).href,
     duration: '3:30',
@@ -112,6 +128,10 @@ export const tracks: Track[] = [
       '../assets/private/audio/TalesFromTheCellar/06 - Suits - Mastered.mp3',
       import.meta.url
     ).href,
+    lyricsPath: new URL(
+      '../assets/private/audio/TalesFromTheCellar/lyrics/06 - Suits - Mastered.json',
+      import.meta.url
+    ).href,
     duration: '3:15',
   },
   {
@@ -124,6 +144,10 @@ export const tracks: Track[] = [
       .href,
     url: new URL(
       '../assets/private/audio/TalesFromTheCellar/07 - Ordinary Suspects - Mastered.mp3',
+      import.meta.url
+    ).href,
+    lyricsPath: new URL(
+      '../assets/private/audio/TalesFromTheCellar/lyrics/07 - Ordinary Suspects - Mastered.json',
       import.meta.url
     ).href,
     duration: '3:20',
