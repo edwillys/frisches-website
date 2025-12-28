@@ -37,8 +37,12 @@ export default defineConfig({
     /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: process.env.CI ? 'http://localhost:4173' : 'http://localhost:5173',
 
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
+    /* Collect trace on CI failures for post-mortem debugging */
+    trace: process.env.CI ? 'retain-on-failure' : 'on-first-retry',
+
+    /* CI diagnostics */
+    screenshot: process.env.CI ? 'only-on-failure' : 'off',
+    video: process.env.CI ? 'retain-on-failure' : 'off',
 
     /* Only on CI systems run the tests headless */
     //headless: !!process.env.CI,
@@ -67,6 +71,13 @@ export default defineConfig({
               'gfx.webrender.all': true,
               // Avoid occasional shader cache / disk IO flakiness.
               'gfx.shader_checks.enabled': false,
+            },
+            // CI hardening (Linux runners): force Mesa software rasterizer so WebGL contexts
+            // consistently initialize even without GPU acceleration.
+            env: {
+              ...process.env,
+              LIBGL_ALWAYS_SOFTWARE: '1',
+              MOZ_WEBRENDER: '1',
             },
           },
         },
