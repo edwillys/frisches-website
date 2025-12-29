@@ -40,8 +40,7 @@ const props = withDefaults(
   }>(),
   {
     draco: true, // Enable Draco by default for better performance
-    // Keep e2e/CI deterministic: use local decoder assets copied to /public/draco.
-    decoderPath: '/draco/',
+    decoderPath: 'https://www.gstatic.com/draco/versioned/decoders/1.5.6/',
     castShadow: false,
     receiveShadow: false,
     autoPlayAnimation: true,

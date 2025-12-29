@@ -62,24 +62,6 @@ export default defineConfig({
         name: 'firefox',
         use: {
           ...devices['Desktop Firefox'],
-          launchOptions: {
-            firefoxUserPrefs: {
-              // CI hardening: headless Firefox can have WebGL/acceleration disabled depending on runner.
-              // These prefs make TresCanvas + WebGL scenes far more reliable without increasing timeouts.
-              'webgl.force-enabled': true,
-              'layers.acceleration.force-enabled': true,
-              'gfx.webrender.all': true,
-              // Avoid occasional shader cache / disk IO flakiness.
-              'gfx.shader_checks.enabled': false,
-            },
-            // CI hardening (Linux runners): force Mesa software rasterizer so WebGL contexts
-            // consistently initialize even without GPU acceleration.
-            env: {
-              ...process.env,
-              LIBGL_ALWAYS_SOFTWARE: '1',
-              MOZ_WEBRENDER: '1',
-            },
-          },
         },
       },
       {

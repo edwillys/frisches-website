@@ -18,7 +18,7 @@
     "lint": "eslint . --fix --cache",
     "format": "prettier --write src/",
     "prepare": "husky",
-    "postinstall": "node scripts/copy-draco.mjs && playwright install"
+    "postinstall": "playwright install"
   },
   "dependencies": {
     "@tresjs/cientos": "^5.2.0",

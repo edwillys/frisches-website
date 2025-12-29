@@ -27,8 +27,7 @@ let gltfLoader: GLTFLoader | null = null
 function getLoaders() {
   if (!dracoLoader) {
     dracoLoader = new DRACOLoader()
-    // Serve Draco decoders from /public/draco to avoid CI network flakiness.
-    dracoLoader.setDecoderPath('/draco/')
+    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/')
     dracoLoader.preload()
   }
 
