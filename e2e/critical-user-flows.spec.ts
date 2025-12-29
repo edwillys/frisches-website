@@ -120,9 +120,6 @@ test.describe('Frisches Website - Critical Flows', () => {
   })
 
   test('3D character models load correctly', async ({ page }, testInfo) => {
-    // Skip this test on CI for browsers that are flaky here
-    test.skip(!!process.env.CI && (testInfo.project.name === 'webkit'),
-      'Skipping 3D model rendering test on CI for webkit')
     // Navigate to about section
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
     
@@ -152,9 +149,6 @@ test.describe('Frisches Website - Critical Flows', () => {
   })
 
   test('navigates to about content with character selection', async ({ page }, testInfo) => {
-    // Skip this test on CI for webkit which is currently flaky
-    test.skip(!!process.env.CI && testInfo.project.name === 'webkit',
-      'Skipping character selection count test on CI for webkit')
     // Navigate to cards
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
     
@@ -208,9 +202,6 @@ test.describe('Frisches Website - Critical Flows', () => {
   })
 
   test('handles all three cards sequentially', async ({ page }, testInfo) => {
-    test.skip(!!process.env.CI && testInfo.project.name === 'webkit',
-      'Skipping handle all three cards sequentially test on CI for webkit')
-
     // Navigate to cards
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
     await expect(page.locator('.card-dealer__cards')).toBeVisible({ timeout: 5000 })
