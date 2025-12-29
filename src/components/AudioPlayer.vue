@@ -314,7 +314,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
           </div>
         </div>
 
-        <div class="track-table__body">
+        <div class="track-table__body" @pointerleave="hoveredTrackId = null">
           <div
             v-for="(track, index) in albumTracks"
             :key="track.trackId"
@@ -326,7 +326,6 @@ watch(currentTrack, async (newTrack, oldTrack) => {
             :data-testid="`track-row-${index}`"
             @click="selectTrack(track)"
             @pointerenter="hoveredTrackId = track.trackId"
-            @pointerleave="hoveredTrackId = null"
           >
             <div class="track-table__col track-table__col--index">
               <button

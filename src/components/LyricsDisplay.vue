@@ -23,6 +23,7 @@ const SYNC_CENTER_TOLERANCE_RATIO = 0.25
 
 let lastUserIntentAt = 0
 let resyncTimer: number | null = null
+let isProgrammaticScroll = false
 
 function markUserIntent() {
   lastUserIntentAt = Date.now()
@@ -128,6 +129,9 @@ function handleLineClick(line: Line) {
 function handleScroll() {
   if (!lyricsContainer.value) return
 
+  // Ignore scroll events we caused via scrollIntoView.
+  if (isProgrammaticScroll) return
+
   // Only treat scroll as a user action if we saw a recent user intent event.
   // This avoids programmatic auto-scroll (scrollIntoView) randomly disabling sync.
   if (Date.now() - lastUserIntentAt > USER_INTENT_WINDOW_MS) return
@@ -161,6 +165,14 @@ function scrollToActiveLine() {
     if (activeElement) {
       const el = activeElement as HTMLElement & { scrollIntoView?: (options?: unknown) => void }
       if (typeof el.scrollIntoView === 'function') {
+        // Mark as programmatic so the ensuing scroll event doesn't flip sync mode off.
+        isProgrammaticScroll = true
+        // Clear after the scroll event(s) have had a chance to fire.
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => {
+            isProgrammaticScroll = false
+          })
+        })
         el.scrollIntoView({
           behavior: 'auto',
           block: 'center',
