@@ -4,6 +4,7 @@ import { getTrackById, tracks, type Track } from '@/data/tracks'
 
 export type AudioRepeatMode = 'off' | 'all' | 'one'
 export type AudioStartSource = 'music' | 'about'
+export type AudioStemName = 'drums' | 'guitar' | 'bass' | 'vocals'
 
 export const useAudioStore = defineStore('audio', () => {
   const persistAcrossPages = true as const
@@ -22,9 +23,17 @@ export const useAudioStore = defineStore('audio', () => {
   // Mini-player visibility state
   const hasUserStartedPlayback = ref(false)
   const isStopped = ref(false)
-  
+
   // Lyrics display state
   const showLyrics = ref(false)
+
+  // Stem mixing (future: parallel stem playback)
+  const stemGains = ref<Record<AudioStemName, number>>({
+    drums: 1,
+    guitar: 1,
+    bass: 1,
+    vocals: 1,
+  })
 
   const currentTrack = computed<Track | null>(() => {
     if (!currentTrackId.value) return null
@@ -182,6 +191,11 @@ export const useAudioStore = defineStore('audio', () => {
     showLyrics.value = false
   }
 
+  function setStemGain(stem: AudioStemName, nextGain: number) {
+    const clamped = Math.max(0, Math.min(1, nextGain))
+    stemGains.value = { ...stemGains.value, [stem]: clamped }
+  }
+
   return {
     persistAcrossPages,
     tracks: allTracks,
@@ -197,9 +211,11 @@ export const useAudioStore = defineStore('audio', () => {
     hasUserStartedPlayback,
     isStopped,
     showLyrics,
+    stemGains,
     setCurrentTrack,
     setPlaylistByTrackIds,
     setVolume,
+    setStemGain,
     seek,
     updateFromAudioTime,
     updateFromAudioDuration,

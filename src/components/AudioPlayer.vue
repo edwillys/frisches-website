@@ -11,6 +11,7 @@ import {
   formatSecondsAsAlbumDuration,
 } from '@/data/albums'
 import LyricsDisplay from './LyricsDisplay.vue'
+import closeSvg from '@/assets/icons/close.svg?raw'
 
 const audioStore = useAudioStore()
 
@@ -460,6 +461,18 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 
       <!-- Lyrics View -->
       <div v-if="audioStore.showLyrics" class="lyrics-view">
+        <div class="lyrics-view__header">
+          <button
+            class="lyrics-view__close"
+            type="button"
+            aria-label="Close lyrics"
+            data-testid="lyrics-view-close"
+            @click="audioStore.closeLyrics"
+          >
+            <span class="lyrics-view__close-icon" aria-hidden="true" v-html="closeSvg" />
+          </button>
+        </div>
+
         <LyricsDisplay
           v-if="lyricsData && !isLoadingLyrics"
           :lyricsData="lyricsData"
@@ -981,6 +994,39 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+.lyrics-view__header {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.lyrics-view__close {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.lyrics-view__close:hover {
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.08);
+  transform: scale(1.06);
+}
+
+:deep(.lyrics-view__close-icon svg) {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .lyrics-loading,

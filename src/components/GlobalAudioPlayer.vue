@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAudioStore } from '@/stores/audio'
-import type { LyricsData } from '@/types/lyrics'
-import LyricsDisplay from './LyricsDisplay.vue'
+import InstrumentFaders from './InstrumentFaders.vue'
 
 // Icon imports
 import lyricsSvg from '@/assets/icons/song-lyrics.svg?raw'
@@ -14,7 +13,10 @@ import nextSvg from '@/assets/icons/next.svg?raw'
 import repeatSvg from '@/assets/icons/repeat.svg?raw'
 import repeatOneSvg from '@/assets/icons/repeat-one.svg?raw'
 import closeSvg from '@/assets/icons/close.svg?raw'
-import closeLgSvg from '@/assets/icons/close-lg.svg?raw'
+import volumeMuteSvg from '@/assets/icons/volume-mute.svg?raw'
+import volumeLowSvg from '@/assets/icons/volume-low.svg?raw'
+import volumeMidSvg from '@/assets/icons/volume-mid.svg?raw'
+import volumeHighSvg from '@/assets/icons/volume-high.svg?raw'
 
 const audioStore = useAudioStore()
 
@@ -23,10 +25,7 @@ const miniPlayerEl = ref<HTMLElement | null>(null)
 let miniPlayerResizeObserver: ResizeObserver | null = null
 let lastMiniPlayerOffsetPx = -1
 
-// Lyrics state
-const showLyrics = ref(false)
-const lyricsData = ref<LyricsData | null>(null)
-const isLoadingLyrics = ref(false)
+const showStemFaders = ref(false)
 
 const shouldShowMiniPlayer = computed(
   () => audioStore.persistAcrossPages && audioStore.hasUserStartedPlayback && !audioStore.isStopped
@@ -43,6 +42,52 @@ const currentCover = computed(() => {
 const currentTrackHasLyrics = computed(() => {
   return !!audioStore.currentTrack?.lyricsPath
 })
+
+const volumeIconSvg = computed(() => {
+  const v = audioStore.volume
+  if (v <= 0.001) return volumeMuteSvg
+  if (v < 0.34) return volumeLowSvg
+  if (v < 0.67) return volumeMidSvg
+  return volumeHighSvg
+})
+
+const volumePercent = computed(() => `${Math.round(audioStore.volume * 100)}%`)
+const lastNonZeroVolume = ref(1)
+
+watch(
+  () => audioStore.volume,
+  (v) => {
+    if (v > 0.001) lastNonZeroVolume.value = v
+  },
+  { immediate: true }
+)
+
+const progressPercent = computed(() => {
+  const d = audioStore.duration
+  if (!Number.isFinite(d) || d <= 0) return '0%'
+  const p = Math.min(1, Math.max(0, audioStore.currentTime / d))
+  return `${Math.round(p * 100)}%`
+})
+
+function onVolumeInput(e: Event) {
+  const target = e.target as HTMLInputElement
+  const v = Number.parseFloat(target.value)
+  const next = Number.isFinite(v) ? v : audioStore.volume
+  if (next > 0.001) lastNonZeroVolume.value = next
+  audioStore.setVolume(next)
+}
+
+function toggleVolumeMute() {
+  const v = audioStore.volume
+  if (v <= 0.001) {
+    const restore = Math.min(1, Math.max(0, lastNonZeroVolume.value || 1))
+    audioStore.setVolume(restore > 0.001 ? restore : 1)
+    return
+  }
+
+  lastNonZeroVolume.value = v
+  audioStore.setVolume(0)
+}
 
 function formatTime(seconds: number) {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00'
@@ -178,8 +223,8 @@ watch(
   shouldShowMiniPlayer,
   (show) => {
     if (!show) {
-      // If the player is dismissed, also dismiss the overlay lyrics.
-      showLyrics.value = false
+      audioStore.closeLyrics()
+      showStemFaders.value = false
       setMiniPlayerOffset(0)
       miniPlayerResizeObserver?.disconnect()
       miniPlayerResizeObserver = null
@@ -260,53 +305,9 @@ function onSeek(e: Event) {
   audioStore.seek(time)
 }
 
-async function toggleLyrics() {
-  if (!currentTrackHasLyrics.value) return
-
-  showLyrics.value = !showLyrics.value
-
-  // Load lyrics if showing and not already loaded
-  if (showLyrics.value && !lyricsData.value && audioStore.currentTrack?.lyricsPath) {
-    await loadLyrics(audioStore.currentTrack.lyricsPath)
-  }
+function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number) {
+  audioStore.setStemGain(stem, value)
 }
-
-async function loadLyrics(lyricsPath: string) {
-  try {
-    isLoadingLyrics.value = true
-    const response = await fetch(lyricsPath)
-    if (!response.ok) throw new Error('Failed to load lyrics')
-    lyricsData.value = await response.json()
-  } catch (error) {
-    console.error('Error loading lyrics:', error)
-    lyricsData.value = null
-  } finally {
-    isLoadingLyrics.value = false
-  }
-}
-
-function handleLyricsSeek(time: number) {
-  audioStore.seek(time)
-}
-
-// Watch for track changes to load lyrics automatically if lyrics view is open
-watch(
-  () => audioStore.currentTrack,
-  async (newTrack, oldTrack) => {
-    if (newTrack?.trackId !== oldTrack?.trackId) {
-      // Load new track lyrics if lyrics view is open
-      if (showLyrics.value) {
-        lyricsData.value = null
-        if (newTrack?.lyricsPath) {
-          await loadLyrics(newTrack.lyricsPath)
-        } else {
-          // Hide lyrics if new track doesn't have lyrics
-          showLyrics.value = false
-        }
-      }
-    }
-  }
-)
 </script>
 
 <template>
@@ -415,25 +416,6 @@ watch(
               v-html="audioStore.repeatMode === 'one' ? repeatOneSvg : repeatSvg"
             />
           </button>
-
-          <button
-            class="mini-player__btn mini-player__btn--lyrics"
-            :class="{ 'is-active': showLyrics, 'is-disabled': !currentTrackHasLyrics }"
-            type="button"
-            :title="
-              !currentTrackHasLyrics
-                ? 'No lyrics available'
-                : showLyrics
-                  ? 'Hide lyrics'
-                  : 'Show lyrics'
-            "
-            :aria-label="showLyrics ? 'Hide lyrics' : 'Show lyrics'"
-            :disabled="!currentTrackHasLyrics"
-            @click="toggleLyrics"
-            data-testid="mini-lyrics"
-          >
-            <span class="mini-player__icon" aria-hidden="true" v-html="lyricsSvg" />
-          </button>
         </div>
 
         <div class="mini-player__progress-row">
@@ -444,6 +426,7 @@ watch(
             min="0"
             :max="audioStore.duration || 100"
             :value="audioStore.currentTime"
+            :style="{ '--progress-percent': progressPercent }"
             @input="onSeek"
             aria-label="Seek"
           />
@@ -453,6 +436,12 @@ watch(
 
       <!-- Right: Lyrics + Close -->
       <div class="mini-player__right">
+        <InstrumentFaders
+          v-model="showStemFaders"
+          :gains="audioStore.stemGains"
+          @setGain="onStemGain"
+        />
+
         <button
           class="mini-player__btn mini-player__btn--lyrics"
           :class="{ 'is-active': audioStore.showLyrics, 'is-disabled': !currentTrackHasLyrics }"
@@ -472,6 +461,30 @@ watch(
           <span class="mini-player__icon" aria-hidden="true" v-html="lyricsSvg" />
         </button>
 
+        <div class="mini-player__volume-wrap" data-testid="mini-volume">
+          <button
+            class="mini-player__volume-icon-btn"
+            type="button"
+            :title="audioStore.volume <= 0.001 ? 'Unmute' : 'Mute'"
+            :aria-label="audioStore.volume <= 0.001 ? 'Unmute' : 'Mute'"
+            data-testid="mini-volume-mute"
+            @click="toggleVolumeMute"
+          >
+            <span class="mini-player__volume-icon" aria-hidden="true" v-html="volumeIconSvg" />
+          </button>
+          <input
+            class="mini-player__volume"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            :value="audioStore.volume"
+            :style="{ '--volume-percent': volumePercent }"
+            aria-label="Volume"
+            @input="onVolumeInput"
+          />
+        </div>
+
         <button
           class="mini-player__btn mini-player__close"
           type="button"
@@ -484,41 +497,6 @@ watch(
         </button>
       </div>
     </div>
-
-    <!-- Lyrics Overlay -->
-    <transition name="lyrics-overlay">
-      <div v-if="showLyrics" class="lyrics-overlay" data-testid="lyrics-overlay">
-        <div class="lyrics-overlay__header">
-          <button
-            class="lyrics-overlay__close"
-            @click="showLyrics = false"
-            aria-label="Close lyrics"
-            data-testid="lyrics-close"
-          >
-            <span class="lyrics-overlay__icon" aria-hidden="true" v-html="closeLgSvg" />
-          </button>
-          <div class="lyrics-overlay__track-info">
-            <div class="lyrics-overlay__title">{{ currentTitle }}</div>
-            <div class="lyrics-overlay__artist">{{ currentArtist }}</div>
-          </div>
-        </div>
-
-        <LyricsDisplay
-          v-if="lyricsData"
-          :lyricsData="lyricsData"
-          :currentTime="audioStore.currentTime"
-          :isPlaying="audioStore.isPlaying"
-          @seek="handleLyricsSeek"
-        />
-        <div v-else-if="isLoadingLyrics" class="lyrics-loading">
-          <div class="lyrics-loading__spinner"></div>
-          <p>Loading lyrics...</p>
-        </div>
-        <div v-else class="lyrics-empty">
-          <p>No lyrics available for this track</p>
-        </div>
-      </div>
-    </transition>
   </div>
 </template>
 
@@ -557,12 +535,6 @@ audio {
   display: block;
   width: 16px;
   height: 16px;
-}
-
-:deep(.lyrics-overlay__icon svg) {
-  display: block;
-  width: 24px;
-  height: 24px;
 }
 
 /* Left: Track Info */
@@ -637,7 +609,7 @@ audio {
   justify-content: center;
 }
 
-.mini-player__btn {
+:deep(.mini-player__btn) {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -652,32 +624,34 @@ audio {
   transition: all 0.15s ease;
 }
 
-.mini-player__btn:hover {
+:deep(.mini-player__btn:hover) {
   color: var(--color-text);
   transform: scale(1.06);
 }
 
-.mini-player__btn--play {
+:deep(.mini-player__btn--play) {
   width: 32px;
   height: 32px;
   background: white;
   color: black;
 }
 
-.mini-player__btn--play:hover {
+:deep(.mini-player__btn--play:hover) {
   background: white;
   transform: scale(1.08);
 }
 
-.mini-player__btn--shuffle.is-active,
-.mini-player__btn--repeat.is-active,
-.mini-player__btn--lyrics.is-active {
+:deep(.mini-player__btn--shuffle.is-active),
+:deep(.mini-player__btn--repeat.is-active),
+:deep(.mini-player__btn--lyrics.is-active),
+:deep(.mini-player__btn--stems.is-active) {
   color: var(--color-neon-cyan);
 }
 
-.mini-player__btn--shuffle.is-active::after,
-.mini-player__btn--repeat.is-active::after,
-.mini-player__btn--lyrics.is-active::after {
+:deep(.mini-player__btn--shuffle.is-active::after),
+:deep(.mini-player__btn--repeat.is-active::after),
+:deep(.mini-player__btn--lyrics.is-active::after),
+:deep(.mini-player__btn--stems.is-active::after) {
   content: '';
   position: absolute;
   bottom: -2px;
@@ -689,12 +663,12 @@ audio {
   background: var(--color-neon-cyan);
 }
 
-.mini-player__btn--lyrics.is-disabled {
+:deep(.mini-player__btn--lyrics.is-disabled) {
   opacity: 0.3;
   cursor: not-allowed;
 }
 
-.mini-player__btn--lyrics.is-disabled:hover {
+:deep(.mini-player__btn--lyrics.is-disabled:hover) {
   color: var(--color-text-secondary);
   transform: none;
 }
@@ -765,6 +739,16 @@ audio {
   );
 }
 
+.mini-player__progress:hover::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    to right,
+    var(--color-neon-cyan) 0%,
+    var(--color-neon-cyan) var(--progress-percent, 0%),
+    rgba(255, 255, 255, 0.3) var(--progress-percent, 0%),
+    rgba(255, 255, 255, 0.3) 100%
+  );
+}
+
 .mini-player__progress::-moz-range-track {
   height: 4px;
   border-radius: 2px;
@@ -777,129 +761,127 @@ audio {
   background: white;
 }
 
+.mini-player__progress:hover::-moz-range-progress {
+  background: var(--color-neon-cyan);
+}
+
 /* Right: Close */
 .mini-player__right {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  gap: 10px;
+}
+
+.mini-player__volume-wrap {
+  display: inline-flex;
+  align-items: center;
   gap: 8px;
 }
 
-.mini-player__btn--lyrics.is-disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
+.mini-player__volume-icon {
+  color: var(--color-text-secondary);
+}
+
+.mini-player__volume-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+:deep(.mini-player__volume-icon svg) {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.mini-player__volume {
+  width: 130px;
+  height: 4px;
+  border-radius: 999px;
+  appearance: none;
+  cursor: pointer;
+  background: transparent;
+}
+
+.mini-player__volume::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.92) 0%,
+    rgba(255, 255, 255, 0.92) var(--volume-percent, 0%),
+    rgba(255, 255, 255, 0.22) var(--volume-percent, 0%),
+    rgba(255, 255, 255, 0.22) 100%
+  );
+}
+
+.mini-player__volume::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  margin-top: -4px;
+}
+
+.mini-player__volume::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.mini-player__volume::-moz-range-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.mini-player__volume::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  border: none;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.mini-player__volume-wrap:hover .mini-player__volume-icon {
+  color: var(--color-text);
+}
+
+.mini-player__volume-wrap:hover .mini-player__volume::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    to right,
+    var(--color-neon-cyan) 0%,
+    var(--color-neon-cyan) var(--volume-percent, 0%),
+    rgba(255, 255, 255, 0.22) var(--volume-percent, 0%),
+    rgba(255, 255, 255, 0.22) 100%
+  );
+}
+
+.mini-player__volume-wrap:hover .mini-player__volume::-moz-range-progress {
+  background: var(--color-neon-cyan);
+}
+
+.mini-player__volume-wrap:hover .mini-player__volume::-webkit-slider-thumb,
+.mini-player__volume-wrap:hover .mini-player__volume::-moz-range-thumb {
+  opacity: 1;
 }
 
 .mini-player__close {
   width: 32px;
   height: 32px;
-}
-
-/* Lyrics Overlay */
-.lyrics-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--color-background);
-  z-index: 10000;
-  display: flex;
-  flex-direction: column;
-}
-
-.lyrics-overlay__header {
-  display: flex;
-  align-items: center;
-  padding: 16px 24px;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  gap: 16px;
-}
-
-.lyrics-overlay__close {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: transparent;
-  border: none;
-  color: var(--color-text);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-}
-
-.lyrics-overlay__close:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: scale(1.1);
-}
-
-.lyrics-overlay__track-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.lyrics-overlay__title {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.lyrics-overlay__artist {
-  font-size: 14px;
-  color: var(--color-text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.lyrics-loading,
-.lyrics-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--color-text-secondary);
-  gap: 16px;
-}
-
-.lyrics-loading__spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(255, 255, 255, 0.1);
-  border-top-color: var(--color-neon-cyan);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Lyrics overlay transitions */
-.lyrics-overlay-enter-active,
-.lyrics-overlay-leave-active {
-  transition: all 0.3s ease;
-}
-
-.lyrics-overlay-enter-from {
-  opacity: 0;
-  transform: translateY(20px);
-}
-
-.lyrics-overlay-leave-to {
-  opacity: 0;
-  transform: translateY(-20px);
 }
 
 /* Responsive */

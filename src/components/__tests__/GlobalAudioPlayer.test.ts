@@ -88,4 +88,94 @@ describe('GlobalAudioPlayer', () => {
 
     expect(wrapper.find('[data-testid="audio-mini-player"]').exists()).toBe(true)
   })
+
+  it('renders only one lyrics button in the mini-player', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:01-misled')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+    expect(wrapper.findAll('[data-testid="mini-lyrics"]').length).toBe(1)
+  })
+
+  it('updates store volume from mini-player volume slider', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:01-misled')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+
+    const volumeWrap = wrapper.find('[data-testid="mini-volume"]')
+    expect(volumeWrap.exists()).toBe(true)
+
+    const volumeInput = volumeWrap.find('input[type="range"]')
+    await volumeInput.setValue('0.5')
+
+    expect(audio.volume).toBeCloseTo(0.5)
+  })
+
+  it('toggles instrument faders overlay and updates stem gain', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:01-misled')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="stems-overlay"]').exists()).toBe(false)
+
+    const stemsBtn = wrapper.find('[data-testid="mini-stems"]')
+    await stemsBtn.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(stemsBtn.classes()).toContain('is-active')
+
+    const overlay = wrapper.find('[data-testid="stems-overlay"]')
+    expect(overlay.exists()).toBe(true)
+
+    const drumsSlider = overlay.find('input[aria-label="Drums volume"]')
+    await drumsSlider.setValue('0.25')
+
+    expect(audio.stemGains.drums).toBeCloseTo(0.25)
+
+    const drumsMute = overlay.find('[data-testid="stem-drums-mute"]')
+    expect(drumsMute.exists()).toBe(true)
+
+    await drumsMute.trigger('click')
+    expect(audio.stemGains.drums).toBeCloseTo(0)
+
+    await drumsMute.trigger('click')
+    expect(audio.stemGains.drums).toBeCloseTo(0.25)
+
+    const closeBtn = overlay.find('[data-testid="stems-close"]')
+    expect(closeBtn.exists()).toBe(true)
+
+    await closeBtn.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="stems-overlay"]').exists()).toBe(false)
+  })
 })
