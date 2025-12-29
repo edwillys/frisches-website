@@ -119,7 +119,7 @@ test.describe('Frisches Website - Critical Flows', () => {
     expect(hasLoadedAudio).toBe(true)
   })
 
-  test('3D character models load correctly', async ({ page }, testInfo) => {
+  test('3D character models load correctly', async ({ page }) => {
     // Navigate to about section
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
     
@@ -148,7 +148,7 @@ test.describe('Frisches Website - Critical Flows', () => {
     await expect(canvas).toBeVisible({ timeout: 5000 })
   })
 
-  test('navigates to about content with character selection', async ({ page }, testInfo) => {
+  test('navigates to about content with character selection', async ({ page }) => {
     // Navigate to cards
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
     
@@ -201,7 +201,7 @@ test.describe('Frisches Website - Critical Flows', () => {
     await expect(logoButton).toBeVisible({ timeout: 15000 })
   })
 
-  test('handles all three cards sequentially', async ({ page }, testInfo) => {
+  test('handles all three cards sequentially', async ({ page }) => {
     // Navigate to cards
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
     await expect(page.locator('.card-dealer__cards')).toBeVisible({ timeout: 5000 })
