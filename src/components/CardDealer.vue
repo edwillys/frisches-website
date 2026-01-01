@@ -63,7 +63,6 @@ const isAnimating = ref(false)
 
 let animFallbackTimer: number | null = null
 let animToken = 0
-let animFallbackTargetView: 'logo' | 'cards' | 'content' | null = null
 
 const clearAnimFallback = () => {
   if (animFallbackTimer !== null) {
@@ -74,30 +73,21 @@ const clearAnimFallback = () => {
 
 // Small safety net: if a GSAP timeline never fires onComplete (rare in headless/FF),
 // make sure we don't get stuck in an animating state that blocks all navigation.
-const startAnimating = (fallbackMs = 4500, targetView?: 'logo' | 'cards' | 'content') => {
+const startAnimating = (fallbackMs = 4500) => {
   clearAnimFallback()
   isAnimating.value = true
-  animFallbackTargetView = targetView ?? null
 
   const token = ++animToken
   animFallbackTimer = window.setTimeout(() => {
     if (animToken !== token) return
     if (!isAnimating.value) return
     isAnimating.value = false
-
-    // If we had to fall back, also force the UI into a consistent view.
-    // This prevents CI-only states like: data-animating=false but still showing the content overlay,
-    // which can intercept pointer events intended for the cards.
-    if (animFallbackTargetView) {
-      currentView.value = animFallbackTargetView
-    }
   }, fallbackMs)
 }
 
 const stopAnimating = () => {
   clearAnimFallback()
   isAnimating.value = false
-  animFallbackTargetView = null
 }
 
 const audioStore = useAudioStore()
@@ -230,14 +220,14 @@ const handleCardClick = (route: string) => {
   const cardIndex = menuItems.findIndex((item) => item.route === route)
   if (cardIndex === -1) return
 
-  startAnimating(4500, 'content')
+  startAnimating()
   selectedCard.value = cardIndex
   playCardSelection(cardIndex)
 }
 
 const handleLogoClick = () => {
   if (isAnimating.value || currentView.value !== 'logo') return
-  startAnimating(4500, 'cards')
+  startAnimating()
 
   // Notify that logo will be hidden
   emit('logo-hide')
@@ -303,10 +293,10 @@ const handleBackClick = () => {
   }
 
   if (currentView.value == 'content') {
-    startAnimating(4500, 'cards')
+    startAnimating()
     playContentCloseAndCardsReturn()
   } else if (currentView.value == 'cards') {
-    startAnimating(4500, 'logo')
+    startAnimating()
     playCardCloseAndLogoReappear()
   }
 }
@@ -325,11 +315,11 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
 
   if (currentView.value === 'cards') {
     if (clickedInsideCards) return
-    startAnimating(4500, 'logo')
+    startAnimating()
     playCardCloseAndLogoReappear()
   } else if (currentView.value === 'content') {
     if (clickedInsideContent || clickedBackButton || clickedMiniCard) return
-    startAnimating(4500, 'cards')
+    startAnimating()
     playContentCloseAndCardsReturn()
   }
 }
