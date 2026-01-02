@@ -184,7 +184,7 @@
   transform: scale(1.1);
 }
 
-.card-dealer__back-button svg {
+.card-dealer__back-button :deep(svg) {
   width: 24px;
   height: 24px;
 }

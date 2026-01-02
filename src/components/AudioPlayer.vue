@@ -12,6 +12,12 @@ import {
 } from '@/data/albums'
 import LyricsDisplay from './LyricsDisplay.vue'
 import closeSvg from '@/assets/icons/close.svg?raw'
+import librarySplitSvg from '@/assets/icons/library-split.svg?raw'
+import playSvg from '@/assets/icons/play.svg?raw'
+import pauseSvg from '@/assets/icons/pause.svg?raw'
+import shuffleSvg from '@/assets/icons/shuffle.svg?raw'
+import clockSvg from '@/assets/icons/clock.svg?raw'
+import playingBarsSvg from '@/assets/icons/playing-bars.svg?raw'
 
 const audioStore = useAudioStore()
 
@@ -170,18 +176,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
         :aria-label="isAlbumDrawerExpanded ? 'Collapse albums' : 'Expand albums'"
         data-testid="album-rail-toggle"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-          <line x1="9" y1="3" x2="9" y2="21" />
-        </svg>
+        <span aria-hidden="true" v-html="librarySplitSvg" />
       </button>
 
       <div class="album-rail__list">
@@ -243,26 +238,8 @@ watch(currentTrack, async (newTrack, oldTrack) => {
           :aria-label="isPlaying ? 'Pause' : 'Play album'"
           data-testid="btn-play-album"
         >
-          <svg
-            v-if="!isPlaying"
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-          >
-            <path d="M8 5v14l11-7z" />
-          </svg>
-          <svg
-            v-else
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-          >
-            <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-          </svg>
+          <span v-if="!isPlaying" aria-hidden="true" v-html="playSvg" />
+          <span v-else aria-hidden="true" v-html="pauseSvg" />
         </button>
 
         <button
@@ -273,23 +250,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
           :aria-label="isShuffle ? 'Disable shuffle' : 'Enable shuffle'"
           data-testid="btn-shuffle"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <polyline points="16 3 21 3 21 8" />
-            <line x1="4" y1="20" x2="21" y2="3" />
-            <polyline points="21 16 21 21 16 21" />
-            <line x1="15" y1="15" x2="21" y2="21" />
-            <line x1="4" y1="4" x2="9" y2="9" />
-          </svg>
+          <span aria-hidden="true" v-html="shuffleSvg" />
         </button>
       </div>
 
@@ -299,18 +260,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
           <div class="track-table__col track-table__col--index">#</div>
           <div class="track-table__col track-table__col--title">Title</div>
           <div class="track-table__col track-table__col--duration">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
+            <span aria-hidden="true" v-html="clockSvg" />
           </div>
         </div>
 
@@ -337,16 +287,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
                 :data-testid="`track-pause-${index}`"
                 @click.stop="audioStore.togglePlayPause()"
               >
-                <svg
-                  class="track-table__icon"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                </svg>
+                <span class="track-table__icon" aria-hidden="true" v-html="pauseSvg" />
               </button>
 
               <button
@@ -362,16 +303,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
                 :data-testid="`track-play-${index}`"
                 @click.stop="playOrToggle(track)"
               >
-                <svg
-                  class="track-table__icon"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M8 5v14l11-7z" />
-                </svg>
+                <span class="track-table__icon" aria-hidden="true" v-html="playSvg" />
               </button>
 
               <!-- Animated bars when playing (not hovered) -->
@@ -380,62 +312,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
                 class="track-table__animated-bars"
                 aria-hidden="true"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="var(--color-neon-cyan)"
-                >
-                  <rect x="4" y="8" width="3" height="8">
-                    <animate
-                      attributeName="height"
-                      values="8;16;8"
-                      dur="0.8s"
-                      repeatCount="indefinite"
-                      begin="0s"
-                    />
-                    <animate
-                      attributeName="y"
-                      values="8;4;8"
-                      dur="0.8s"
-                      repeatCount="indefinite"
-                      begin="0s"
-                    />
-                  </rect>
-                  <rect x="10" y="6" width="3" height="12">
-                    <animate
-                      attributeName="height"
-                      values="12;18;12"
-                      dur="0.8s"
-                      repeatCount="indefinite"
-                      begin="0.2s"
-                    />
-                    <animate
-                      attributeName="y"
-                      values="6;3;6"
-                      dur="0.8s"
-                      repeatCount="indefinite"
-                      begin="0.2s"
-                    />
-                  </rect>
-                  <rect x="16" y="4" width="3" height="16">
-                    <animate
-                      attributeName="height"
-                      values="16;12;16"
-                      dur="0.8s"
-                      repeatCount="indefinite"
-                      begin="0.4s"
-                    />
-                    <animate
-                      attributeName="y"
-                      values="4;6;4"
-                      dur="0.8s"
-                      repeatCount="indefinite"
-                      begin="0.4s"
-                    />
-                  </rect>
-                </svg>
+                <span aria-hidden="true" v-html="playingBarsSvg" />
               </div>
 
               <span v-else class="track-table__number">{{ index + 1 }}</span>
@@ -710,6 +587,12 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   box-shadow: 0 8px 24px rgba(139, 79, 125, 0.4);
 }
 
+.btn-play-big :deep(svg) {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
 .btn-play-big:hover {
   transform: scale(1.06);
   box-shadow: 0 8px 32px rgba(139, 79, 125, 0.6);
@@ -731,6 +614,12 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.btn-shuffle :deep(svg) {
+  width: 20px;
+  height: 20px;
+  display: block;
 }
 
 .btn-shuffle:hover {

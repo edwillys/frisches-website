@@ -42,7 +42,7 @@ describe('CardDealer social links', () => {
     })
 
     const anchors = wrapper.findAll('.card-dealer__social-link')
-    expect(anchors.length).toBe(3)
+    expect(anchors.length).toBe(4)
 
     // Instagram
     expect(anchors[0]!.attributes('href')).toBe(socialLinks.instagram)
@@ -55,5 +55,9 @@ describe('CardDealer social links', () => {
     // YouTube - empty URL should render '#' and have disabled state
     expect(anchors[2]!.attributes('href')).toBe('#')
     expect(anchors[2]!.attributes('aria-disabled')).toBe('true')
+
+    // Email
+    expect(anchors[3]!.attributes('href')).toBe('mailto:frisches.band@gmail.com')
+    expect(anchors[3]!.attributes('aria-label')).toBe('Email')
   })
 })

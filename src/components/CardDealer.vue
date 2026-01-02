@@ -38,6 +38,12 @@ import { getOffsetsToContainerCenter } from './cardDealer/containerOffsets'
 import gsap from 'gsap'
 import { CustomEase } from 'gsap/CustomEase'
 
+import instagramSvg from '@/assets/icons/social-instagram.svg?raw'
+import spotifySvg from '@/assets/icons/social-spotify.svg?raw'
+import youtubeSvg from '@/assets/icons/social-youtube.svg?raw'
+import emailSvg from '@/assets/icons/email.svg?raw'
+import arrowLeftSvg from '@/assets/icons/arrow-left.svg?raw'
+
 gsap.registerPlugin(CustomEase)
 
 const deckGrowEase = CustomEase.create('deckGrowEase', 'M0,0 C0.3,0 0.05,1 1,1')
@@ -1081,28 +1087,7 @@ onBeforeUnmount(() => {
         target="_blank"
         rel="noopener noreferrer"
       >
-        <!-- Instagram (outline) -->
-        <svg
-          width="28"
-          height="28"
-          viewBox="0 0 24 24"
-          preserveAspectRatio="xMidYMid meet"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-        >
-          <rect
-            x="3"
-            y="3"
-            width="18"
-            height="18"
-            rx="5"
-            stroke="currentColor"
-            stroke-width="1.6"
-            fill="none"
-          />
-          <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.6" fill="none" />
-          <circle cx="17.5" cy="6.5" r="0.8" stroke="currentColor" stroke-width="1.6" fill="none" />
-        </svg>
+        <span aria-hidden="true" v-html="instagramSvg" />
       </a>
 
       <a
@@ -1114,41 +1099,7 @@ onBeforeUnmount(() => {
         target="_blank"
         rel="noopener noreferrer"
       >
-        <!-- Spotify (three stepped arcs: top thicker, middle slightly thinner, bottom thinnest) -->
-        <svg
-          width="28"
-          height="28"
-          viewBox="0 0 24 24"
-          preserveAspectRatio="xMidYMid meet"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-        >
-          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6" fill="none" />
-          <!-- Top arc: longest, thickest -->
-          <path
-            d="M6.2 9.1 C9.4 7.2 14.6 7.2 17.8 9.1"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            fill="none"
-          />
-          <!-- Middle arc: slightly shorter, medium thickness -->
-          <path
-            d="M6.6 11.8 C9.4 10.4 14.6 10.4 17.2 11.8"
-            stroke="currentColor"
-            stroke-width="1.4"
-            stroke-linecap="round"
-            fill="none"
-          />
-          <!-- Bottom arc: shortest, thinnest -->
-          <path
-            d="M7.4 14.7 C9.3 13.7 14.4 13.7 16.3 14.7"
-            stroke="currentColor"
-            stroke-width="1.3"
-            stroke-linecap="round"
-            fill="none"
-          />
-        </svg>
+        <span aria-hidden="true" v-html="spotifySvg" />
       </a>
 
       <a
@@ -1160,34 +1111,11 @@ onBeforeUnmount(() => {
         target="_blank"
         rel="noopener noreferrer"
       >
-        <!-- YouTube (outline only) -->
-        <svg
-          width="28"
-          height="28"
-          viewBox="0 0 24 24"
-          preserveAspectRatio="xMidYMid meet"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-        >
-          <rect
-            x="2"
-            y="3"
-            width="20"
-            height="18"
-            rx="3"
-            stroke="currentColor"
-            stroke-width="1.6"
-            fill="none"
-          />
-          <polygon
-            points="10,9 16,12 10,15"
-            stroke="currentColor"
-            stroke-width="1.4"
-            stroke-linejoin="round"
-            stroke-linecap="round"
-            fill="none"
-          />
-        </svg>
+        <span aria-hidden="true" v-html="youtubeSvg" />
+      </a>
+
+      <a href="mailto:frisches.band@gmail.com" class="card-dealer__social-link" aria-label="Email">
+        <span aria-hidden="true" v-html="emailSvg" />
       </a>
     </div>
     <div ref="bgRef" class="card-dealer__background">
@@ -1250,21 +1178,7 @@ onBeforeUnmount(() => {
       <!-- Header with back button and miniature card (shown in content view) -->
       <div v-if="currentView === 'content'" class="card-dealer__header">
         <div ref="backButtonRef" class="card-dealer__back-button" @click="handleBackClick">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M19 12H5M5 12L12 19M5 12L12 5"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
+          <span aria-hidden="true" v-html="arrowLeftSvg" />
         </div>
         <div ref="miniCardRef" class="card-dealer__mini-card-wrapper" :style="miniCardStyle">
           <!-- Circular avatar shows selected card image as background -->
@@ -1277,21 +1191,7 @@ onBeforeUnmount(() => {
       <!-- Back button for cards view -->
       <div v-if="currentView === 'cards'" class="card-dealer__cards-back-button-wrapper">
         <div class="card-dealer__back-button" @click="handleBackClick">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M19 12H5M5 12L12 19M5 12L12 5"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
+          <span aria-hidden="true" v-html="arrowLeftSvg" />
         </div>
       </div>
 

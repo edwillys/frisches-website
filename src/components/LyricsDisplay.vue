@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import type { LyricsData, Line, Word } from '@/types/lyrics'
+import syncSvg from '@/assets/icons/sync.svg?raw'
 
 interface Props {
   lyricsData: LyricsData | null
@@ -271,21 +272,7 @@ onUnmounted(() => {
         @click="syncToActiveLine"
         title="Sync to current lyrics"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polyline points="1 4 1 10 7 10" />
-          <polyline points="23 20 23 14 17 14" />
-          <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
-        </svg>
+        <span aria-hidden="true" v-html="syncSvg" />
         <span>Sync</span>
       </button>
     </transition>
@@ -405,7 +392,7 @@ onUnmounted(() => {
   transform: translateX(-50%) scale(1.05);
 }
 
-.sync-button svg {
+.sync-button :deep(svg) {
   width: 16px;
   height: 16px;
 }
