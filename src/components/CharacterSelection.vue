@@ -58,7 +58,7 @@ const characters = ref<Character[]>([
     id: 1,
     name: 'Edgar',
     modelPath: new URL('../assets/private/threed/monster1.glb', import.meta.url).href,
-    //rotationY: DEFAULT_ROTATION_Y,
+    rotationY: Math.PI,
     //scale: DEFAULT_SCALE,
     instruments: ['Guitar', 'Backing Vocals'],
     influences: ['Led Zeppelin', 'Beatles'],
@@ -67,8 +67,8 @@ const characters = ref<Character[]>([
   {
     id: 2,
     name: 'Cami',
-    modelPath: new URL('../assets/private/threed/monster2.glb', import.meta.url).href,
-    //rotationY: DEFAULT_ROTATION_Y,
+    modelPath: new URL('../assets/private/threed/witch.glb', import.meta.url).href,
+    rotationY: -Math.PI / 2,
     //scale: DEFAULT_SCALE,
     instruments: ['Singer', 'Flute'],
     influences: ['Beatles', 'Joni Mitchell'],
@@ -106,7 +106,7 @@ const AUTO_ROTATION_DURATION = 3 // seconds for full 360 rotation
 
 // OrbitControls ref for camera reset
 const orbitControlsRef = ref<InstanceType<typeof OrbitControls> | null>(null)
-const initialCameraPosition = new Vector3(0, 1.2, 5)
+const initialCameraPosition = new Vector3(0, 0, 0)
 const initialTarget = new Vector3(0, 0, 0)
 
 const emit = defineEmits<{
@@ -490,7 +490,7 @@ const modelContainerRef = ref<HTMLElement | null>(null)
           :window-size="false"
           data-testid="gltf-canvas"
         >
-          <TresPerspectiveCamera :position="[0, 1.2, 5]" :fov="50" />
+          <TresPerspectiveCamera :position="[0, 0, 0]" :fov="50" />
 
           <!-- Simplified lighting for performance -->
           <TresAmbientLight :intensity="0.8" />
@@ -504,7 +504,7 @@ const modelContainerRef = ref<HTMLElement | null>(null)
                 :path="character.modelPath"
                 draco
                 :auto-play-animation="false"
-                :position="[0, -2.2, 0]"
+                :position="[0, 0, 0]"
                 :rotation="[0, character.rotationY ?? DEFAULT_ROTATION_Y, 0]"
                 :scale="DEFAULT_SCALE"
                 :visible="character.id === selectedCharacter?.id"
