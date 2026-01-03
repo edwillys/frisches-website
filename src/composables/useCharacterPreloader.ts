@@ -17,7 +17,7 @@ const MODEL_PATHS = [
   new URL('../assets/private/threed/monster1.glb', import.meta.url).href,
   new URL('../assets/private/threed/witch.glb', import.meta.url).href,
   new URL('../assets/private/threed/dealer.glb', import.meta.url).href,
-  new URL('../assets/private/threed/monster4.glb', import.meta.url).href,
+  new URL('../assets/private/threed/monster2.glb', import.meta.url).href,
 ]
 
 // Singleton loader instances

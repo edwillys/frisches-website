@@ -87,8 +87,8 @@ const characters = ref<Character[]>([
   {
     id: 4,
     name: 'Tobi',
-    modelPath: new URL('../assets/private/threed/monster4.glb', import.meta.url).href,
-    //rotationY: DEFAULT_ROTATION_Y,
+    modelPath: new URL('../assets/private/threed/monster2.glb', import.meta.url).href,
+    rotationY: Math.PI,
     //scale: DEFAULT_SCALE,
     instruments: ['Bass'],
     influences: ['Red Hot Chili Peppers', 'Jimi Hendrix'],
