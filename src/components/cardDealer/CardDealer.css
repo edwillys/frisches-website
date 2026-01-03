@@ -202,16 +202,46 @@
   position: relative;
 }
 
-.card-dealer__header-title {
+.card-dealer__header-titles {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: baseline;
+  margin: 0;
+  white-space: nowrap;
+  pointer-events: auto;
+}
+
+.card-dealer__header-title-item {
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
-  color: var(--color-text);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
-  margin: 0;
-  pointer-events: none;
-  white-space: nowrap;
+  color: var(--color-text-secondary);
+  opacity: 0.65;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.6);
+  transition:
+    opacity var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
+  user-select: none;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.card-dealer__header-title-item--active {
+  color: var(--color-text);
+  opacity: 1;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.85);
+}
+
+.card-dealer__header-title-item--hovered {
+  opacity: 0.95;
+  color: var(--color-text);
+  transform: translateY(-1px);
 }
 
 .card-dealer__content-overlay {

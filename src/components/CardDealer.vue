@@ -67,6 +67,9 @@ const currentView = ref<'logo' | 'cards' | 'content'>('logo')
 const selectedCard = ref<number | null>(null)
 const isAnimating = ref(false)
 
+const hoveredHeaderIndex = ref<number | null>(null)
+const isCoverActive = ref(false)
+
 let animFallbackTimer: number | null = null
 let animToken = 0
 
@@ -319,13 +322,14 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
   const clickedInsideContent = contentPanelRef.value?.contains(target) ?? false
   const clickedBackButton = backButtonRef.value?.contains(target) ?? false
   const clickedMiniCard = miniCardRef.value?.contains(target) ?? false
+  const clickedHeaderTitles = headerTitleRef.value?.contains(target) ?? false
 
   if (currentView.value === 'cards') {
     if (clickedInsideCards) return
     startAnimating()
     playCardCloseAndLogoReappear()
   } else if (currentView.value === 'content') {
-    if (clickedInsideContent || clickedBackButton || clickedMiniCard) return
+    if (clickedInsideContent || clickedBackButton || clickedMiniCard || clickedHeaderTitles) return
     startAnimating()
     playContentCloseAndCardsReturn()
   }
@@ -629,6 +633,7 @@ const playContentCloseAndCardsReturn = () => {
       )
       selectedCard.value = null
       currentView.value = 'cards'
+      isCoverActive.value = false
       stopAnimating()
     },
   })
@@ -802,6 +807,8 @@ const playCardSelection = (cardIndex: number) => {
       : undefined
   const coverKey = coverSrc ? slugify(selectedMenuItem?.title || '') : undefined
 
+  isCoverActive.value = Boolean(coverSrc)
+
   // Emit palette immediately (tests + keeps UI responsive)
   emit('palette-change', readParticlesPaletteFromCss(coverSrc ? 'cover' : 'main'))
 
@@ -929,6 +936,72 @@ const playCardSelection = (cardIndex: number) => {
 }
 
 const slugify = (value: string) => value.toString().toLowerCase().trim().replace(/\s+/g, '-')
+
+const syncCoverForMenuIndex = (menuIndex: number) => {
+  const item = menuItems[menuIndex]
+  if (!item) return
+
+  const coverSrc =
+    item && 'coverImage' in item
+      ? ((item.coverImage as string | undefined) ?? undefined)
+      : undefined
+  const coverKey = coverSrc ? slugify(item?.title || '') : undefined
+
+  // Palette stays driven by CSS variables.
+  emit('palette-change', readParticlesPaletteFromCss(coverSrc ? 'cover' : 'main'))
+
+  const coverImg = bgSecondaryRef.value
+  const mainImg = bgMainRef.value
+  if (!coverImg || !mainImg) return
+
+  // Cover -> Cover switching: just swap the cover image.
+  // (Keeps logic minimal; dim/opacity remain whatever cover mode already set.)
+  if (coverSrc && isCoverActive.value) {
+    if (coverImg.src !== coverSrc) coverImg.src = coverSrc
+    return
+  }
+
+  // Main <-> Cover switching: use the existing transition helper.
+  if (coverSrc) {
+    transitionToCover({
+      enter: true,
+      coverSrc,
+      coverKey,
+      elements: getBackgroundTransitionElements(
+        true,
+        bgMainRef.value,
+        bgSecondaryRef.value,
+        bgSecondaryDimRef.value
+      ),
+    })
+    isCoverActive.value = true
+  } else {
+    transitionToCover({
+      enter: false,
+      elements: getBackgroundTransitionElements(
+        false,
+        bgMainRef.value,
+        bgSecondaryRef.value,
+        bgSecondaryDimRef.value
+      ),
+    })
+    isCoverActive.value = false
+  }
+}
+
+const handleHeaderTitleClick = (menuIndex: number) => {
+  if (isAnimating.value) return
+  if (currentView.value !== 'content') return
+  if (selectedCard.value === menuIndex) return
+
+  // Leaving the Music screen should always exit karaoke mode.
+  if (selectedItem.value?.route === '/music') {
+    audioStore.closeLyrics()
+  }
+
+  selectedCard.value = menuIndex
+  syncCoverForMenuIndex(menuIndex)
+}
 
 type CoverTransitionOptions = {
   enter: boolean
@@ -1184,9 +1257,24 @@ onBeforeUnmount(() => {
         <div ref="miniCardRef" class="card-dealer__mini-card-wrapper" :style="miniCardStyle">
           <!-- Circular avatar shows selected card image as background -->
         </div>
-        <h2 v-if="selectedItem" ref="headerTitleRef" class="card-dealer__header-title">
-          {{ selectedItem.title }}
-        </h2>
+        <div v-if="selectedItem" ref="headerTitleRef" class="card-dealer__header-titles">
+          <button
+            v-for="(item, index) in menuItems"
+            :key="item.route"
+            type="button"
+            class="card-dealer__header-title-item"
+            :class="{
+              'card-dealer__header-title-item--active': selectedCard === index,
+              'card-dealer__header-title-item--hovered': hoveredHeaderIndex === index,
+            }"
+            :aria-current="selectedCard === index ? 'page' : undefined"
+            @mouseenter="hoveredHeaderIndex = index"
+            @mouseleave="hoveredHeaderIndex = null"
+            @click="handleHeaderTitleClick(index)"
+          >
+            {{ item.title }}
+          </button>
+        </div>
       </div>
 
       <!-- Back button for cards view -->
