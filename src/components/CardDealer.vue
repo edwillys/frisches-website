@@ -1243,7 +1243,6 @@ onBeforeUnmount(() => {
           :image="item.image"
           :route="item.route"
           :index="index"
-          :data-testid="`card-${item.route}`"
           @click="handleCardClick"
           class="card-dealer__card"
         />
