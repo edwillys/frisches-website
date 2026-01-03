@@ -78,7 +78,7 @@ const characters = ref<Character[]>([
     id: 3,
     name: 'Steff',
     modelPath: new URL('../assets/private/threed/dealer.glb', import.meta.url).href,
-    //rotationY: DEFAULT_ROTATION_Y,
+    rotationY: -Math.PI / 2,
     //scale: DEFAULT_SCALE,
     instruments: ['Drums'],
     influences: ['Led Zeppelin', 'Pink Floyd'],
