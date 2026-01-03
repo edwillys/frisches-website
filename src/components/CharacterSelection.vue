@@ -77,7 +77,7 @@ const characters = ref<Character[]>([
   {
     id: 3,
     name: 'Steff',
-    modelPath: new URL('../assets/private/threed/monster3.glb', import.meta.url).href,
+    modelPath: new URL('../assets/private/threed/dealer.glb', import.meta.url).href,
     //rotationY: DEFAULT_ROTATION_Y,
     //scale: DEFAULT_SCALE,
     instruments: ['Drums'],

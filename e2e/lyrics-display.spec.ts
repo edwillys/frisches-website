@@ -57,7 +57,7 @@ test.describe('Lyrics Display Feature', () => {
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]', 6000)
 
     // Click music card
-    const musicCard = page.locator('[data-testid="card-/music"]')
+    const musicCard = page.locator('[data-testid="card-music"]')
     await expect(musicCard).toBeVisible({ timeout: 2000 })
     await musicCard.click()
 

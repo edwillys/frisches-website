@@ -23,5 +23,7 @@ describe('App', () => {
     // App mounts and renders the CardDealer component
     expect(wrapper.exists()).toBe(true)
     expect(wrapper.find('.card-dealer').exists()).toBe(true)
-  })
+
+    wrapper.unmount()
+  }, 15000)
 })

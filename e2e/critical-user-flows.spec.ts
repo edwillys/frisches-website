@@ -37,13 +37,13 @@ test.describe('Frisches Website - Critical Flows', () => {
     await expect(cardsContainer).toBeVisible({ timeout: 10000 })
     
     // All three cards should be present
-    const musicCard = page.locator('[data-testid="card-/music"]')
-    const aboutCard = page.locator('[data-testid="card-/about"]')
-    const tourCard = page.locator('[data-testid="card-/tour"]')
+      const musicCard = page.locator('[data-testid="card-music"]')
+      const aboutCard = page.locator('[data-testid="card-about"]')
+      const galeryCard = page.locator('[data-testid="card-gallery"]')
     
     await expect(musicCard).toBeVisible({ timeout: 10000 })
     await expect(aboutCard).toBeVisible({ timeout: 10000 })
-    await expect(tourCard).toBeVisible({ timeout: 10000 })
+      await expect(galeryCard).toBeVisible({ timeout: 10000 })
     
     // Logo should be hidden
     await expect(logoButton).toBeHidden()
@@ -57,7 +57,7 @@ test.describe('Frisches Website - Critical Flows', () => {
     await expect(cardsContainer).toBeVisible({ timeout: 10000 })
     
     // Click music card
-    const musicCard = page.locator('[data-testid="card-/music"]')
+      const musicCard = page.locator('[data-testid="card-music"]')
     await expect(musicCard).toBeVisible({ timeout: 10000 })
     await musicCard.click()
     await waitForAnimations(page)
@@ -83,7 +83,7 @@ test.describe('Frisches Website - Critical Flows', () => {
     // Navigate to music section
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
     
-    const musicCard = page.locator('[data-testid="card-/music"]')
+    const musicCard = page.locator('[data-testid="card-music"]')
     await musicCard.click()
     await waitForAnimations(page)
     
@@ -123,7 +123,7 @@ test.describe('Frisches Website - Critical Flows', () => {
     // Navigate to about section
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
     
-    const aboutCard = page.locator('[data-testid="card-/about"]')
+    const aboutCard = page.locator('[data-testid="card-about"]')
     await aboutCard.click()
     await waitForAnimations(page)
     
@@ -156,7 +156,7 @@ test.describe('Frisches Website - Critical Flows', () => {
     await expect(cardsContainer).toBeVisible({ timeout: 10000 })
     
     // Click about card
-    const aboutCard = page.locator('[data-testid="card-/about"]')
+      const aboutCard = page.locator('[data-testid="card-about"]')
     await expect(aboutCard).toBeVisible({ timeout: 10000 })
     await aboutCard.click()
     await waitForAnimations(page)

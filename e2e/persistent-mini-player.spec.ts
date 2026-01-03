@@ -20,7 +20,7 @@ test.describe('Persistent mini-player (Phase 1)', () => {
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
 
     // Go to Music
-    await page.locator('[data-testid="card-/music"]').click()
+    await page.locator('[data-testid="card-music"]').click()
     await waitForAnimations(page)
 
     // Mini-player should still be hidden until play is pressed
@@ -67,7 +67,7 @@ test.describe('Persistent mini-player (Phase 1)', () => {
     await expect(miniPlayer).toBeHidden()
 
     // Restart path 1: About chip can start playback again
-    await page.locator('[data-testid="card-/about"]').click()
+    await page.locator('[data-testid="card-about"]').click()
     await waitForAnimations(page)
 
     await page.locator('[data-testid="favorite-song-chip"]').click()

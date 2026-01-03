@@ -154,13 +154,14 @@ const menuItems = [
   {
     title: 'About',
     image: new URL('../assets/images/menu-card-about.png', import.meta.url).href,
-    coverImage: new URL('../assets/images/cover.png', import.meta.url).href,
+    coverImage: new URL('../assets/images/bg-about.png', import.meta.url).href,
     route: '/about',
   },
   {
-    title: 'Tour',
+    title: 'Galery',
     image: new URL('../assets/images/menu-card-tour.png', import.meta.url).href,
-    route: '/tour',
+    coverImage: new URL('../assets/images/bg-gallery.png', import.meta.url).href,
+    route: '/gallery',
   },
 ]
 
@@ -1121,7 +1122,7 @@ onBeforeUnmount(() => {
     <div ref="bgRef" class="card-dealer__background">
       <img
         ref="bgMainRef"
-        src="../assets/images/card-dealer-main.jpg"
+        src="../assets/images/bg-home.jpg"
         alt="Mysterious card dealer"
         class="card-dealer__bg-image card-dealer__bg-main"
       />

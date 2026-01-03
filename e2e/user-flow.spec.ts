@@ -38,11 +38,11 @@ test.describe('Frisches Website - Extended User Flows', () => {
     // Verify all three cards with correct titles
     const musicCard = page.locator('.menu-card__title:has-text("Music")')
     const aboutCard = page.locator('.menu-card__title:has-text("About")')
-    const tourCard = page.locator('.menu-card__title:has-text("Tour")')
+    const galeryCard = page.locator('.menu-card__title:has-text("Galery")')
 
     await expect(musicCard).toBeVisible()
     await expect(aboutCard).toBeVisible()
-    await expect(tourCard).toBeVisible()
+    await expect(galeryCard).toBeVisible()
 
     // Logo should be hidden after cards appear
     const logoButton = page.locator('.logo-button')
@@ -53,7 +53,7 @@ test.describe('Frisches Website - Extended User Flows', () => {
     // Navigate to music
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
     
-    const musicCard = page.locator('[data-testid="card-/music"]')
+    const musicCard = page.locator('[data-testid="card-music"]')
     await musicCard.click()
     await waitForAnimations(page)
 
