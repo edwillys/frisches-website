@@ -6,7 +6,11 @@ import { PCFSoftShadowMap, SRGBColorSpace, ACESFilmicToneMapping, Vector3, Cache
 import type { AnimationClip, Object3D } from 'three'
 import gsap from 'gsap'
 import GLTFModelWithEvents from './GLTFModelWithEvents.vue'
+import CharacterInfoCard from './CharacterInfoCard.vue'
+import type { Badge, InfoItem, InfoSection } from './CharacterInfoCard.vue'
+import type { Character } from '@/types/character'
 import { getTrackById } from '@/data/tracks'
+import { getAlbumById } from '@/data/albums'
 import { useAudioStore } from '@/stores/audio'
 
 // Enable Three.js cache - this is critical for sharing loaded models across loaders
@@ -29,6 +33,9 @@ import microphoneSvg from '@/assets/badges/microphone.svg'
 import fluteSvg from '@/assets/badges/flute.svg'
 import drumSticksSvg from '@/assets/badges/drum-sticks.svg'
 import choirSvg from '@/assets/badges/choir.svg'
+import instagramSvg from '@/assets/icons/social-instagram.svg?raw'
+import spotifySvg from '@/assets/icons/social-spotify.svg?raw'
+import youtubeSvg from '@/assets/icons/social-youtube.svg?raw'
 
 const badgeMap: Record<string, string> = {
   Guitar: guitarHeadSvg,
@@ -37,17 +44,6 @@ const badgeMap: Record<string, string> = {
   Flute: fluteSvg,
   Drums: drumSticksSvg,
   'Backing Vocals': choirSvg,
-}
-
-interface Character {
-  id: number
-  name: string
-  modelPath: string
-  rotationY?: number
-  scale?: number
-  instruments: string[]
-  influences: string[]
-  favoriteTrackId: string
 }
 
 const DEFAULT_SCALE = 2.5
@@ -75,6 +71,21 @@ const characters = ref<Character[]>([
     favoriteTrackId: 'tftc:05-witch-hunting',
   },
   {
+    id: 0,
+    name: 'Frisches',
+    isGroup: true,
+    yearFormed: 2019,
+    genre: 'Rock',
+    description:
+      'Powerful beats, punchy bass lines, gritty guitar riffs, touching solos and incisive lyrics. We embody rock in its purest form.',
+    albumIds: ['tftc'],
+    socialLinks: {
+      instagram: 'https://www.instagram.com/frisches.band/',
+      spotify: 'https://open.spotify.com/artist/3kzl8F6XMEkGhOXxYZBZJv',
+      youtube: 'https://www.youtube.com/@frischesband',
+    },
+  },
+  {
     id: 3,
     name: 'Steff',
     modelPath: new URL('../assets/private/threed/dealer.glb', import.meta.url).href,
@@ -96,7 +107,7 @@ const characters = ref<Character[]>([
   },
 ])
 
-const selectedIndex = ref<number>(0)
+const selectedIndex = ref<number>(2) // Default to Frisches (F)
 const isAnimating = ref<boolean>(false)
 
 // Auto-rotation state
@@ -114,23 +125,72 @@ const emit = defineEmits<{
 }>()
 
 // Navigation Logic
-const nextCharacter = () => {
-  const nextIndex = (selectedIndex.value + 1) % characters.value.length
-  selectCharacter(nextIndex)
+const bandMembers = computed(() => characters.value.filter((c) => !c.isGroup))
+const groupCharacter = computed(() => characters.value.find((c) => c.isGroup))
+
+const nextBandMember = () => {
+  const currentChar = selectedCharacter.value
+  if (!currentChar || currentChar.isGroup) return
+
+  const currentBandIndex = bandMembers.value.findIndex((c) => c.id === currentChar.id)
+  const nextBandIndex = (currentBandIndex + 1) % bandMembers.value.length
+  const nextMember = bandMembers.value[nextBandIndex]
+  if (nextMember) {
+    const globalIndex = characters.value.findIndex((c) => c.id === nextMember.id)
+    selectCharacter(globalIndex)
+  }
 }
 
-const prevCharacter = () => {
-  const prevIndex = (selectedIndex.value - 1 + characters.value.length) % characters.value.length
-  selectCharacter(prevIndex)
+const prevBandMember = () => {
+  const currentChar = selectedCharacter.value
+  if (!currentChar || currentChar.isGroup) return
+
+  const currentBandIndex = bandMembers.value.findIndex((c) => c.id === currentChar.id)
+  const prevBandIndex = (currentBandIndex - 1 + bandMembers.value.length) % bandMembers.value.length
+  const prevMember = bandMembers.value[prevBandIndex]
+  if (prevMember) {
+    const globalIndex = characters.value.findIndex((c) => c.id === prevMember.id)
+    selectCharacter(globalIndex)
+  }
+}
+
+const goToGroup = () => {
+  const group = groupCharacter.value
+  if (group) {
+    const groupIndex = characters.value.findIndex((c) => c.id === group.id)
+    selectCharacter(groupIndex)
+  }
+}
+
+const goToFirstBandMember = () => {
+  const firstMember = bandMembers.value[0]
+  if (firstMember) {
+    const globalIndex = characters.value.findIndex((c) => c.id === firstMember.id)
+    selectCharacter(globalIndex)
+  }
+}
+
+const goToCharacterByLetter = (letter: string) => {
+  const char = characters.value.find((c) => c.name.charAt(0).toUpperCase() === letter.toUpperCase())
+  if (char) {
+    const index = characters.value.findIndex((c) => c.id === char.id)
+    selectCharacter(index)
+  }
 }
 
 const handleKeydown = (e: KeyboardEvent) => {
   if (e.key === 'Escape') {
     emit('back')
   } else if (e.key === 'ArrowRight') {
-    nextCharacter()
+    nextBandMember()
   } else if (e.key === 'ArrowLeft') {
-    prevCharacter()
+    prevBandMember()
+  } else if (e.key === 'ArrowUp') {
+    goToGroup()
+  } else if (e.key === 'ArrowDown') {
+    goToFirstBandMember()
+  } else if (['E', 'C', 'F', 'S', 'T'].includes(e.key.toUpperCase())) {
+    goToCharacterByLetter(e.key)
   }
 }
 
@@ -156,9 +216,9 @@ const handleTouchEnd = (e: TouchEvent) => {
 const handleSwipe = () => {
   const threshold = 50
   if (touchEndX.value < touchStartX.value - threshold) {
-    nextCharacter()
+    nextBandMember()
   } else if (touchEndX.value > touchStartX.value + threshold) {
-    prevCharacter()
+    prevBandMember()
   }
 }
 
@@ -230,6 +290,137 @@ function playFavoriteSong() {
   if (!trackId) return
   audioStore.startFromAbout(trackId)
 }
+
+function navigateToAlbum(albumId: string) {
+  // Navigate to music view and start playing the album
+  const album = getAlbumById(albumId)
+  if (!album || !album.trackIds.length) return
+  // Play the first track of the album
+  audioStore.startFromAbout(album.trackIds[0] || '')
+  // Close the about view
+  emit('back')
+}
+
+// Transform character data for CharacterInfoCard
+const cardLeftBadges = computed<Badge[]>(() => {
+  if (!selectedCharacter.value) return []
+
+  if (selectedCharacter.value.isGroup) {
+    // Social links for group
+    const badges: Badge[] = []
+    const socialLinks = selectedCharacter.value.socialLinks
+    if (socialLinks?.instagram) {
+      badges.push({
+        title: 'Instagram',
+        link: socialLinks.instagram,
+        icon: instagramSvg,
+      })
+    }
+    if (socialLinks?.spotify) {
+      badges.push({
+        title: 'Spotify',
+        link: socialLinks.spotify,
+        icon: spotifySvg,
+      })
+    }
+    if (socialLinks?.youtube) {
+      badges.push({
+        title: 'YouTube',
+        link: socialLinks.youtube,
+        icon: youtubeSvg,
+      })
+    }
+    return badges
+  } else {
+    // Instruments for individual members
+    return (
+      selectedCharacter.value.instruments?.map((instrument) => ({
+        title: instrument,
+        image: badgeMap[instrument],
+      })) || []
+    )
+  }
+})
+
+const cardRightInfo = computed<InfoItem[]>(() => {
+  if (!selectedCharacter.value || !selectedCharacter.value.isGroup) return []
+
+  const items: InfoItem[] = []
+  if (selectedCharacter.value.yearFormed) {
+    items.push({
+      label: 'Founded',
+      value: String(selectedCharacter.value.yearFormed),
+    })
+  }
+  if (selectedCharacter.value.genre) {
+    items.push({
+      label: 'Genre',
+      value: selectedCharacter.value.genre,
+    })
+  }
+  return items
+})
+
+const cardSections = computed<InfoSection[]>(() => {
+  if (!selectedCharacter.value) return []
+
+  const sections: InfoSection[] = []
+
+  if (selectedCharacter.value.isGroup) {
+    // Group character sections
+    if (selectedCharacter.value.description) {
+      sections.push({
+        title: 'Description',
+        content: selectedCharacter.value.description,
+        type: 'description',
+      })
+    }
+
+    if (selectedCharacter.value.albumIds && selectedCharacter.value.albumIds.length > 0) {
+      sections.push({
+        title: 'Albums',
+        content: selectedCharacter.value.albumIds.map((albumId) => {
+          const album = getAlbumById(albumId)
+          return album ? `${album.title} (${album.year})` : albumId
+        }),
+        type: 'buttons',
+        clickable: true,
+        onItemClick: (item: string) => {
+          // Extract album ID from the button text
+          const albumId = selectedCharacter.value?.albumIds?.find((id) => {
+            const album = getAlbumById(id)
+            return album && item.includes(album.title)
+          })
+          if (albumId) navigateToAlbum(albumId)
+        },
+      })
+    }
+  } else {
+    // Individual character sections
+    if (selectedCharacter.value.influences && selectedCharacter.value.influences.length > 0) {
+      sections.push({
+        title: 'Influences',
+        content: selectedCharacter.value.influences,
+        type: 'chips',
+      })
+    }
+
+    if (selectedCharacter.value.favoriteTrackId) {
+      const trackTitle = favoriteSongTitle.value
+      if (trackTitle) {
+        sections.push({
+          title: 'Favorite Frisches Song',
+          content: [`${trackTitle} ▶`],
+          type: 'chips',
+          clickable: true,
+          onItemClick: () => playFavoriteSong(),
+        })
+      }
+    }
+  }
+
+  return sections
+})
 
 // Stop auto-rotation on user interaction
 const stopAutoRotation = () => {
@@ -393,9 +584,15 @@ const selectCharacter = (index: number) => {
     isAnimating.value = false
     return
   }
-  const isAlreadyLoaded = loadedModels.value.has(targetCharacter.id)
-  if (!isAlreadyLoaded) {
-    isModelLoading.value = true
+
+  // Group characters don't have models, so no loading needed
+  if (targetCharacter.isGroup) {
+    isModelLoading.value = false
+  } else {
+    const isAlreadyLoaded = loadedModels.value.has(targetCharacter.id)
+    if (!isAlreadyLoaded) {
+      isModelLoading.value = true
+    }
   }
 
   // Stop auto-rotation and reset camera for new character
@@ -406,15 +603,19 @@ const selectCharacter = (index: number) => {
   const timeline = gsap.timeline({
     onComplete: () => {
       isAnimating.value = false
-      // Start auto-rotation for the new character if already loaded
-      if (isAlreadyLoaded) {
+      // Start auto-rotation for the new character if already loaded and not a group
+      if (
+        !targetCharacter.isGroup &&
+        targetCharacter.modelPath &&
+        loadedModels.value.has(targetCharacter.id)
+      ) {
         setTimeout(() => startAutoRotation(), 100)
       }
     },
   })
 
   timeline
-    .to('.character-selection__card', {
+    .to('.character-info-card', {
       opacity: 0,
       x: 50,
       duration: 0.3,
@@ -440,7 +641,7 @@ const selectCharacter = (index: number) => {
       ease: 'power2.out',
     })
     .to(
-      '.character-selection__card',
+      '.character-info-card',
       {
         opacity: 1,
         x: 0,
@@ -476,8 +677,12 @@ const modelContainerRef = ref<HTMLElement | null>(null)
   <div class="character-selection" data-testid="character-selection">
     <!-- Character and Card Container -->
     <div class="character-selection__content">
-      <!-- 3D Character Model -->
-      <div ref="modelContainerRef" class="character-selection__model-container">
+      <!-- 3D Character Model (only for individual members) -->
+      <div
+        v-if="!selectedCharacter?.isGroup"
+        ref="modelContainerRef"
+        class="character-selection__model-container"
+      >
         <!-- Loading indicator -->
         <div v-if="isModelLoading" class="character-selection__loading">
           <div class="character-selection__loading-spinner"></div>
@@ -500,7 +705,10 @@ const modelContainerRef = ref<HTMLElement | null>(null)
           <Suspense>
             <template v-for="character in characters" :key="character.id">
               <GLTFModelWithEvents
-                v-if="character.id === selectedCharacter?.id || preloadAllModels"
+                v-if="
+                  character.modelPath &&
+                  (character.id === selectedCharacter?.id || preloadAllModels)
+                "
                 :path="character.modelPath"
                 draco
                 :auto-play-animation="false"
@@ -534,73 +742,25 @@ const modelContainerRef = ref<HTMLElement | null>(null)
       </div>
 
       <!-- Character Details Card -->
-      <div class="character-selection__card" v-if="selectedCharacter" data-testid="character-info">
-        <!-- Character Portrait Row -->
-        <div class="character-selection__portrait-row">
-          <!-- Instrument Badges (Top Left) -->
-          <div class="character-selection__badges-container" data-testid="char-instruments">
-            <div
-              v-for="instrument in selectedCharacter.instruments"
-              :key="instrument"
-              class="character-selection__badge"
-              :title="instrument"
-            >
-              <img :src="badgeMap[instrument]" :alt="instrument" />
-            </div>
-          </div>
-
-          <!-- Center Column (Avatar) -->
-          <div class="character-selection__portrait-center">
-            <div class="character-selection__portrait-inner">
-              {{ selectedCharacter.name.charAt(0) }}
-            </div>
-          </div>
-
-          <!-- Empty right side for balance -->
-          <div class="character-selection__portrait-spacer"></div>
-        </div>
-
-        <div class="character-selection__card-content">
-          <h3 class="character-selection__card-title" data-testid="character-name">
-            {{ selectedCharacter.name }}
-          </h3>
-
-          <div class="character-selection__info-section">
-            <h4 class="character-selection__section-title">Influences</h4>
-            <div class="character-selection__influences-container" data-testid="char-influences">
-              <span
-                v-for="influence in selectedCharacter.influences"
-                :key="influence"
-                class="character-selection__influence-chip"
-              >
-                {{ influence }}
-              </span>
-            </div>
-          </div>
-
-          <div class="character-selection__info-section">
-            <h4 class="character-selection__section-title">Favorite Frisches Song</h4>
-            <a
-              href="#"
-              class="character-selection__favorite-song-link"
-              data-testid="favorite-song-chip"
-              @click.prevent="playFavoriteSong"
-            >
-              <span class="character-selection__favorite-song">{{ favoriteSongTitle }}</span>
-              <span class="character-selection__play-icon">▶</span>
-            </a>
-          </div>
-        </div>
-      </div>
+      <CharacterInfoCard
+        v-if="selectedCharacter"
+        :name="selectedCharacter.name"
+        :left-badges="cardLeftBadges"
+        :right-info="cardRightInfo"
+        :sections="cardSections"
+      />
     </div>
 
-    <!-- Character Selection Buttons -->
+    <!-- Character Selection Buttons - Single row centered -->
     <div class="character-selection__buttons">
       <button
         v-for="(character, index) in characters"
         :key="character.id"
         class="character-selection__button"
-        :class="{ 'character-selection__button--active': index === selectedIndex }"
+        :class="{
+          'character-selection__button--active': index === selectedIndex,
+          'character-selection__button--group': character.isGroup,
+        }"
         data-testid="character-card"
         @click="selectCharacter(index)"
         :disabled="isAnimating"

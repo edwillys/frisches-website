@@ -70,6 +70,10 @@ test.describe('Persistent mini-player (Phase 1)', () => {
     await page.locator('[data-testid="card-about"]').click()
     await waitForAnimations(page)
 
+    // Navigate to a band member (Edgar) who has a favorite song
+    await page.keyboard.press('E')
+    await waitForAnimations(page)
+
     await page.locator('[data-testid="favorite-song-chip"]').click()
     await expect(miniPlayer).toBeVisible({ timeout: 10000 })
 

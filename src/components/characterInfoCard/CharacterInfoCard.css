@@ -1,0 +1,326 @@
+/* RPG-Style Character Info Card */
+.character-info-card {
+  flex: 0 0 320px;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(
+    0deg,
+    var(--color-secondary-dark) 0%,
+    var(--color-primary-light) 100%
+  );
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 0;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Animated Gradient Border */
+.character-info-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 12px;
+  padding: 1px;
+  background: linear-gradient(
+    45deg,
+    var(--color-neon-magenta),
+    var(--color-primary-dark),
+    var(--color-neon-magenta)
+  );
+  background-size: 200% 200%;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: borderGradient 4s ease infinite;
+}
+
+@keyframes borderGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Subtle top glow */
+.character-info-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-neon-magenta) 50%,
+    transparent 100%
+  );
+  opacity: 0.7;
+  z-index: 2;
+}
+
+/* Portrait Row */
+.character-info-card__portrait-row {
+  padding: 1.5rem 1.25rem 1rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+}
+
+/* Badges Container - Top Left Position */
+.character-info-card__badges-container {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  width: 80px;
+  flex: 0 0 80px;
+  align-items: flex-start;
+}
+
+.character-info-card__badge {
+  width: 32px;
+  height: 32px;
+  background:
+    linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+    linear-gradient(135deg, var(--color-neon-magenta), var(--color-secondary)) border-box;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  box-shadow: 0 2px 8px rgba(224, 0, 224, 0.2);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  text-decoration: none;
+  cursor: default;
+}
+
+.character-info-card__badge--link {
+  cursor: pointer;
+}
+
+.character-info-card__badge:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(224, 0, 224, 0.4);
+}
+
+.character-info-card__badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: brightness(1.1) drop-shadow(0 0 2px rgba(224, 0, 224, 0.5));
+  display: block;
+  margin: auto;
+}
+
+.character-info-card__badge :deep(svg) {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+  color: var(--color-neon-cyan);
+  display: block;
+  margin: auto;
+}
+
+/* Portrait Center */
+.character-info-card__portrait-center {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.character-info-card__portrait-inner {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background:
+    linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+    linear-gradient(135deg, var(--color-neon-magenta), var(--color-secondary)) border-box;
+  border: 3px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: var(--color-text);
+  font-family: 'Cinzel', 'Georgia', serif;
+  box-shadow: 0 0 20px rgba(224, 0, 224, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Right Info Items */
+.character-info-card__right-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 80px;
+  flex: 0 0 80px;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.character-info-card__info-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+}
+
+.character-info-card__info-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--color-neon-cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: 'Cinzel', 'Georgia', serif;
+}
+
+.character-info-card__info-value {
+  font-size: 0.85rem;
+  color: var(--color-text);
+  font-family: 'Georgia', serif;
+  font-weight: 500;
+}
+
+/* Card Content */
+.character-info-card__content {
+  padding: 1rem 1.5rem 1.5rem;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.character-info-card__title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-family: 'Cinzel', 'Georgia', serif;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.character-info-card__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.character-info-card__section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-neon-cyan);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-family: 'Cinzel', 'Georgia', serif;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.4rem;
+}
+
+/* Description */
+.character-info-card__description {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  font-family: 'Georgia', serif;
+  margin: 0;
+  font-style: italic;
+  text-align: justify;
+}
+
+/* Chips Container */
+.character-info-card__chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.character-info-card__chip {
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 0.3rem 0.65rem;
+  border-radius: 14px;
+  font-size: 0.8rem;
+  font-family: 'Georgia', serif;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.character-info-card__chip--clickable {
+  cursor: pointer;
+}
+
+.character-info-card__chip--clickable:hover {
+  background: var(--color-secondary-dark);
+  border-color: var(--color-neon-magenta);
+  color: var(--color-neon-cyan);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(224, 0, 224, 0.2);
+}
+
+/* Buttons Container */
+.character-info-card__buttons-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.character-info-card__button {
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: 'Georgia', serif;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  text-align: left;
+}
+
+.character-info-card__button:hover {
+  background: var(--color-secondary-dark);
+  border-color: var(--color-neon-magenta);
+  color: var(--color-neon-cyan);
+  transform: translateX(4px);
+  box-shadow: 0 4px 8px rgba(224, 0, 224, 0.3);
+}
+
+.character-info-card__button:active {
+  transform: translateX(2px);
+}
