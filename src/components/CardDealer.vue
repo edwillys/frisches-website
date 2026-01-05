@@ -25,7 +25,7 @@
  *    - No stagger: cards disappear as one unified deck
  *    - Duration: 0.8s with power2.inOut easing
  */
-import { ref, onMounted, nextTick, onBeforeUnmount, computed } from 'vue'
+import { ref, onMounted, nextTick, onBeforeUnmount, computed, watch } from 'vue'
 import MenuCard from './MenuCard.vue'
 import LogoButton from './LogoButton.vue'
 import AudioPlayer from './AudioPlayer.vue'
@@ -103,6 +103,42 @@ const audioStore = useAudioStore()
 
 const selectedItem = computed(() =>
   selectedCard.value !== null ? (menuItems[selectedCard.value] ?? null) : null
+)
+
+// Keep content subviews mounted once visited.
+// This is important for WebGL (About) so the canvas/context is not destroyed
+// when navigating between Music/About or back to cards.
+const hasMountedContentView = ref(false)
+const hasMountedMusic = ref(false)
+const hasMountedAbout = ref(false)
+
+const characterSelectionRef = ref<null | { resetToGroup: () => void }>(null)
+
+watch(
+  () => selectedItem.value?.title,
+  (title) => {
+    if (title === 'Music') hasMountedMusic.value = true
+    if (title === 'About') hasMountedAbout.value = true
+  },
+  { immediate: true }
+)
+
+watch(
+  () => currentView.value,
+  (view) => {
+    if (view === 'content') hasMountedContentView.value = true
+  },
+  { immediate: true }
+)
+
+watch(
+  [() => currentView.value, () => selectedItem.value?.title],
+  async ([view, title]) => {
+    if (view !== 'content' || title !== 'About') return
+    await nextTick()
+    characterSelectionRef.value?.resetToGroup()
+  },
+  { immediate: false }
 )
 
 const miniCardStyle = computed(() => {
@@ -1283,25 +1319,40 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <!-- Content view (shown after card click) -->
-      <div v-if="currentView === 'content'" class="card-dealer__content-view">
+      <!-- Content view (keep mounted once entered to preserve WebGL context) -->
+      <div
+        v-if="hasMountedContentView"
+        v-show="currentView === 'content'"
+        class="card-dealer__content-view"
+      >
         <!-- Content overlay for transparency -->
         <div class="card-dealer__content-overlay"></div>
 
         <!-- Actual content -->
         <div ref="contentPanelRef" class="card-dealer__content-container">
-          <!-- Music Player -->
-          <div v-if="selectedItem?.title === 'Music'" class="card-dealer__music-content">
+          <!-- Music Player (lazy-mount + keep alive via v-show) -->
+          <div
+            v-if="hasMountedMusic"
+            v-show="selectedItem?.title === 'Music'"
+            class="card-dealer__music-content"
+          >
             <AudioPlayer @back="handleBackClick" />
           </div>
 
-          <!-- About / Character Selection -->
-          <div v-else-if="selectedItem?.title === 'About'" class="card-dealer__about-content">
-            <CharacterSelection @back="handleBackClick" />
+          <!-- About / Character Selection (lazy-mount + keep alive via v-show) -->
+          <div
+            v-if="hasMountedAbout"
+            v-show="selectedItem?.title === 'About'"
+            class="card-dealer__about-content"
+          >
+            <CharacterSelection ref="characterSelectionRef" @back="handleBackClick" />
           </div>
 
           <!-- Other content -->
-          <div v-else class="card-dealer__generic-content">
+          <div
+            v-if="selectedItem?.title !== 'Music' && selectedItem?.title !== 'About'"
+            class="card-dealer__generic-content"
+          >
             <p>
               Content for
               {{ selectedItem?.title || '' }}

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, onBeforeUnmount, shallowRef, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, shallowRef, nextTick } from 'vue'
 import { TresCanvas } from '@tresjs/core'
 import { OrbitControls } from '@tresjs/cientos'
 import { PCFSoftShadowMap, SRGBColorSpace, ACESFilmicToneMapping, Vector3, Cache } from 'three'
@@ -26,6 +26,19 @@ try {
     console.warn('Three.js Cache not available, models will not be cached')
   }
 }
+
+// Track loaded models globally (persists across component mount/unmount)
+// This prevents reloading when navigating back to the about page
+interface LoadedModel {
+  scene: Object3D
+  animations: AnimationClip[]
+}
+const globalLoadedModels = shallowRef(new Map<number, LoadedModel>())
+
+// Track which models are loaded in THIS WebGL context.
+// With CardDealer keeping this component mounted (v-show), the context persists
+// across navigation (Music/Cards <-> About).
+const currentContextLoadedModels = ref(new Set<number>())
 
 // Badge SVG imports
 import guitarHeadSvg from '@/assets/badges/guitar-head.svg'
@@ -113,6 +126,24 @@ const isAnimating = ref<boolean>(false)
 
 // Get preloader state to check if models are already cached
 const { preloadComplete } = useCharacterPreloader()
+
+// Optimized WebGL settings for performance
+const gl = {
+  clearColor: '#000000',
+  clearAlpha: 0,
+  shadows: false, // Disable shadows for performance
+  alpha: true,
+  premultipliedAlpha: false,
+  shadowMapType: PCFSoftShadowMap,
+  outputColorSpace: SRGBColorSpace,
+  toneMapping: ACESFilmicToneMapping,
+  toneMappingExposure: 1.2,
+  // Performance optimizations
+  powerPreference: 'high-performance' as const,
+  antialias: false, // Disable antialiasing for performance
+  // Limit pixel ratio for performance on high-DPI displays
+  dpr: Math.min(window.devicePixelRatio, 1.5),
+}
 
 // Auto-rotation state
 const isAutoRotating = ref<boolean>(false)
@@ -227,13 +258,14 @@ const handleSwipe = () => {
 }
 
 // Model loading state
-// If models are preloaded, don't show loading indicator initially
-// In test mode, preloading doesn't happen, so always start with loading = true
-const isModelLoading = ref(import.meta.env.MODE === 'test' ? true : !preloadComplete.value)
+// Default selection is the group (no model), so start with no spinner.
+// We flip this to true when a member model isn't ready in the current context.
+const isModelLoading = ref(false)
 const preloadAllModels = ref(false)
 
 // Note: Models are preloaded from App.vue via useCharacterPreloader
-// The Three.js Cache ensures they're shared across loaders
+// The Three.js Cache ensures they're shared across loaders, but WebGL context
+// is recreated on each mount, so models need to be rendered again
 
 onMounted(async () => {
   window.addEventListener('keydown', handleKeydown)
@@ -242,12 +274,11 @@ onMounted(async () => {
 
   // Wait for DOM to be ready before running any animations
   await nextTick()
-})
 
-onBeforeUnmount(() => {
-  // Hide canvas to prevent WebGL context loss errors during unmounting
-  if (modelContainerRef.value) {
-    modelContainerRef.value.style.display = 'none'
+  // If the preloader finished, go ahead and mount all models inside the canvas
+  // so switching from group -> member is instant.
+  if (preloadComplete.value && import.meta.env.MODE !== 'test') {
+    preloadAllModels.value = true
   }
 })
 
@@ -262,29 +293,24 @@ onUnmounted(() => {
     autoRotationTween = null
   }
 
-  // Clean up WebGL context by finding and disposing the canvas
-  if (modelContainerRef.value) {
-    const canvas = modelContainerRef.value.querySelector('canvas')
-    if (canvas) {
-      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl')
-      if (gl) {
-        const ext = gl.getExtension('WEBGL_lose_context')
-        if (ext) {
-          ext.loseContext()
-        }
-      }
-    }
-  }
+  // Note: We intentionally do NOT lose the WebGL context here.
+  // Three.js Cache keeps models loaded, and the browser will handle
+  // context cleanup naturally. Losing context forces expensive reloads.
 })
 
-// Track loaded models and their animations
-interface LoadedModel {
-  scene: Object3D
-  animations: AnimationClip[]
-}
-const loadedModels = shallowRef(new Map<number, LoadedModel>())
+// Use global loaded models map (defined outside component scope)
+// (still useful for debugging / potential future use)
+const loadedModels = globalLoadedModels
 
 const selectedCharacter = computed(() => characters.value[selectedIndex.value])
+
+const resetToGroup = () => {
+  // Default to Frisches (F)
+  selectedIndex.value = 2
+  isModelLoading.value = false
+  stopAutoRotation()
+  resetCameraToFrontal(false)
+}
 
 const audioStore = useAudioStore()
 
@@ -537,15 +563,17 @@ const resetCameraToFrontal = (startRotationAfter = false) => {
 const onModelLoaded = (id: number, payload: { scene: Object3D; animations: AnimationClip[] }) => {
   console.log(`Model loaded for character ${id}`)
 
-  // Hide loading spinner when the SELECTED character is loaded
-  // If all models were preloaded, we should already be showing content
+  // Track that this model is loaded in the current WebGL context
+  currentContextLoadedModels.value.add(id)
+
+  // Hide loading spinner when the SELECTED character is loaded in this context
   if (id === selectedCharacter.value?.id) {
     isModelLoading.value = false
   }
 
-  // After the first model is loaded OR if preloading is complete,
-  // allow background loading of other models
-  if (!preloadAllModels.value && (id === selectedCharacter.value?.id || preloadComplete.value)) {
+  // Enable background loading of other models after first model loads
+  // or if preloading already completed (models are in cache)
+  if (!preloadAllModels.value) {
     preloadAllModels.value = true
   }
 
@@ -593,7 +621,7 @@ const selectCharacter = async (index: number) => {
   if (isAnimating.value) return
   isAnimating.value = true
 
-  // Only show loading if the model isn't already loaded or preloaded
+  // Only show loading if the model isn't loaded in the current WebGL context
   const targetCharacter = characters.value[index]
   // Guard against invalid index (TypeScript strict check)
   if (!targetCharacter) {
@@ -605,9 +633,9 @@ const selectCharacter = async (index: number) => {
   if (targetCharacter.isGroup) {
     isModelLoading.value = false
   } else {
-    // Check if already loaded in component OR if all models were preloaded
-    const isAlreadyLoaded = loadedModels.value.has(targetCharacter.id) || preloadComplete.value
-    isModelLoading.value = !isAlreadyLoaded
+    // Check if already loaded in the current WebGL context
+    const isLoadedInContext = currentContextLoadedModels.value.has(targetCharacter.id)
+    isModelLoading.value = !isLoadedInContext
   }
 
   // Stop auto-rotation and reset camera for new character
@@ -621,11 +649,11 @@ const selectCharacter = async (index: number) => {
   const timeline = gsap.timeline({
     onComplete: () => {
       isAnimating.value = false
-      // Start auto-rotation for the new character if already loaded and not a group
+      // Start auto-rotation for the new character if loaded in current context and not a group
       if (
         !targetCharacter.isGroup &&
         targetCharacter.modelPath &&
-        (loadedModels.value.has(targetCharacter.id) || preloadComplete.value)
+        currentContextLoadedModels.value.has(targetCharacter.id)
       ) {
         setTimeout(() => startAutoRotation(), 100)
       }
@@ -670,25 +698,11 @@ const selectCharacter = async (index: number) => {
     )
 }
 
-// Optimized WebGL settings for performance
-const gl = {
-  clearColor: '#000000',
-  clearAlpha: 0,
-  shadows: false, // Disable shadows for performance
-  alpha: true,
-  premultipliedAlpha: false,
-  shadowMapType: PCFSoftShadowMap,
-  outputColorSpace: SRGBColorSpace,
-  toneMapping: ACESFilmicToneMapping,
-  toneMappingExposure: 1.2,
-  // Performance optimizations
-  powerPreference: 'high-performance' as const,
-  antialias: false, // Disable antialiasing for performance
-  // Limit pixel ratio for performance on high-DPI displays
-  dpr: Math.min(window.devicePixelRatio, 1.5),
-}
-
 const modelContainerRef = ref<HTMLElement | null>(null)
+
+defineExpose({
+  resetToGroup,
+})
 </script>
 
 <template>
@@ -697,12 +711,17 @@ const modelContainerRef = ref<HTMLElement | null>(null)
     <div class="character-selection__content">
       <!-- 3D Character Model (only for individual members) -->
       <div
-        v-if="!selectedCharacter?.isGroup"
         ref="modelContainerRef"
-        class="character-selection__model-container"
+        :class="[
+          'character-selection__model-container',
+          { 'character-selection__model-container--group': selectedCharacter?.isGroup },
+        ]"
       >
         <!-- Loading indicator -->
-        <div v-if="isModelLoading" class="character-selection__loading">
+        <div
+          v-if="isModelLoading && !selectedCharacter?.isGroup"
+          class="character-selection__loading"
+        >
           <div class="character-selection__loading-spinner"></div>
           <span>Loading...</span>
         </div>
