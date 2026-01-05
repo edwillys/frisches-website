@@ -3,8 +3,14 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { Cache } from 'three'
 
-// Enable Three.js cache globally
-Cache.enabled = true
+// Enable Three.js cache globally (guarded for test mocks)
+try {
+  if (typeof Cache !== 'undefined' && Object.prototype.hasOwnProperty.call(Cache, 'enabled')) {
+    ;(Cache as unknown as { enabled?: boolean }).enabled = true
+  }
+} catch {
+  // Ignore in test environments where three is mocked.
+}
 
 // Track preload state globally (singleton)
 const isPreloading = ref(false)
