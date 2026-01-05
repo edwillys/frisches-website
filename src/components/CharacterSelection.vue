@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, onBeforeUnmount, shallowRef } from 'vue'
+import { ref, computed, onMounted, onUnmounted, onBeforeUnmount, shallowRef, nextTick } from 'vue'
 import { TresCanvas } from '@tresjs/core'
 import { OrbitControls } from '@tresjs/cientos'
 import { PCFSoftShadowMap, SRGBColorSpace, ACESFilmicToneMapping, Vector3, Cache } from 'three'
@@ -12,6 +12,7 @@ import type { Character } from '@/types/character'
 import { getTrackById } from '@/data/tracks'
 import { getAlbumById } from '@/data/albums'
 import { useAudioStore } from '@/stores/audio'
+import { useCharacterPreloader } from '@/composables/useCharacterPreloader'
 
 // Enable Three.js cache - this is critical for sharing loaded models across loaders
 // Wrapped in try-catch to handle test environments where Cache may not be available
@@ -109,6 +110,9 @@ const characters = ref<Character[]>([
 
 const selectedIndex = ref<number>(2) // Default to Frisches (F)
 const isAnimating = ref<boolean>(false)
+
+// Get preloader state to check if models are already cached
+const { preloadComplete } = useCharacterPreloader()
 
 // Auto-rotation state
 const isAutoRotating = ref<boolean>(false)
@@ -223,16 +227,21 @@ const handleSwipe = () => {
 }
 
 // Model loading state
-const isModelLoading = ref(true)
+// If models are preloaded, don't show loading indicator initially
+// In test mode, preloading doesn't happen, so always start with loading = true
+const isModelLoading = ref(import.meta.env.MODE === 'test' ? true : !preloadComplete.value)
 const preloadAllModels = ref(false)
 
 // Note: Models are preloaded from App.vue via useCharacterPreloader
 // The Three.js Cache ensures they're shared across loaders
 
-onMounted(() => {
+onMounted(async () => {
   window.addEventListener('keydown', handleKeydown)
   window.addEventListener('touchstart', handleTouchStart)
   window.addEventListener('touchend', handleTouchEnd)
+
+  // Wait for DOM to be ready before running any animations
+  await nextTick()
 })
 
 onBeforeUnmount(() => {
@@ -528,11 +537,15 @@ const resetCameraToFrontal = (startRotationAfter = false) => {
 const onModelLoaded = (id: number, payload: { scene: Object3D; animations: AnimationClip[] }) => {
   console.log(`Model loaded for character ${id}`)
 
-  // Only hide loading spinner when the SELECTED character is loaded
+  // Hide loading spinner when the SELECTED character is loaded
+  // If all models were preloaded, we should already be showing content
   if (id === selectedCharacter.value?.id) {
     isModelLoading.value = false
-    // After the first model is ready, allow background preloading of the others.
-    // This keeps initial load fast/stable on CI (especially Firefox).
+  }
+
+  // After the first model is loaded OR if preloading is complete,
+  // allow background loading of other models
+  if (!preloadAllModels.value && (id === selectedCharacter.value?.id || preloadComplete.value)) {
     preloadAllModels.value = true
   }
 
@@ -573,11 +586,14 @@ const onModelError = (id: number, error: unknown) => {
 }
 
 // Character selection with animation
-const selectCharacter = (index: number) => {
-  if (isAnimating.value || index === selectedIndex.value) return
+const selectCharacter = async (index: number) => {
+  if (index === selectedIndex.value) return
+
+  // Prevent multiple animations, but allow the first selection to animate
+  if (isAnimating.value) return
   isAnimating.value = true
 
-  // Only show loading if the model isn't already loaded
+  // Only show loading if the model isn't already loaded or preloaded
   const targetCharacter = characters.value[index]
   // Guard against invalid index (TypeScript strict check)
   if (!targetCharacter) {
@@ -589,15 +605,17 @@ const selectCharacter = (index: number) => {
   if (targetCharacter.isGroup) {
     isModelLoading.value = false
   } else {
-    const isAlreadyLoaded = loadedModels.value.has(targetCharacter.id)
-    if (!isAlreadyLoaded) {
-      isModelLoading.value = true
-    }
+    // Check if already loaded in component OR if all models were preloaded
+    const isAlreadyLoaded = loadedModels.value.has(targetCharacter.id) || preloadComplete.value
+    isModelLoading.value = !isAlreadyLoaded
   }
 
   // Stop auto-rotation and reset camera for new character
   stopAutoRotation()
   resetCameraToFrontal(false)
+
+  // Wait for DOM to be ready if this is the first interaction
+  await nextTick()
 
   // Animate card out then in
   const timeline = gsap.timeline({
@@ -607,7 +625,7 @@ const selectCharacter = (index: number) => {
       if (
         !targetCharacter.isGroup &&
         targetCharacter.modelPath &&
-        loadedModels.value.has(targetCharacter.id)
+        (loadedModels.value.has(targetCharacter.id) || preloadComplete.value)
       ) {
         setTimeout(() => startAutoRotation(), 100)
       }
