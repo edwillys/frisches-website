@@ -6,6 +6,7 @@ export interface Album {
   artist: string
   year: number
   coverUrl: string
+  coverSrcset?: string
   trackIds: string[]
 }
 
@@ -64,6 +65,9 @@ export const albums: Album[] = [
       tracks.find((t) => t.album === 'Tales From The Cellar')?.fallbackCover ??
       tracks[0]?.fallbackCover ??
       '',
+    coverSrcset:
+      tracks.find((t) => t.album === 'Tales From The Cellar')?.coverSrcset ??
+      tracks[0]?.coverSrcset,
     trackIds: tracks
       .filter((t) => t.album === 'Tales From The Cellar')
       .sort((a, b) => a.id - b.id)

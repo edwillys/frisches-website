@@ -190,7 +190,14 @@ watch(currentTrack, async (newTrack, oldTrack) => {
           @click="selectAlbum(album.albumId)"
           data-testid="album-rail-item"
         >
-          <img :src="album.coverUrl" class="album-rail__cover" width="48" height="48" />
+          <img
+            :src="album.coverUrl"
+            :srcset="album.coverSrcset"
+            sizes="48px"
+            class="album-rail__cover"
+            width="48"
+            height="48"
+          />
           <div v-if="isAlbumDrawerExpanded" class="album-rail__info">
             <div class="album-rail__title">{{ album.title }}</div>
             <div class="album-rail__meta">{{ album.trackIds.length }} songs</div>
@@ -207,6 +214,8 @@ watch(currentTrack, async (newTrack, oldTrack) => {
           <img
             v-if="selectedAlbum?.coverUrl"
             :src="selectedAlbum.coverUrl"
+            :srcset="selectedAlbum.coverSrcset"
+            sizes="(max-width: 768px) 160px, 320px"
             :alt="selectedAlbum.title"
             class="album-hero__cover"
             data-testid="album-hero-cover"

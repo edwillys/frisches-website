@@ -4,6 +4,7 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import vueDevTools from 'vite-plugin-vue-devtools'
+import { imagetools } from 'vite-imagetools'
 import { templateCompilerOptions } from '@tresjs/core'
 
 // https://vite.dev/config/
@@ -12,6 +13,7 @@ export default defineConfig({
     vue(templateCompilerOptions),
     vueJsx(),
     vueDevTools(),
+    imagetools(),
   ],
   resolve: {
     alias: {

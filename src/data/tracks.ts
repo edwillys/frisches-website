@@ -1,3 +1,14 @@
+// Import album cover with responsive sizes (48w for thumbnails, 160w for small, 320w for large)
+// @ts-expect-error - vite-imagetools generates these at build time
+import coverSmall from '../assets/private/audio/TalesFromTheCellar/Cover.png?w=48&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import coverMedium from '../assets/private/audio/TalesFromTheCellar/Cover.png?w=160&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import coverLarge from '../assets/private/audio/TalesFromTheCellar/Cover.png?w=320&format=webp'
+
+const albumCoverSrcset = `${coverSmall} 48w, ${coverMedium} 160w, ${coverLarge} 320w`
+const albumCoverFallback = coverMedium // Use medium size as fallback
+
 export interface Track {
   id: number
   trackId: string
@@ -6,6 +17,7 @@ export interface Track {
   album?: string
   cover?: string
   fallbackCover?: string
+  coverSrcset?: string // Responsive srcset for the cover image
   url: string
   duration?: string
   lyricsPath?: string // Path to lyrics JSON file
@@ -18,8 +30,8 @@ export const tracks: Track[] = [
     title: 'Intro',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    fallbackCover: new URL('../assets/private/audio/TalesFromTheCellar/Cover.png', import.meta.url)
-      .href,
+    fallbackCover: albumCoverFallback,
+    coverSrcset: albumCoverSrcset,
     url: new URL(
       '../assets/private/audio/TalesFromTheCellar/00 - Intro - Mastered.mp3',
       import.meta.url
@@ -32,8 +44,8 @@ export const tracks: Track[] = [
     title: 'Misled',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    fallbackCover: new URL('../assets/private/audio/TalesFromTheCellar/Cover.png', import.meta.url)
-      .href,
+    fallbackCover: albumCoverFallback,
+    coverSrcset: albumCoverSrcset,
     url: new URL(
       '../assets/private/audio/TalesFromTheCellar/01 - Misled - Mastered.mp3',
       import.meta.url
@@ -50,8 +62,8 @@ export const tracks: Track[] = [
     title: 'Tears Of Joyful Despair',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    fallbackCover: new URL('../assets/private/audio/TalesFromTheCellar/Cover.png', import.meta.url)
-      .href,
+    fallbackCover: albumCoverFallback,
+    coverSrcset: albumCoverSrcset,
     url: new URL(
       '../assets/private/audio/TalesFromTheCellar/02 - TOJD - Mastered.mp3',
       import.meta.url
@@ -68,8 +80,8 @@ export const tracks: Track[] = [
     title: 'Etiquette',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    fallbackCover: new URL('../assets/private/audio/TalesFromTheCellar/Cover.png', import.meta.url)
-      .href,
+    fallbackCover: albumCoverFallback,
+    coverSrcset: albumCoverSrcset,
     url: new URL(
       '../assets/private/audio/TalesFromTheCellar/03 - Etiquette - Mastered.mp3',
       import.meta.url
@@ -86,8 +98,8 @@ export const tracks: Track[] = [
     title: 'Mr. Red Jacket',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    fallbackCover: new URL('../assets/private/audio/TalesFromTheCellar/Cover.png', import.meta.url)
-      .href,
+    fallbackCover: albumCoverFallback,
+    coverSrcset: albumCoverSrcset,
     url: new URL(
       '../assets/private/audio/TalesFromTheCellar/04 - Mr Red Jacket - Mastered.mp3',
       import.meta.url
@@ -104,8 +116,8 @@ export const tracks: Track[] = [
     title: 'Witch Hunting',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    fallbackCover: new URL('../assets/private/audio/TalesFromTheCellar/Cover.png', import.meta.url)
-      .href,
+    fallbackCover: albumCoverFallback,
+    coverSrcset: albumCoverSrcset,
     url: new URL(
       '../assets/private/audio/TalesFromTheCellar/05 - Witch Hunting - Mastered.mp3',
       import.meta.url
@@ -122,8 +134,8 @@ export const tracks: Track[] = [
     title: 'Suits',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    fallbackCover: new URL('../assets/private/audio/TalesFromTheCellar/Cover.png', import.meta.url)
-      .href,
+    fallbackCover: albumCoverFallback,
+    coverSrcset: albumCoverSrcset,
     url: new URL(
       '../assets/private/audio/TalesFromTheCellar/06 - Suits - Mastered.mp3',
       import.meta.url
@@ -140,8 +152,8 @@ export const tracks: Track[] = [
     title: 'Ordinary Suspects',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    fallbackCover: new URL('../assets/private/audio/TalesFromTheCellar/Cover.png', import.meta.url)
-      .href,
+    fallbackCover: albumCoverFallback,
+    coverSrcset: albumCoverSrcset,
     url: new URL(
       '../assets/private/audio/TalesFromTheCellar/07 - Ordinary Suspects - Mastered.mp3',
       import.meta.url
@@ -158,8 +170,8 @@ export const tracks: Track[] = [
     title: 'Solitude Etude',
     artist: 'Frisches',
     album: 'Tales From The Cellar',
-    fallbackCover: new URL('../assets/private/audio/TalesFromTheCellar/Cover.png', import.meta.url)
-      .href,
+    fallbackCover: albumCoverFallback,
+    coverSrcset: albumCoverSrcset,
     url: new URL(
       '../assets/private/audio/TalesFromTheCellar/08 - Solitude Etude - Mastered.mp3',
       import.meta.url
