@@ -106,6 +106,22 @@ const isAnimating = ref(false)
 const hoveredHeaderIndex = ref<number | null>(null)
 const isCoverActive = ref(false)
 
+const activeCover = ref<{ src: string; srcset?: string; key?: string } | null>(null)
+
+let bgTransitionTimeline: gsap.core.Timeline | null = null
+
+const killBackgroundTransition = () => {
+  if (bgTransitionTimeline) {
+    bgTransitionTimeline.kill()
+    bgTransitionTimeline = null
+  }
+
+  const mainImg = bgMainRef.value
+  const coverImg = bgSecondaryRef.value
+  const dimEl = bgSecondaryDimRef.value
+  gsap.killTweensOf([mainImg, coverImg, dimEl].filter(Boolean))
+}
+
 let animFallbackTimer: number | null = null
 let animToken = 0
 
@@ -987,22 +1003,18 @@ const playCardSelection = (cardIndex: number) => {
       )
     }
 
-    // Animate in back button, avatar, and title together
+    // Animate in back button, avatar, and title immediately at animation start
+    // This allows users to click back or hit escape without waiting
     if (backButton) {
-      tl.fromTo(
-        backButton,
-        { opacity: 0, scale: 0.8 },
-        { opacity: 1, scale: 1, duration: 0.4 },
-        0.5
-      )
+      tl.fromTo(backButton, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.4 }, 0)
     }
 
     if (miniCard) {
-      tl.fromTo(miniCard, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.4 }, 0.5)
+      tl.fromTo(miniCard, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.4 }, 0)
     }
 
     if (headerTitle) {
-      tl.fromTo(headerTitle, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.4 }, 0.5)
+      tl.fromTo(headerTitle, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.4 }, 0)
     }
 
     // Phase 3: Animate in content panel
@@ -1040,14 +1052,25 @@ const syncCoverForMenuIndex = (menuIndex: number) => {
   const mainImg = bgMainRef.value
   if (!coverImg || !mainImg) return
 
-  // Cover -> Cover switching: just swap the cover image.
-  // (Keeps logic minimal; dim/opacity remain whatever cover mode already set.)
+  // Cover -> Cover switching: crossfade smoothly between the current cover and the next.
+  // Must not flash the Home background and must be interruptible.
   if (coverSrc && isCoverActive.value) {
-    if (coverImg.src !== coverSrc) {
-      coverImg.src = coverSrc
-      if (coverSrcset) coverImg.srcset = coverSrcset
-      coverImg.sizes = '100vw'
+    const from = activeCover.value
+    const fromCoverSrc = from?.src || coverImg.src
+    const fromCoverSrcset = from?.srcset || (coverImg.getAttribute('srcset') ?? undefined)
+
+    if (fromCoverSrc && fromCoverSrc !== coverSrc) {
+      transitionCoverToCover({
+        fromCoverSrc,
+        fromCoverSrcset,
+        toCoverSrc: coverSrc,
+        toCoverSrcset: coverSrcset,
+        toCoverKey: coverKey,
+        elements: { mainImg, coverImg, dimEl: bgSecondaryDimRef.value },
+      })
     }
+
+    activeCover.value = { src: coverSrc, srcset: coverSrcset, key: coverKey }
     return
   }
 
@@ -1066,6 +1089,7 @@ const syncCoverForMenuIndex = (menuIndex: number) => {
       ),
     })
     isCoverActive.value = true
+    activeCover.value = { src: coverSrc, srcset: coverSrcset, key: coverKey }
   } else {
     transitionToCover({
       enter: false,
@@ -1077,6 +1101,7 @@ const syncCoverForMenuIndex = (menuIndex: number) => {
       ),
     })
     isCoverActive.value = false
+    activeCover.value = null
   }
 }
 
@@ -1105,10 +1130,6 @@ type BackgroundTransitionElements = {
   fromImg: HTMLImageElement | null
   toImg: HTMLImageElement | null
   dimEl: HTMLElement | null
-}
-
-type BackgroundTransitionOptions = CoverTransitionOptions & {
-  elements: BackgroundTransitionElements
 }
 
 const getBackgroundTransitionElements = (
@@ -1142,7 +1163,7 @@ const transitionToCover = ({
   const duration = parseFloat(durationStr) || 1.6
 
   // Prevent competing tweens when users navigate quickly
-  gsap.killTweensOf([fromImg, toImg, dimEl].filter(Boolean))
+  killBackgroundTransition()
 
   const key = slugify(coverKey || '')
 
@@ -1165,6 +1186,7 @@ const transitionToCover = ({
     if (!Number.isFinite(mainOpacity)) mainOpacity = 1
 
     const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' } })
+    bgTransitionTimeline = tl
 
     gsap.set(fromImg, { visibility: 'visible' })
     gsap.set(toImg, { opacity: 0, visibility: 'visible' })
@@ -1185,18 +1207,16 @@ const transitionToCover = ({
       tl.to(fromImg, { opacity: mainOpacity, duration }, 0)
     }
 
+    tl.add(() => {
+      if (bgTransitionTimeline === tl) bgTransitionTimeline = null
+    })
+
     return tl
   }
 
   // Leaving cover: fade destination (main) in and hide cover + dim.
-  const tl = gsap.timeline({
-    onComplete: () => {
-      if (dimEl) gsap.set(dimEl, { visibility: 'hidden' })
-      gsap.set(fromImg, { visibility: 'hidden' })
-      gsap.set(toImg, { opacity: 1, visibility: 'visible' })
-    },
-    defaults: { ease: 'power2.inOut' },
-  })
+  const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' } })
+  bgTransitionTimeline = tl
 
   gsap.set(fromImg, { visibility: 'visible' })
   gsap.set(toImg, { visibility: 'visible' })
@@ -1204,6 +1224,95 @@ const transitionToCover = ({
   if (dimEl) tl.to(dimEl, { opacity: 0, duration }, 0)
   tl.to(fromImg, { opacity: 0, duration }, 0)
   tl.to(toImg, { opacity: 1, duration }, 0)
+
+  tl.add(() => {
+    if (dimEl) gsap.set(dimEl, { visibility: 'hidden' })
+    gsap.set(fromImg, { visibility: 'hidden' })
+    gsap.set(toImg, { opacity: 1, visibility: 'visible' })
+    if (bgTransitionTimeline === tl) bgTransitionTimeline = null
+  })
+
+  return tl
+}
+
+const transitionCoverToCover = ({
+  fromCoverSrc,
+  fromCoverSrcset,
+  toCoverSrc,
+  toCoverSrcset,
+  toCoverKey,
+  elements,
+}: {
+  fromCoverSrc: string
+  fromCoverSrcset?: string
+  toCoverSrc: string
+  toCoverSrcset?: string
+  toCoverKey?: string
+  elements: { mainImg: HTMLImageElement; coverImg: HTMLImageElement; dimEl: HTMLElement | null }
+}) => {
+  const { mainImg, coverImg, dimEl } = elements
+
+  const styles = getComputedStyle(document.documentElement)
+  const durationStr = styles.getPropertyValue('--bg-cover-transition-duration') || '1.6s'
+  const duration = parseFloat(durationStr) || 1.6
+
+  killBackgroundTransition()
+
+  const getCoverDim = (key?: string) => {
+    const slug = slugify(key || '')
+    const dimVar = slug ? `--bg-cover-${slug}-dim` : '--bg-cover-dim'
+    let dim = parseFloat(styles.getPropertyValue(dimVar) || '')
+    if (!Number.isFinite(dim)) dim = parseFloat(styles.getPropertyValue('--bg-cover-dim') || '')
+    return Number.isFinite(dim) ? Math.max(0, Math.min(1, dim)) : 0
+  }
+
+  let mainOpacity = parseFloat(styles.getPropertyValue('--bg-main-opacity') || '')
+  if (!Number.isFinite(mainOpacity)) mainOpacity = 1
+
+  // Use the main layer as a temporary buffer holding the *current* cover.
+  // This avoids flashing the Home background while crossfading cover -> cover.
+  mainImg.src = fromCoverSrc
+  if (fromCoverSrcset) {
+    mainImg.srcset = fromCoverSrcset
+    mainImg.sizes = '100vw'
+  } else {
+    mainImg.removeAttribute('srcset')
+  }
+
+  coverImg.src = toCoverSrc
+  if (toCoverSrcset) {
+    coverImg.srcset = toCoverSrcset
+    coverImg.sizes = '100vw'
+  } else {
+    coverImg.removeAttribute('srcset')
+  }
+
+  const startDim = dimEl ? parseFloat(getComputedStyle(dimEl).opacity || '0') || 0 : 0
+  const targetDim = getCoverDim(toCoverKey)
+
+  gsap.set(mainImg, { opacity: 1, visibility: 'visible' })
+  gsap.set(coverImg, { opacity: 0, visibility: 'visible' })
+  if (dimEl) gsap.set(dimEl, { opacity: startDim, visibility: 'visible' })
+
+  const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' } })
+  bgTransitionTimeline = tl
+
+  tl.to(coverImg, { opacity: 1, duration }, 0)
+  tl.to(mainImg, { opacity: mainOpacity, duration }, 0)
+  if (dimEl) tl.to(dimEl, { opacity: targetDim, duration }, 0)
+
+  // Restore the main layer back to the Home background for future main <-> cover transitions.
+  // This is safe because the cover sits on top.
+  tl.add(() => {
+    mainImg.src = bgHomeSmall
+    mainImg.srcset = bgHomeSrcset
+    mainImg.sizes = '100vw'
+    gsap.set(mainImg, { opacity: mainOpacity, visibility: 'visible' })
+  })
+
+  tl.add(() => {
+    if (bgTransitionTimeline === tl) bgTransitionTimeline = null
+  })
 
   return tl
 }
