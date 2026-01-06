@@ -21,6 +21,9 @@
     "postinstall": "playwright install"
   },
   "dependencies": {
+    "@gltf-transform/core": "^4.3.0",
+    "@gltf-transform/extensions": "^4.3.0",
+    "@gltf-transform/functions": "^4.3.0",
     "@tresjs/cientos": "^5.2.0",
     "@tresjs/core": "^5.2.0",
     "gsap": "^3.13.0",
