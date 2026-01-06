@@ -44,6 +44,42 @@ import youtubeSvg from '@/assets/icons/social-youtube.svg?raw'
 import emailSvg from '@/assets/icons/email.svg?raw'
 import arrowLeftSvg from '@/assets/icons/arrow-left.svg?raw'
 
+// Import menu card images with responsive sizes (320w for cards, 640w for larger displays)
+// @ts-expect-error - vite-imagetools generates these at build time
+import menuMusicSmall from '@/assets/images/menu-card-music.png?w=320&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import menuMusicLarge from '@/assets/images/menu-card-music.png?w=640&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import menuAboutSmall from '@/assets/images/menu-card-about.png?w=320&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import menuAboutLarge from '@/assets/images/menu-card-about.png?w=640&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import menuTourSmall from '@/assets/images/menu-card-tour.png?w=320&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import menuTourLarge from '@/assets/images/menu-card-tour.png?w=640&format=webp'
+
+// Import background images with responsive sizes (768w for mobile, 1920w for desktop)
+// @ts-expect-error - vite-imagetools generates these at build time
+import bgHomeSmall from '@/assets/images/bg-home.jpg?w=768&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import bgHomeLarge from '@/assets/images/bg-home.jpg?w=1920&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import bgAboutSmall from '@/assets/images/bg-about.png?w=768&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import bgAboutLarge from '@/assets/images/bg-about.png?w=1920&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import bgGallerySmall from '@/assets/images/bg-gallery.png?w=768&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import bgGalleryLarge from '@/assets/images/bg-gallery.png?w=1920&format=webp'
+
+const menuMusicSrcset = `${menuMusicSmall} 320w, ${menuMusicLarge} 640w`
+const menuAboutSrcset = `${menuAboutSmall} 320w, ${menuAboutLarge} 640w`
+const menuTourSrcset = `${menuTourSmall} 320w, ${menuTourLarge} 640w`
+
+const bgHomeSrcset = `${bgHomeSmall} 768w, ${bgHomeLarge} 1920w`
+const bgAboutSrcset = `${bgAboutSmall} 768w, ${bgAboutLarge} 1920w`
+const bgGallerySrcset = `${bgGallerySmall} 768w, ${bgGalleryLarge} 1920w`
+
 gsap.registerPlugin(CustomEase)
 
 const deckGrowEase = CustomEase.create('deckGrowEase', 'M0,0 C0.3,0 0.05,1 1,1')
@@ -187,19 +223,24 @@ useGSAP(() => {
 const menuItems = [
   {
     title: 'Music',
-    image: new URL('../assets/images/menu-card-music.png', import.meta.url).href,
+    image: menuMusicSmall,
+    imageSrcset: menuMusicSrcset,
     route: '/music',
   },
   {
     title: 'About',
-    image: new URL('../assets/images/menu-card-about.png', import.meta.url).href,
-    coverImage: new URL('../assets/images/bg-about.png', import.meta.url).href,
+    image: menuAboutSmall,
+    imageSrcset: menuAboutSrcset,
+    coverImage: bgAboutSmall,
+    coverSrcset: bgAboutSrcset,
     route: '/about',
   },
   {
     title: 'Galery',
-    image: new URL('../assets/images/menu-card-tour.png', import.meta.url).href,
-    coverImage: new URL('../assets/images/bg-gallery.png', import.meta.url).href,
+    image: menuTourSmall,
+    imageSrcset: menuTourSrcset,
+    coverImage: bgGallerySmall,
+    coverSrcset: bgGallerySrcset,
     route: '/gallery',
   },
 ]
@@ -841,6 +882,10 @@ const playCardSelection = (cardIndex: number) => {
     selectedMenuItem && 'coverImage' in selectedMenuItem
       ? (selectedMenuItem.coverImage as string | undefined)
       : undefined
+  const coverSrcset =
+    selectedMenuItem && 'coverSrcset' in selectedMenuItem
+      ? (selectedMenuItem.coverSrcset as string | undefined)
+      : undefined
   const coverKey = coverSrc ? slugify(selectedMenuItem?.title || '') : undefined
 
   isCoverActive.value = Boolean(coverSrc)
@@ -875,6 +920,7 @@ const playCardSelection = (cardIndex: number) => {
         ? transitionToCover({
             enter: true,
             coverSrc,
+            coverSrcset,
             coverKey,
             elements: getBackgroundTransitionElements(
               true,
@@ -981,6 +1027,10 @@ const syncCoverForMenuIndex = (menuIndex: number) => {
     item && 'coverImage' in item
       ? ((item.coverImage as string | undefined) ?? undefined)
       : undefined
+  const coverSrcset =
+    item && 'coverSrcset' in item
+      ? ((item.coverSrcset as string | undefined) ?? undefined)
+      : undefined
   const coverKey = coverSrc ? slugify(item?.title || '') : undefined
 
   // Palette stays driven by CSS variables.
@@ -993,7 +1043,11 @@ const syncCoverForMenuIndex = (menuIndex: number) => {
   // Cover -> Cover switching: just swap the cover image.
   // (Keeps logic minimal; dim/opacity remain whatever cover mode already set.)
   if (coverSrc && isCoverActive.value) {
-    if (coverImg.src !== coverSrc) coverImg.src = coverSrc
+    if (coverImg.src !== coverSrc) {
+      coverImg.src = coverSrc
+      if (coverSrcset) coverImg.srcset = coverSrcset
+      coverImg.sizes = '100vw'
+    }
     return
   }
 
@@ -1002,6 +1056,7 @@ const syncCoverForMenuIndex = (menuIndex: number) => {
     transitionToCover({
       enter: true,
       coverSrc,
+      coverSrcset,
       coverKey,
       elements: getBackgroundTransitionElements(
         true,
@@ -1042,6 +1097,7 @@ const handleHeaderTitleClick = (menuIndex: number) => {
 type CoverTransitionOptions = {
   enter: boolean
   coverSrc?: string
+  coverSrcset?: string
   coverKey?: string
 }
 
@@ -1074,9 +1130,10 @@ const getBackgroundTransitionElements = (
 const transitionToCover = ({
   enter,
   coverSrc,
+  coverSrcset,
   coverKey,
   elements,
-}: BackgroundTransitionOptions) => {
+}: CoverTransitionOptions & { elements: BackgroundTransitionElements }) => {
   const { fromImg, toImg, dimEl } = elements
   if (!fromImg || !toImg) return gsap.timeline()
 
@@ -1092,6 +1149,10 @@ const transitionToCover = ({
   if (enter) {
     if (coverSrc && toImg.src !== coverSrc) {
       toImg.src = coverSrc
+      if (coverSrcset) {
+        toImg.srcset = coverSrcset
+        toImg.sizes = '100vw'
+      }
     }
 
     // Determine per-cover dim (overlay darkness) first; if set, prefer dim overlay
@@ -1231,7 +1292,9 @@ onBeforeUnmount(() => {
     <div ref="bgRef" class="card-dealer__background">
       <img
         ref="bgMainRef"
-        src="../assets/images/bg-home.jpg"
+        :src="bgHomeSmall"
+        :srcset="bgHomeSrcset"
+        sizes="100vw"
         alt="Mysterious card dealer"
         class="card-dealer__bg-image card-dealer__bg-main"
       />
@@ -1277,6 +1340,7 @@ onBeforeUnmount(() => {
           :ref="(el) => setCardRef(el, index)"
           :title="item.title"
           :image="item.image"
+          :image-srcset="item.imageSrcset"
           :route="item.route"
           :index="index"
           @click="handleCardClick"
