@@ -1345,7 +1345,11 @@ onBeforeUnmount(() => {
             v-show="selectedItem?.title === 'About'"
             class="card-dealer__about-content"
           >
-            <CharacterSelection ref="characterSelectionRef" @back="handleBackClick" />
+            <CharacterSelection
+              ref="characterSelectionRef"
+              @back="handleBackClick"
+              @open-music="handleHeaderTitleClick(0)"
+            />
           </div>
 
           <!-- Other content -->

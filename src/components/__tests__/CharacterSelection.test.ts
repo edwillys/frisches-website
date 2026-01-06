@@ -38,6 +38,8 @@ vi.mock('gsap', () => ({
       }
       return {}
     }),
+    // Mock killTweensOf for interrupting animations
+    killTweensOf: vi.fn(),
   },
 }))
 
@@ -442,7 +444,7 @@ describe('CharacterSelection', () => {
     expect(buttons[1]?.classes()).toContain('character-selection__button--active')
   })
 
-  it('disables buttons during animation', async () => {
+  it('buttons remain enabled during animation', async () => {
     wrapper = mount(CharacterSelection, {
       global: {
         stubs: globalStubs,
@@ -457,7 +459,10 @@ describe('CharacterSelection', () => {
     // Click button
     await buttons[1]?.trigger('click')
 
-    // Should be disabled during animation
+    // Should still not be disabled during animation - allows rapid switching
+    expect(buttons[0]?.attributes('disabled')).toBeUndefined()
+    expect(buttons[1]?.attributes('disabled')).toBeUndefined()
+
     const vm = wrapper.vm as unknown as ComponentVM
     expect(vm.isAnimating).toBe(true)
   })
@@ -934,7 +939,7 @@ describe('CharacterSelection', () => {
   // ANIMATION STATE TESTS
   // =============================================
   describe('Animation state management', () => {
-    it('prevents rapid character switching during animation', async () => {
+    it('allows rapid character switching by interrupting previous animation', async () => {
       wrapper = mount(CharacterSelection, {
         global: {
           stubs: globalStubs,
@@ -948,12 +953,12 @@ describe('CharacterSelection', () => {
       await buttons[1]?.trigger('click')
       expect(vm.isAnimating).toBe(true)
 
-      // Try to switch again immediately
+      // Switch again immediately - should interrupt and go to new target
       await buttons[2]?.trigger('click')
       await nextTick()
 
-      // Should still be at index 1, not 2
-      expect(vm.selectedIndex).toBe(1)
+      // Should now be at index 2, not stuck at 1
+      expect(vm.selectedIndex).toBe(2)
     })
 
     it('buttons have correct aria-label for accessibility', () => {

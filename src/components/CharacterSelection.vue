@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, shallowRef, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { TresCanvas } from '@tresjs/core'
 import { OrbitControls } from '@tresjs/cientos'
 import { PCFSoftShadowMap, SRGBColorSpace, ACESFilmicToneMapping, Vector3, Cache } from 'three'
 import type { AnimationClip, Object3D } from 'three'
 import gsap from 'gsap'
 import GLTFModelWithEvents from './GLTFModelWithEvents.vue'
+import VineOverlay from './characterSelection/VineOverlay.vue'
 import CharacterInfoCard from './CharacterInfoCard.vue'
 import type { Badge, InfoItem, InfoSection } from './CharacterInfoCard.vue'
 import type { Character } from '@/types/character'
@@ -26,14 +27,6 @@ try {
     console.warn('Three.js Cache not available, models will not be cached')
   }
 }
-
-// Track loaded models globally (persists across component mount/unmount)
-// This prevents reloading when navigating back to the about page
-interface LoadedModel {
-  scene: Object3D
-  animations: AnimationClip[]
-}
-const globalLoadedModels = shallowRef(new Map<number, LoadedModel>())
 
 // Track which models are loaded in THIS WebGL context.
 // With CardDealer keeping this component mounted (v-show), the context persists
@@ -157,6 +150,7 @@ const initialTarget = new Vector3(0, 0, 0)
 
 const emit = defineEmits<{
   (e: 'back'): void
+  (e: 'open-music'): void
 }>()
 
 // Navigation Logic
@@ -298,10 +292,6 @@ onUnmounted(() => {
   // context cleanup naturally. Losing context forces expensive reloads.
 })
 
-// Use global loaded models map (defined outside component scope)
-// (still useful for debugging / potential future use)
-const loadedModels = globalLoadedModels
-
 const selectedCharacter = computed(() => characters.value[selectedIndex.value])
 
 const resetToGroup = () => {
@@ -327,13 +317,11 @@ function playFavoriteSong() {
 }
 
 function navigateToAlbum(albumId: string) {
-  // Navigate to music view and start playing the album
+  // Navigate to the Music content (same as clicking the Music header)
+  // and let the user choose what to play from there.
   const album = getAlbumById(albumId)
-  if (!album || !album.trackIds.length) return
-  // Play the first track of the album
-  audioStore.startFromAbout(album.trackIds[0] || '')
-  // Close the about view
-  emit('back')
+  if (!album) return
+  emit('open-music')
 }
 
 // Transform character data for CharacterInfoCard
@@ -577,27 +565,20 @@ const onModelLoaded = (id: number, payload: { scene: Object3D; animations: Anima
     preloadAllModels.value = true
   }
 
-  if (payload.scene) {
-    loadedModels.value.set(id, {
-      scene: payload.scene,
-      animations: payload.animations,
-    })
+  if (payload.animations && payload.animations.length > 0) {
+    console.log(
+      `Character ${id} available animations:`,
+      payload.animations.map((a) => a.name)
+    )
+  } else {
+    console.log(`Character ${id} has no embedded animations`)
+  }
 
-    if (payload.animations && payload.animations.length > 0) {
-      console.log(
-        `Character ${id} available animations:`,
-        payload.animations.map((a) => a.name)
-      )
-    } else {
-      console.log(`Character ${id} has no embedded animations`)
-    }
-
-    // Start automatic 360-degree camera rotation only for selected character
-    if (id === selectedCharacter.value?.id) {
-      setTimeout(() => {
-        startAutoRotation()
-      }, 100)
-    }
+  // Start automatic 360-degree camera rotation only for selected character
+  if (id === selectedCharacter.value?.id) {
+    setTimeout(() => {
+      startAutoRotation()
+    }, 100)
   }
 }
 
@@ -617,8 +598,11 @@ const onModelError = (id: number, error: unknown) => {
 const selectCharacter = async (index: number) => {
   if (index === selectedIndex.value) return
 
-  // Prevent multiple animations, but allow the first selection to animate
-  if (isAnimating.value) return
+  // Allow clicks during animation - if already animating, kill current animation and start new one
+  if (isAnimating.value) {
+    gsap.killTweensOf('.character-info-card')
+    gsap.killTweensOf('.character-selection__model-container')
+  }
   isAnimating.value = true
 
   // Only show loading if the model isn't loaded in the current WebGL context
@@ -699,6 +683,33 @@ const selectCharacter = async (index: number) => {
 }
 
 const modelContainerRef = ref<HTMLElement | null>(null)
+
+const buttonsContainerRef = ref<HTMLElement | null>(null)
+const letterButtonEls = ref<Record<string, HTMLElement | null>>({})
+
+const setLetterButtonRef = (key: string) => (el: unknown) => {
+  letterButtonEls.value[key] = (el as HTMLElement | null) ?? null
+}
+
+const selectedLetter = computed(() =>
+  characters.value[selectedIndex.value]?.name?.charAt(0).toUpperCase()
+)
+
+const vineActiveKey = computed(() => {
+  const key = selectedLetter.value
+  return key && key !== 'F' ? key : null
+})
+
+const vineSources = computed(() => {
+  return Object.entries(letterButtonEls.value)
+    .filter(([key]) => key !== 'F')
+    .map(([key, el]) => ({ key, el }))
+    .filter((s): s is { key: string; el: HTMLElement } => Boolean(s.el))
+})
+
+const vineTargetEl = computed<HTMLElement | null>(() => {
+  return letterButtonEls.value['F'] ?? null
+})
 
 defineExpose({
   resetToGroup,
@@ -789,7 +800,17 @@ defineExpose({
     </div>
 
     <!-- Character Selection Buttons - Single row centered -->
-    <div class="character-selection__buttons">
+    <div ref="buttonsContainerRef" class="character-selection__buttons">
+      <VineOverlay
+        :container-el="buttonsContainerRef"
+        :target-el="vineTargetEl"
+        :sources="vineSources"
+        :active-key="vineActiveKey"
+        source-anchor="top"
+        target-anchor="top"
+        :source-offset="{ x: 0, y: -2 }"
+        :target-offset="{ x: 0, y: -2 }"
+      />
       <button
         v-for="(character, index) in characters"
         :key="character.id"
@@ -800,8 +821,8 @@ defineExpose({
         }"
         data-testid="character-card"
         @click="selectCharacter(index)"
-        :disabled="isAnimating"
         :aria-label="`Select ${character.name}`"
+        :ref="setLetterButtonRef(character.name.charAt(0).toUpperCase())"
       >
         {{ character.name.charAt(0) }}
       </button>

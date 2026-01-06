@@ -91,6 +91,7 @@
 
 /* Character Selection Buttons - Single row centered */
 .character-selection__buttons {
+  position: relative;
   flex: 0 0 auto;
   display: flex;
   justify-content: center;
@@ -132,7 +133,7 @@
   color: var(--color-neon-magenta);
 }
 
-.character-selection__button:hover:not(:disabled) {
+.character-selection__button:hover {
   background: linear-gradient(180deg, var(--color-secondary) 0%, var(--color-secondary-dark) 100%);
   border-color: var(--color-neon-cyan);
   transform: scale(1.1);
@@ -140,7 +141,7 @@
   box-shadow: 0 0 15px var(--color-neon-cyan);
 }
 
-.character-selection__button--group:hover:not(:disabled) {
+.character-selection__button--group:hover {
   background: linear-gradient(180deg, rgba(90, 40, 90, 0.9) 0%, rgba(60, 30, 70, 1) 100%);
   border-color: var(--color-neon-magenta);
   color: var(--color-neon-magenta);
@@ -164,11 +165,6 @@
   box-shadow:
     0 0 20px var(--color-neon-magenta),
     inset 0 0 10px rgba(0, 0, 0, 0.5);
-}
-
-.character-selection__button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 /* RPG-Style Character Card */

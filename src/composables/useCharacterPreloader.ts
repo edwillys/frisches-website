@@ -117,3 +117,35 @@ export function useCharacterPreloader() {
     preloadCharacterModels,
   }
 }
+
+// Avoid dev-only memory growth across Vite HMR updates.
+// When this module hot-reloads, dispose Draco workers and clear caches/state.
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    try {
+      dracoLoader?.dispose()
+    } catch {
+      // ignore
+    }
+
+    dracoLoader = null
+    gltfLoader = null
+
+    isPreloading.value = false
+    preloadProgress.value = 0
+    preloadComplete.value = false
+    preloadedPaths.clear()
+
+    try {
+      const maybeClear = (Cache as unknown as { clear?: () => void }).clear
+      if (typeof maybeClear === 'function') {
+        maybeClear.call(Cache)
+      } else {
+        const files = (Cache as unknown as { files?: { clear?: () => void } }).files
+        files?.clear?.()
+      }
+    } catch {
+      // ignore
+    }
+  })
+}
