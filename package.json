@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "vite",
@@ -17,8 +17,7 @@
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix --cache",
     "format": "prettier --write src/",
-    "prepare": "husky",
-    "postinstall": "playwright install"
+    "prepare": "husky"
   },
   "dependencies": {
     "@gltf-transform/core": "^4.3.0",
