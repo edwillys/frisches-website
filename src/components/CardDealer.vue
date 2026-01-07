@@ -25,7 +25,7 @@
  *    - No stagger: cards disappear as one unified deck
  *    - Duration: 0.8s with power2.inOut easing
  */
-import { ref, onMounted, nextTick, onBeforeUnmount, computed } from 'vue'
+import { ref, onMounted, nextTick, onBeforeUnmount, computed, watch } from 'vue'
 import MenuCard from './MenuCard.vue'
 import LogoButton from './LogoButton.vue'
 import AudioPlayer from './AudioPlayer.vue'
@@ -43,6 +43,42 @@ import spotifySvg from '@/assets/icons/social-spotify.svg?raw'
 import youtubeSvg from '@/assets/icons/social-youtube.svg?raw'
 import emailSvg from '@/assets/icons/email.svg?raw'
 import arrowLeftSvg from '@/assets/icons/arrow-left.svg?raw'
+
+// Import menu card images with responsive sizes (320w for cards, 640w for larger displays)
+// @ts-expect-error - vite-imagetools generates these at build time
+import menuMusicSmall from '@/assets/images/menu-card-music.png?w=320&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import menuMusicLarge from '@/assets/images/menu-card-music.png?w=640&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import menuAboutSmall from '@/assets/images/menu-card-about.png?w=320&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import menuAboutLarge from '@/assets/images/menu-card-about.png?w=640&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import menuTourSmall from '@/assets/images/menu-card-tour.png?w=320&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import menuTourLarge from '@/assets/images/menu-card-tour.png?w=640&format=webp'
+
+// Import background images with responsive sizes (768w for mobile, 1920w for desktop)
+// @ts-expect-error - vite-imagetools generates these at build time
+import bgHomeSmall from '@/assets/images/bg-home.jpg?w=768&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import bgHomeLarge from '@/assets/images/bg-home.jpg?w=1920&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import bgAboutSmall from '@/assets/images/bg-about.png?w=768&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import bgAboutLarge from '@/assets/images/bg-about.png?w=1920&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import bgGallerySmall from '@/assets/images/bg-gallery.png?w=768&format=webp'
+// @ts-expect-error - vite-imagetools generates these at build time
+import bgGalleryLarge from '@/assets/images/bg-gallery.png?w=1920&format=webp'
+
+const menuMusicSrcset = `${menuMusicSmall} 320w, ${menuMusicLarge} 640w`
+const menuAboutSrcset = `${menuAboutSmall} 320w, ${menuAboutLarge} 640w`
+const menuTourSrcset = `${menuTourSmall} 320w, ${menuTourLarge} 640w`
+
+const bgHomeSrcset = `${bgHomeSmall} 768w, ${bgHomeLarge} 1920w`
+const bgAboutSrcset = `${bgAboutSmall} 768w, ${bgAboutLarge} 1920w`
+const bgGallerySrcset = `${bgGallerySmall} 768w, ${bgGalleryLarge} 1920w`
 
 gsap.registerPlugin(CustomEase)
 
@@ -69,6 +105,22 @@ const isAnimating = ref(false)
 
 const hoveredHeaderIndex = ref<number | null>(null)
 const isCoverActive = ref(false)
+
+const activeCover = ref<{ src: string; srcset?: string; key?: string } | null>(null)
+
+let bgTransitionTimeline: gsap.core.Timeline | null = null
+
+const killBackgroundTransition = () => {
+  if (bgTransitionTimeline) {
+    bgTransitionTimeline.kill()
+    bgTransitionTimeline = null
+  }
+
+  const mainImg = bgMainRef.value
+  const coverImg = bgSecondaryRef.value
+  const dimEl = bgSecondaryDimRef.value
+  gsap.killTweensOf([mainImg, coverImg, dimEl].filter(Boolean))
+}
 
 let animFallbackTimer: number | null = null
 let animToken = 0
@@ -103,6 +155,42 @@ const audioStore = useAudioStore()
 
 const selectedItem = computed(() =>
   selectedCard.value !== null ? (menuItems[selectedCard.value] ?? null) : null
+)
+
+// Keep content subviews mounted once visited.
+// This is important for WebGL (About) so the canvas/context is not destroyed
+// when navigating between Music/About or back to cards.
+const hasMountedContentView = ref(false)
+const hasMountedMusic = ref(false)
+const hasMountedAbout = ref(false)
+
+const characterSelectionRef = ref<null | { resetToGroup: () => void }>(null)
+
+watch(
+  () => selectedItem.value?.title,
+  (title) => {
+    if (title === 'Music') hasMountedMusic.value = true
+    if (title === 'About') hasMountedAbout.value = true
+  },
+  { immediate: true }
+)
+
+watch(
+  () => currentView.value,
+  (view) => {
+    if (view === 'content') hasMountedContentView.value = true
+  },
+  { immediate: true }
+)
+
+watch(
+  [() => currentView.value, () => selectedItem.value?.title],
+  async ([view, title]) => {
+    if (view !== 'content' || title !== 'About') return
+    await nextTick()
+    characterSelectionRef.value?.resetToGroup()
+  },
+  { immediate: false }
 )
 
 const miniCardStyle = computed(() => {
@@ -151,19 +239,24 @@ useGSAP(() => {
 const menuItems = [
   {
     title: 'Music',
-    image: new URL('../assets/images/menu-card-music.png', import.meta.url).href,
+    image: menuMusicSmall,
+    imageSrcset: menuMusicSrcset,
     route: '/music',
   },
   {
     title: 'About',
-    image: new URL('../assets/images/menu-card-about.png', import.meta.url).href,
-    coverImage: new URL('../assets/images/bg-about.png', import.meta.url).href,
+    image: menuAboutSmall,
+    imageSrcset: menuAboutSrcset,
+    coverImage: bgAboutSmall,
+    coverSrcset: bgAboutSrcset,
     route: '/about',
   },
   {
     title: 'Galery',
-    image: new URL('../assets/images/menu-card-tour.png', import.meta.url).href,
-    coverImage: new URL('../assets/images/bg-gallery.png', import.meta.url).href,
+    image: menuTourSmall,
+    imageSrcset: menuTourSrcset,
+    coverImage: bgGallerySmall,
+    coverSrcset: bgGallerySrcset,
     route: '/gallery',
   },
 ]
@@ -805,6 +898,10 @@ const playCardSelection = (cardIndex: number) => {
     selectedMenuItem && 'coverImage' in selectedMenuItem
       ? (selectedMenuItem.coverImage as string | undefined)
       : undefined
+  const coverSrcset =
+    selectedMenuItem && 'coverSrcset' in selectedMenuItem
+      ? (selectedMenuItem.coverSrcset as string | undefined)
+      : undefined
   const coverKey = coverSrc ? slugify(selectedMenuItem?.title || '') : undefined
 
   isCoverActive.value = Boolean(coverSrc)
@@ -839,6 +936,7 @@ const playCardSelection = (cardIndex: number) => {
         ? transitionToCover({
             enter: true,
             coverSrc,
+            coverSrcset,
             coverKey,
             elements: getBackgroundTransitionElements(
               true,
@@ -905,22 +1003,18 @@ const playCardSelection = (cardIndex: number) => {
       )
     }
 
-    // Animate in back button, avatar, and title together
+    // Animate in back button, avatar, and title immediately at animation start
+    // This allows users to click back or hit escape without waiting
     if (backButton) {
-      tl.fromTo(
-        backButton,
-        { opacity: 0, scale: 0.8 },
-        { opacity: 1, scale: 1, duration: 0.4 },
-        0.5
-      )
+      tl.fromTo(backButton, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.4 }, 0)
     }
 
     if (miniCard) {
-      tl.fromTo(miniCard, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.4 }, 0.5)
+      tl.fromTo(miniCard, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.4 }, 0)
     }
 
     if (headerTitle) {
-      tl.fromTo(headerTitle, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.4 }, 0.5)
+      tl.fromTo(headerTitle, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.4 }, 0)
     }
 
     // Phase 3: Animate in content panel
@@ -945,6 +1039,10 @@ const syncCoverForMenuIndex = (menuIndex: number) => {
     item && 'coverImage' in item
       ? ((item.coverImage as string | undefined) ?? undefined)
       : undefined
+  const coverSrcset =
+    item && 'coverSrcset' in item
+      ? ((item.coverSrcset as string | undefined) ?? undefined)
+      : undefined
   const coverKey = coverSrc ? slugify(item?.title || '') : undefined
 
   // Palette stays driven by CSS variables.
@@ -954,10 +1052,25 @@ const syncCoverForMenuIndex = (menuIndex: number) => {
   const mainImg = bgMainRef.value
   if (!coverImg || !mainImg) return
 
-  // Cover -> Cover switching: just swap the cover image.
-  // (Keeps logic minimal; dim/opacity remain whatever cover mode already set.)
+  // Cover -> Cover switching: crossfade smoothly between the current cover and the next.
+  // Must not flash the Home background and must be interruptible.
   if (coverSrc && isCoverActive.value) {
-    if (coverImg.src !== coverSrc) coverImg.src = coverSrc
+    const from = activeCover.value
+    const fromCoverSrc = from?.src || coverImg.src
+    const fromCoverSrcset = from?.srcset || (coverImg.getAttribute('srcset') ?? undefined)
+
+    if (fromCoverSrc && fromCoverSrc !== coverSrc) {
+      transitionCoverToCover({
+        fromCoverSrc,
+        fromCoverSrcset,
+        toCoverSrc: coverSrc,
+        toCoverSrcset: coverSrcset,
+        toCoverKey: coverKey,
+        elements: { mainImg, coverImg, dimEl: bgSecondaryDimRef.value },
+      })
+    }
+
+    activeCover.value = { src: coverSrc, srcset: coverSrcset, key: coverKey }
     return
   }
 
@@ -966,6 +1079,7 @@ const syncCoverForMenuIndex = (menuIndex: number) => {
     transitionToCover({
       enter: true,
       coverSrc,
+      coverSrcset,
       coverKey,
       elements: getBackgroundTransitionElements(
         true,
@@ -975,6 +1089,7 @@ const syncCoverForMenuIndex = (menuIndex: number) => {
       ),
     })
     isCoverActive.value = true
+    activeCover.value = { src: coverSrc, srcset: coverSrcset, key: coverKey }
   } else {
     transitionToCover({
       enter: false,
@@ -986,6 +1101,7 @@ const syncCoverForMenuIndex = (menuIndex: number) => {
       ),
     })
     isCoverActive.value = false
+    activeCover.value = null
   }
 }
 
@@ -1006,6 +1122,7 @@ const handleHeaderTitleClick = (menuIndex: number) => {
 type CoverTransitionOptions = {
   enter: boolean
   coverSrc?: string
+  coverSrcset?: string
   coverKey?: string
 }
 
@@ -1013,10 +1130,6 @@ type BackgroundTransitionElements = {
   fromImg: HTMLImageElement | null
   toImg: HTMLImageElement | null
   dimEl: HTMLElement | null
-}
-
-type BackgroundTransitionOptions = CoverTransitionOptions & {
-  elements: BackgroundTransitionElements
 }
 
 const getBackgroundTransitionElements = (
@@ -1038,9 +1151,10 @@ const getBackgroundTransitionElements = (
 const transitionToCover = ({
   enter,
   coverSrc,
+  coverSrcset,
   coverKey,
   elements,
-}: BackgroundTransitionOptions) => {
+}: CoverTransitionOptions & { elements: BackgroundTransitionElements }) => {
   const { fromImg, toImg, dimEl } = elements
   if (!fromImg || !toImg) return gsap.timeline()
 
@@ -1049,13 +1163,17 @@ const transitionToCover = ({
   const duration = parseFloat(durationStr) || 1.6
 
   // Prevent competing tweens when users navigate quickly
-  gsap.killTweensOf([fromImg, toImg, dimEl].filter(Boolean))
+  killBackgroundTransition()
 
   const key = slugify(coverKey || '')
 
   if (enter) {
     if (coverSrc && toImg.src !== coverSrc) {
       toImg.src = coverSrc
+      if (coverSrcset) {
+        toImg.srcset = coverSrcset
+        toImg.sizes = '100vw'
+      }
     }
 
     // Determine per-cover dim (overlay darkness) first; if set, prefer dim overlay
@@ -1068,6 +1186,7 @@ const transitionToCover = ({
     if (!Number.isFinite(mainOpacity)) mainOpacity = 1
 
     const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' } })
+    bgTransitionTimeline = tl
 
     gsap.set(fromImg, { visibility: 'visible' })
     gsap.set(toImg, { opacity: 0, visibility: 'visible' })
@@ -1088,18 +1207,16 @@ const transitionToCover = ({
       tl.to(fromImg, { opacity: mainOpacity, duration }, 0)
     }
 
+    tl.add(() => {
+      if (bgTransitionTimeline === tl) bgTransitionTimeline = null
+    })
+
     return tl
   }
 
   // Leaving cover: fade destination (main) in and hide cover + dim.
-  const tl = gsap.timeline({
-    onComplete: () => {
-      if (dimEl) gsap.set(dimEl, { visibility: 'hidden' })
-      gsap.set(fromImg, { visibility: 'hidden' })
-      gsap.set(toImg, { opacity: 1, visibility: 'visible' })
-    },
-    defaults: { ease: 'power2.inOut' },
-  })
+  const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' } })
+  bgTransitionTimeline = tl
 
   gsap.set(fromImg, { visibility: 'visible' })
   gsap.set(toImg, { visibility: 'visible' })
@@ -1107,6 +1224,95 @@ const transitionToCover = ({
   if (dimEl) tl.to(dimEl, { opacity: 0, duration }, 0)
   tl.to(fromImg, { opacity: 0, duration }, 0)
   tl.to(toImg, { opacity: 1, duration }, 0)
+
+  tl.add(() => {
+    if (dimEl) gsap.set(dimEl, { visibility: 'hidden' })
+    gsap.set(fromImg, { visibility: 'hidden' })
+    gsap.set(toImg, { opacity: 1, visibility: 'visible' })
+    if (bgTransitionTimeline === tl) bgTransitionTimeline = null
+  })
+
+  return tl
+}
+
+const transitionCoverToCover = ({
+  fromCoverSrc,
+  fromCoverSrcset,
+  toCoverSrc,
+  toCoverSrcset,
+  toCoverKey,
+  elements,
+}: {
+  fromCoverSrc: string
+  fromCoverSrcset?: string
+  toCoverSrc: string
+  toCoverSrcset?: string
+  toCoverKey?: string
+  elements: { mainImg: HTMLImageElement; coverImg: HTMLImageElement; dimEl: HTMLElement | null }
+}) => {
+  const { mainImg, coverImg, dimEl } = elements
+
+  const styles = getComputedStyle(document.documentElement)
+  const durationStr = styles.getPropertyValue('--bg-cover-transition-duration') || '1.6s'
+  const duration = parseFloat(durationStr) || 1.6
+
+  killBackgroundTransition()
+
+  const getCoverDim = (key?: string) => {
+    const slug = slugify(key || '')
+    const dimVar = slug ? `--bg-cover-${slug}-dim` : '--bg-cover-dim'
+    let dim = parseFloat(styles.getPropertyValue(dimVar) || '')
+    if (!Number.isFinite(dim)) dim = parseFloat(styles.getPropertyValue('--bg-cover-dim') || '')
+    return Number.isFinite(dim) ? Math.max(0, Math.min(1, dim)) : 0
+  }
+
+  let mainOpacity = parseFloat(styles.getPropertyValue('--bg-main-opacity') || '')
+  if (!Number.isFinite(mainOpacity)) mainOpacity = 1
+
+  // Use the main layer as a temporary buffer holding the *current* cover.
+  // This avoids flashing the Home background while crossfading cover -> cover.
+  mainImg.src = fromCoverSrc
+  if (fromCoverSrcset) {
+    mainImg.srcset = fromCoverSrcset
+    mainImg.sizes = '100vw'
+  } else {
+    mainImg.removeAttribute('srcset')
+  }
+
+  coverImg.src = toCoverSrc
+  if (toCoverSrcset) {
+    coverImg.srcset = toCoverSrcset
+    coverImg.sizes = '100vw'
+  } else {
+    coverImg.removeAttribute('srcset')
+  }
+
+  const startDim = dimEl ? parseFloat(getComputedStyle(dimEl).opacity || '0') || 0 : 0
+  const targetDim = getCoverDim(toCoverKey)
+
+  gsap.set(mainImg, { opacity: 1, visibility: 'visible' })
+  gsap.set(coverImg, { opacity: 0, visibility: 'visible' })
+  if (dimEl) gsap.set(dimEl, { opacity: startDim, visibility: 'visible' })
+
+  const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' } })
+  bgTransitionTimeline = tl
+
+  tl.to(coverImg, { opacity: 1, duration }, 0)
+  tl.to(mainImg, { opacity: mainOpacity, duration }, 0)
+  if (dimEl) tl.to(dimEl, { opacity: targetDim, duration }, 0)
+
+  // Restore the main layer back to the Home background for future main <-> cover transitions.
+  // This is safe because the cover sits on top.
+  tl.add(() => {
+    mainImg.src = bgHomeSmall
+    mainImg.srcset = bgHomeSrcset
+    mainImg.sizes = '100vw'
+    gsap.set(mainImg, { opacity: mainOpacity, visibility: 'visible' })
+  })
+
+  tl.add(() => {
+    if (bgTransitionTimeline === tl) bgTransitionTimeline = null
+  })
 
   return tl
 }
@@ -1195,7 +1401,9 @@ onBeforeUnmount(() => {
     <div ref="bgRef" class="card-dealer__background">
       <img
         ref="bgMainRef"
-        src="../assets/images/bg-home.jpg"
+        :src="bgHomeSmall"
+        :srcset="bgHomeSrcset"
+        sizes="100vw"
         alt="Mysterious card dealer"
         class="card-dealer__bg-image card-dealer__bg-main"
       />
@@ -1241,6 +1449,7 @@ onBeforeUnmount(() => {
           :ref="(el) => setCardRef(el, index)"
           :title="item.title"
           :image="item.image"
+          :image-srcset="item.imageSrcset"
           :route="item.route"
           :index="index"
           @click="handleCardClick"
@@ -1283,25 +1492,44 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <!-- Content view (shown after card click) -->
-      <div v-if="currentView === 'content'" class="card-dealer__content-view">
+      <!-- Content view (keep mounted once entered to preserve WebGL context) -->
+      <div
+        v-if="hasMountedContentView"
+        v-show="currentView === 'content'"
+        class="card-dealer__content-view"
+      >
         <!-- Content overlay for transparency -->
         <div class="card-dealer__content-overlay"></div>
 
         <!-- Actual content -->
         <div ref="contentPanelRef" class="card-dealer__content-container">
-          <!-- Music Player -->
-          <div v-if="selectedItem?.title === 'Music'" class="card-dealer__music-content">
+          <!-- Music Player (lazy-mount + keep alive via v-show) -->
+          <div
+            v-if="hasMountedMusic"
+            v-show="selectedItem?.title === 'Music'"
+            class="card-dealer__music-content"
+          >
             <AudioPlayer @back="handleBackClick" />
           </div>
 
-          <!-- About / Character Selection -->
-          <div v-else-if="selectedItem?.title === 'About'" class="card-dealer__about-content">
-            <CharacterSelection @back="handleBackClick" />
+          <!-- About / Character Selection (lazy-mount + keep alive via v-show) -->
+          <div
+            v-if="hasMountedAbout"
+            v-show="selectedItem?.title === 'About'"
+            class="card-dealer__about-content"
+          >
+            <CharacterSelection
+              ref="characterSelectionRef"
+              @back="handleBackClick"
+              @open-music="handleHeaderTitleClick(0)"
+            />
           </div>
 
           <!-- Other content -->
-          <div v-else class="card-dealer__generic-content">
+          <div
+            v-if="selectedItem?.title !== 'Music' && selectedItem?.title !== 'About'"
+            class="card-dealer__generic-content"
+          >
             <p>
               Content for
               {{ selectedItem?.title || '' }}

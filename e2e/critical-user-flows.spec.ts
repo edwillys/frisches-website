@@ -130,6 +130,10 @@ test.describe('Frisches Website - Critical Flows', () => {
     const charSelection = page.locator('[data-testid="character-selection"]')
     await expect(charSelection).toBeVisible({ timeout: 20000 })
 
+    // Navigate to a band member (Edgar) to see the 3D model (default is Frisches which is group with no model)
+    await page.keyboard.press('E')
+    await waitForAnimations(page)
+
     // CI Firefox often runs without a working WebGL stack (no GPU / missing GL drivers).
     // When WebGL can't initialize, Three.js never renders and the loading spinner never hides.
     const hasWebGL = await page.evaluate(() => {
@@ -161,12 +165,12 @@ test.describe('Frisches Website - Critical Flows', () => {
     await aboutCard.click()
     await waitForAnimations(page)
     
-    // Verify character selection with 4 cards
+    // Verify character selection with 5 buttons (E, C, F, S, T)
     const charSelection = page.locator('[data-testid="character-selection"]')
     await expect(charSelection).toBeVisible({ timeout: 20000 })
     
     const characters = page.locator('[data-testid="character-card"]')
-    await expect(characters).toHaveCount(4, { timeout: 20000 })
+    await expect(characters).toHaveCount(5, { timeout: 20000 })
   })
 
   test('complete navigation cycle: logo → cards → content → cards → logo', async ({ page }) => {

@@ -446,7 +446,10 @@ describe('CardDealer', () => {
     overlay.element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
     await nextTick()
 
-    expect(wrapper.find('.card-dealer__content-view').exists()).toBe(false)
+    // Content view is kept mounted (to preserve WebGL contexts); it should be hidden instead.
+    const contentView = wrapper.find('.card-dealer__content-view')
+    expect(contentView.exists()).toBe(true)
+    expect((contentView.element as HTMLElement).style.display).toBe('none')
     expect(wrapper.find('.card-dealer__cards').attributes('style')).not.toContain('display: none')
 
     wrapper.unmount()

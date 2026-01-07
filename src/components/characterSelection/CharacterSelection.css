@@ -12,10 +12,11 @@
 .character-selection__content {
   flex: 1;
   display: flex;
+  position: relative;
   align-items: stretch;
   justify-content: center;
   gap: 2rem;
-  padding: 1rem 2rem;
+  padding: 0;
   min-height: 0;
   overflow: hidden;
 }
@@ -26,6 +27,23 @@
   height: 100%;
   min-height: 0;
   position: relative;
+}
+
+/*
+  When the group (Frisches) card is selected we still keep the canvas mounted
+  (to preserve the WebGL context), but we remove it from the flex layout so the
+  info card can remain centered.
+*/
+.character-selection__model-container--group {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 500px;
+  max-width: 500px;
+  flex: 0 0 auto;
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* Loading indicator */
@@ -71,20 +89,21 @@
   touch-action: none;
 }
 
-/* Character Selection Buttons */
+/* Character Selection Buttons - Single row centered */
 .character-selection__buttons {
+  position: relative;
   flex: 0 0 auto;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 1.5rem;
-  padding: 1rem 2rem;
+  gap: 1rem;
+  padding: 0.75rem 2rem;
   z-index: 10;
 }
 
 .character-selection__button {
-  width: 60px;
-  height: 60px;
+  width: 45px;
+  height: 45px;
   border-radius: 50%;
   background: linear-gradient(
     180deg,
@@ -105,12 +124,28 @@
   justify-content: center;
 }
 
-.character-selection__button:hover:not(:disabled) {
+.character-selection__button--group {
+  width: 30px;
+  height: 30px;
+  font-size: 1rem;
+  background: linear-gradient(180deg, rgba(70, 30, 70, 0.8) 0%, rgba(40, 20, 50, 0.9) 100%);
+  border-color: var(--color-neon-magenta);
+  color: var(--color-neon-magenta);
+}
+
+.character-selection__button:hover {
   background: linear-gradient(180deg, var(--color-secondary) 0%, var(--color-secondary-dark) 100%);
   border-color: var(--color-neon-cyan);
   transform: scale(1.1);
   color: var(--color-neon-cyan);
   box-shadow: 0 0 15px var(--color-neon-cyan);
+}
+
+.character-selection__button--group:hover {
+  background: linear-gradient(180deg, rgba(90, 40, 90, 0.9) 0%, rgba(60, 30, 70, 1) 100%);
+  border-color: var(--color-neon-magenta);
+  color: var(--color-neon-magenta);
+  box-shadow: 0 0 15px var(--color-neon-magenta);
 }
 
 .character-selection__button--active {
@@ -123,9 +158,13 @@
   transform: scale(1.15);
 }
 
-.character-selection__button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.character-selection__button--group.character-selection__button--active {
+  background: linear-gradient(180deg, rgba(90, 40, 90, 0.9) 0%, rgba(60, 30, 70, 1) 100%);
+  border-color: var(--color-neon-magenta);
+  color: var(--color-neon-magenta);
+  box-shadow:
+    0 0 20px var(--color-neon-magenta),
+    inset 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
 /* RPG-Style Character Card */
@@ -139,15 +178,13 @@
     var(--color-primary-light) 100%
   );
   border: 1px solid transparent;
-  /* Transparent border for the gradient to show */
   border-radius: 12px;
   padding: 0;
   backdrop-filter: blur(12px);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   position: relative;
   overflow: hidden;
-  height: auto;
-  max-height: 100%;
+  height: 100%;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -412,12 +449,136 @@
   opacity: 1;
 }
 
+.character-selection__favorite-song-link:hover .character-selection__play-icon {
+  opacity: 1;
+}
+
+/* Band Info Card Styles */
+.character-selection__social-container {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  width: 80px;
+  flex: 0 0 80px;
+  align-items: flex-start;
+}
+
+.character-selection__social-link {
+  width: 32px;
+  height: 32px;
+  background:
+    linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+    linear-gradient(135deg, var(--color-neon-magenta), var(--color-secondary)) border-box;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  box-shadow: 0 2px 8px rgba(224, 0, 224, 0.2);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  text-decoration: none;
+}
+
+.character-selection__social-link:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(224, 0, 224, 0.4);
+}
+
+.character-selection__social-link :deep(svg) {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+  color: var(--color-neon-cyan);
+}
+
+.character-selection__band-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 80px;
+  flex: 0 0 80px;
+  align-items: flex-end;
+}
+
+.character-selection__band-info-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+}
+
+.character-selection__band-info-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--color-neon-cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: 'Cinzel', 'Georgia', serif;
+}
+
+.character-selection__band-info-value {
+  font-size: 0.85rem;
+  color: var(--color-text);
+  font-family: 'Georgia', serif;
+  font-weight: 500;
+}
+
+.character-selection__band-description {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  font-family: 'Georgia', serif;
+  margin: 0;
+  font-style: italic;
+}
+
+.character-selection__albums-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.character-selection__album-button {
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: 'Georgia', serif;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.character-selection__album-button:hover {
+  background: var(--color-secondary-dark);
+  border-color: var(--color-neon-magenta);
+  color: var(--color-neon-cyan);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(224, 0, 224, 0.3);
+}
+
+.character-selection__album-year {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .character-selection__content {
     flex-direction: column;
     gap: 1rem;
     align-items: center;
+    padding: 0.5rem;
   }
 
   .character-selection__model-container {
@@ -435,17 +596,23 @@
 
 @media (max-width: 768px) {
   .character-selection__content {
-    padding: 1rem;
+    padding: 0.5rem;
   }
 
   .character-selection__buttons {
-    gap: 1rem;
+    gap: 0.75rem;
     padding: 0.5rem;
   }
 
   .character-selection__button {
-    width: 50px;
-    height: 50px;
-    font-size: 1.2rem;
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  .character-selection__button--group {
+    width: 44px;
+    height: 44px;
+    font-size: 1.1rem;
   }
 }

@@ -19,15 +19,15 @@ describe('MenuCard', () => {
     expect(wrapper.find('.menu-card__title').text()).toBe('Music')
   })
 
-  it('applies background image style', () => {
+  it('renders image with correct src', () => {
     const wrapper = mount(MenuCard, {
       props: defaultProps,
     })
 
-    const cardElement = wrapper.find('.menu-card')
-    const style = cardElement.attributes('style')
-    expect(style).toContain('background-image')
-    expect(style).toContain(defaultProps.image)
+    const img = wrapper.find('.menu-card__image')
+    expect(img.exists()).toBe(true)
+    expect(img.attributes('src')).toBe(defaultProps.image)
+    expect(img.attributes('alt')).toBe(defaultProps.title)
   })
 
   it('emits click event with route when clicked', async () => {

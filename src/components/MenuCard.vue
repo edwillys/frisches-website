@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 
 export interface MenuCardProps {
   title: string
   image: string
+  imageSrcset?: string
   route: string
   index?: number
 }
@@ -14,10 +15,6 @@ const props = withDefaults(defineProps<MenuCardProps>(), {
 
 const cardRef = ref<HTMLElement | null>(null)
 const isHovered = ref(false)
-
-const cardStyle = computed(() => ({
-  backgroundImage: `url(${props.image})`,
-}))
 
 const emit = defineEmits<{
   click: [route: string]
@@ -37,12 +34,18 @@ defineExpose({
     ref="cardRef"
     class="menu-card"
     :class="{ 'menu-card--hovered': isHovered }"
-    :style="cardStyle"
     :data-testid="`card-${props.route.slice(1)}`"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
     @click="handleClick"
   >
+    <img
+      :src="props.image"
+      :srcset="props.imageSrcset"
+      sizes="(max-width: 640px) 320px, 640px"
+      :alt="props.title"
+      class="menu-card__image"
+    />
     <div class="menu-card__overlay"></div>
     <div class="menu-card__content">
       <h3 class="menu-card__title">{{ title }}</h3>
@@ -55,13 +58,20 @@ defineExpose({
   position: relative;
   width: 180px;
   height: 280px;
-  background-size: cover;
-  background-position: center;
   border-radius: var(--radius-lg);
   cursor: pointer;
   overflow: hidden;
   transition: transform var(--transition-base);
   box-shadow: var(--shadow-lg);
+}
+
+.menu-card__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
 }
 
 .menu-card::before {

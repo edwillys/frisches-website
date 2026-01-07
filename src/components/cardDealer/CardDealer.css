@@ -278,7 +278,7 @@
 
 .card-dealer__about-content {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   width: 100%;
   height: 100%;

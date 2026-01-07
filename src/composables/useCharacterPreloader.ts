@@ -3,8 +3,14 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { Cache } from 'three'
 
-// Enable Three.js cache globally
-Cache.enabled = true
+// Enable Three.js cache globally (guarded for test mocks)
+try {
+  if (typeof Cache !== 'undefined' && Object.prototype.hasOwnProperty.call(Cache, 'enabled')) {
+    ;(Cache as unknown as { enabled?: boolean }).enabled = true
+  }
+} catch {
+  // Ignore in test environments where three is mocked.
+}
 
 // Track preload state globally (singleton)
 const isPreloading = ref(false)
@@ -14,10 +20,10 @@ const preloadedPaths = new Set<string>()
 
 // Model paths - these must match CharacterSelection.vue
 const MODEL_PATHS = [
-  new URL('../assets/private/threed/monster1.glb', import.meta.url).href,
-  new URL('../assets/private/threed/witch.glb', import.meta.url).href,
-  new URL('../assets/private/threed/dealer.glb', import.meta.url).href,
-  new URL('../assets/private/threed/monster2.glb', import.meta.url).href,
+  new URL('../assets/private/threed/monster1_simplified.glb', import.meta.url).href,
+  new URL('../assets/private/threed/witch_simplified.glb', import.meta.url).href,
+  new URL('../assets/private/threed/dealer_simplified.glb', import.meta.url).href,
+  new URL('../assets/private/threed/monster2_simplified.glb', import.meta.url).href,
 ]
 
 // Singleton loader instances
@@ -110,4 +116,36 @@ export function useCharacterPreloader() {
     preloadComplete,
     preloadCharacterModels,
   }
+}
+
+// Avoid dev-only memory growth across Vite HMR updates.
+// When this module hot-reloads, dispose Draco workers and clear caches/state.
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    try {
+      dracoLoader?.dispose()
+    } catch {
+      // ignore
+    }
+
+    dracoLoader = null
+    gltfLoader = null
+
+    isPreloading.value = false
+    preloadProgress.value = 0
+    preloadComplete.value = false
+    preloadedPaths.clear()
+
+    try {
+      const maybeClear = (Cache as unknown as { clear?: () => void }).clear
+      if (typeof maybeClear === 'function') {
+        maybeClear.call(Cache)
+      } else {
+        const files = (Cache as unknown as { files?: { clear?: () => void } }).files
+        files?.clear?.()
+      }
+    } catch {
+      // ignore
+    }
+  })
 }
