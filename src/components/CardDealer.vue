@@ -252,7 +252,7 @@ const menuItems = [
     route: '/about',
   },
   {
-    title: 'Galery',
+    title: 'Gallery',
     image: menuTourSmall,
     imageSrcset: menuTourSrcset,
     coverImage: bgGallerySmall,

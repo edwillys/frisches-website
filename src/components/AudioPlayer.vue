@@ -40,7 +40,7 @@ const albumSongCount = computed(() => albumTracks.value.length)
 const selectedArtist = computed(() => selectedAlbum.value?.artist ?? 'Frisches')
 
 const bandLogoUrl = new URL(
-  '../assets/private/image/Frisches_Logo-Mood-3-Round.png',
+  '../assets/private/images/Frisches_Logo-Mood-3-Round.png',
   import.meta.url
 ).href
 

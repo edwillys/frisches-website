@@ -238,7 +238,7 @@ describe('CardDealer', () => {
     expect(cards.length).toBe(3)
     expect(cards[0]?.props('title')).toBe('Music')
     expect(cards[1]?.props('title')).toBe('About')
-    expect(cards[2]?.props('title')).toBe('Galery')
+    expect(cards[2]?.props('title')).toBe('Gallery')
   })
 
   it('creates intro animation timeline for background and logo', async () => {

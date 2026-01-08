@@ -57,14 +57,14 @@
   --bg-cover-dim: 0.36;
   --bg-cover-about-dim: 0.36;
   --bg-cover-music-dim: 0.28;
-  --bg-cover-galery-dim: 0.3;
+  --bg-cover-gallery-dim: 0.3;
   /* Per-cover opacity overrides (0.0 - 1.0) */
   --bg-cover-about-opacity: 0.5;
   /* About cover default */
   --bg-cover-music-opacity: 0.9;
   /* Music cover example */
-  --bg-cover-galery-opacity: 0.92;
-  /* Galery cover example */
+  --bg-cover-gallery-opacity: 0.92;
+  /* Gallery cover example */
   /* Main/home background opacity (if needed) */
   --bg-main-opacity: 1;
   /* Particle color to use when cover is active (integer RGB) */
