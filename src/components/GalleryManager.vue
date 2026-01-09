@@ -432,7 +432,7 @@ function isKeyChecked(
   key: string
 ): boolean {
   const v = selectionKeys[key]
-  return v === true || v?.checked === true
+  return v === true || (typeof v === 'object' && v?.checked === true)
 }
 
 function collectCheckedLeafTokens(
