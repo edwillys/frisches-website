@@ -372,6 +372,36 @@ describe('CardDealer', () => {
     wrapper.unmount()
   })
 
+  it('renders gallery content when selecting the Gallery card', async () => {
+    const wrapper = mount(CardDealer, {
+      attachTo: document.body,
+      global: {
+        stubs: {
+          GalleryManager: {
+            template: '<div data-testid="gallery-manager-stub" />',
+          },
+        },
+      },
+    })
+
+    await wrapper.find('.logo-button').trigger('click')
+    await vi.advanceTimersByTimeAsync(1000)
+    await nextTick()
+
+    const cards = wrapper.findAllComponents(MenuCard)
+    const galleryCard = cards[2]
+    if (!galleryCard) {
+      throw new Error('Expected Gallery menu card to exist')
+    }
+
+    await galleryCard.trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="gallery-manager-stub"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
   it('animates card stack and content fade when selecting a card', async () => {
     const wrapper = mount(CardDealer, {
       attachTo: document.body,

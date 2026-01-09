@@ -30,6 +30,7 @@ import MenuCard from './MenuCard.vue'
 import LogoButton from './LogoButton.vue'
 import AudioPlayer from './AudioPlayer.vue'
 import CharacterSelection from './CharacterSelection.vue'
+import GalleryManager from './GalleryManager.vue'
 import { useGSAP } from '../composables/useGSAP'
 import { readParticlesPaletteFromCss } from '../composables/useCardDealerPalette'
 import { getTargetXYToViewportCenter, getViewportCenter } from './cardDealer/viewportCenter'
@@ -163,6 +164,7 @@ const selectedItem = computed(() =>
 const hasMountedContentView = ref(false)
 const hasMountedMusic = ref(false)
 const hasMountedAbout = ref(false)
+const hasMountedGallery = ref(false)
 
 const characterSelectionRef = ref<null | { resetToGroup: () => void }>(null)
 
@@ -171,6 +173,7 @@ watch(
   (title) => {
     if (title === 'Music') hasMountedMusic.value = true
     if (title === 'About') hasMountedAbout.value = true
+    if (title === 'Gallery') hasMountedGallery.value = true
   },
   { immediate: true }
 )
@@ -288,8 +291,20 @@ const emit = defineEmits<{
   (e: 'palette-change', payload: number[] | null): void
 }>()
 
+const hasBlockingOverlayOpen = () => {
+  // Gallery lightbox + PrimeVue overlays (MultiSelect/DatePicker/etc.) are teleported to body.
+  // While any of these are open, CardDealer must not treat Escape or outside-click
+  // as a navigation/back action.
+  return Boolean(
+    document.querySelector(
+      '.lightbox, .p-overlay, .p-multiselect-overlay, .p-treeselect-panel, .p-datepicker-panel, .p-dialog-mask, .p-sidebar-mask'
+    )
+  )
+}
+
 const handleKeydown = (e: KeyboardEvent) => {
   if (e.key === 'Escape') {
+    if (hasBlockingOverlayOpen()) return
     handleBackClick()
   }
 }
@@ -408,8 +423,32 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
   if (isAnimating.value) return
   if (currentView.value === 'logo') return
 
+  if (hasBlockingOverlayOpen()) return
+
   const target = event.target as Node | null
   if (!target) return
+
+  // PrimeVue overlays (TreeSelect/DatePicker/etc.) are teleported to body.
+  // Clicking inside them must not be treated as an outside click.
+  const targetEl = target instanceof Element ? target : null
+  const clickedInsidePrimeOverlay =
+    targetEl?.closest(
+      [
+        '.p-overlay',
+        '.p-overlaypanel',
+        '.p-dialog-mask',
+        '.p-sidebar-mask',
+        '.p-tooltip',
+        '.p-multiselect-overlay',
+        '.p-dropdown-panel',
+        '.p-select-overlay',
+        '.p-treeselect-panel',
+        '.p-treeselect-overlay',
+        '.p-datepicker-panel',
+        '.p-datepicker-overlay',
+      ].join(',')
+    ) !== null
+  if (clickedInsidePrimeOverlay) return
 
   const clickedInsideCards = cardsContainerRef.value?.contains(target) ?? false
   const clickedInsideContent = contentPanelRef.value?.contains(target) ?? false
@@ -1525,9 +1564,22 @@ onBeforeUnmount(() => {
             />
           </div>
 
+          <!-- Gallery (lazy-mount + keep alive via v-show) -->
+          <div
+            v-if="hasMountedGallery"
+            v-show="selectedItem?.title === 'Gallery'"
+            class="card-dealer__gallery-content"
+          >
+            <GalleryManager />
+          </div>
+
           <!-- Other content -->
           <div
-            v-if="selectedItem?.title !== 'Music' && selectedItem?.title !== 'About'"
+            v-if="
+              selectedItem?.title !== 'Music' &&
+              selectedItem?.title !== 'About' &&
+              selectedItem?.title !== 'Gallery'
+            "
             class="card-dealer__generic-content"
           >
             <p>

@@ -17,5 +17,6 @@ export interface Character {
     instagram?: string
     spotify?: string
     youtube?: string
+    email?: string
   }
 }

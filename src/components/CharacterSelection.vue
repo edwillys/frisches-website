@@ -43,6 +43,7 @@ import choirSvg from '@/assets/badges/choir.svg'
 import instagramSvg from '@/assets/icons/social-instagram.svg?raw'
 import spotifySvg from '@/assets/icons/social-spotify.svg?raw'
 import youtubeSvg from '@/assets/icons/social-youtube.svg?raw'
+import emailSvg from '@/assets/icons/email.svg?raw'
 
 const badgeMap: Record<string, string> = {
   Guitar: guitarHeadSvg,
@@ -90,6 +91,7 @@ const characters = ref<Character[]>([
       instagram: 'https://www.instagram.com/frisches.band/',
       spotify: 'https://open.spotify.com/artist/3kzl8F6XMEkGhOXxYZBZJv',
       youtube: 'https://www.youtube.com/@frischesband',
+      email: 'mailto:contact@frisches.band',
     },
   },
   {
@@ -351,6 +353,13 @@ const cardLeftBadges = computed<Badge[]>(() => {
         title: 'YouTube',
         link: socialLinks.youtube,
         icon: youtubeSvg,
+      })
+    }
+    if (socialLinks?.email) {
+      badges.push({
+        title: 'Email',
+        link: socialLinks.email,
+        icon: emailSvg,
       })
     }
     return badges
