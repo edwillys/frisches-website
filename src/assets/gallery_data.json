@@ -27,7 +27,7 @@
     "relativePath": "retreat/WhatsApp Image 2025-11-09 at 20.22.24 (1).jpeg",
     "albumName": "retreat",
     "tags": ["Activity/Retreat"],
-    "people": ["Edgar"],
+    "people": ["Edgar", "Steff"],
     "location": ["Sammerberg"],
     "rating": 0,
     "creationDate": "2026-01-07T19:42:28.280"
@@ -49,10 +49,10 @@
     "relativePath": "shows/000031.jpg",
     "albumName": "shows",
     "tags": ["Activity/Show", "Activity/Show/Eisenbahnbrücke"],
-    "people": [],
+    "people": ["Cami", "Edgar", "Steff", "Tobi"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2023-10-09T18:02:00.000"
+    "creationDate": "2023-08-12T18:02:00.000"
   },
   {
     "id": 6,
@@ -60,10 +60,10 @@
     "relativePath": "shows/000034.jpg",
     "albumName": "shows",
     "tags": ["Activity/Show", "Activity/Show/Eisenbahnbrücke"],
-    "people": ["Edgar"],
+    "people": ["Edgar", "Steff"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2023-10-09T18:02:00.000"
+    "creationDate": "2023-08-12T18:02:00.000"
   },
   {
     "id": 7,
@@ -79,8 +79,8 @@
   {
     "id": 8,
     "filename": "DSC00025.jpg",
-    "relativePath": "shows/DSC00025.jpg",
-    "albumName": "shows",
+    "relativePath": "DSC00025.jpg",
+    "albumName": "Uncategorized",
     "tags": ["Activity/Show", "Activity/Show/Eisenbahnbrücke"],
     "people": ["Cami"],
     "location": ["Munich"],
@@ -90,8 +90,8 @@
   {
     "id": 9,
     "filename": "DSC00032.jpg",
-    "relativePath": "shows/DSC00032.jpg",
-    "albumName": "shows",
+    "relativePath": "DSC00032.jpg",
+    "albumName": "Uncategorized",
     "tags": ["Activity/Show", "Activity/Show/Eisenbahnbrücke"],
     "people": ["Tobi"],
     "location": ["Munich"],
@@ -148,7 +148,7 @@
     "relativePath": "shows/FRI100525_012_ful.jpg",
     "albumName": "shows",
     "tags": ["Activity/Show", "Activity/Show/Proberaum"],
-    "people": ["Cami", "Edgar"],
+    "people": ["Cami", "Edgar", "Steff", "Tobi"],
     "location": ["Munich"],
     "rating": 0,
     "creationDate": "2025-05-10T20:13:11.000"
@@ -169,11 +169,11 @@
     "filename": "FrischesBand Cropped 16x9.jpg",
     "relativePath": "shows/FrischesBand Cropped 16x9.jpg",
     "albumName": "shows",
-    "tags": ["Activity/Show/Proberaum"],
-    "people": ["People"],
+    "tags": ["Activity/Show/Eisenbahnbrücke"],
+    "people": ["Cami", "Edgar", "Steff", "Tobi"],
     "location": [],
     "rating": 0,
-    "creationDate": "2026-01-07T19:11:32.948"
+    "creationDate": "2023-08-12T19:11:32.948"
   },
   {
     "id": 17,

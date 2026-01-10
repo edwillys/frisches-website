@@ -102,23 +102,37 @@ export function useGalleryData() {
   const selectedImageId = ref<number | null>(null)
   const lightboxImageId = ref<number | null>(null)
 
+  // Exclude "Uncategorized" images from the UI.
+  // The generator can produce this album for images without a proper album path.
+  const visibleImages = computed(() =>
+    galleryData.value.filter((img) => img.albumName && img.albumName !== 'Uncategorized')
+  )
+
   // ==================== Indexes ====================
 
   const albums = computed(() => {
     const albumSet = new Set<string>()
-    galleryData.value.forEach((img) => albumSet.add(img.albumName))
+    visibleImages.value.forEach((img) => albumSet.add(img.albumName))
     return Array.from(albumSet).sort()
   })
 
   const allPeople = computed(() => {
     const peopleSet = new Set<string>()
-    galleryData.value.forEach((img) => img.people.forEach((p) => peopleSet.add(p)))
+    visibleImages.value.forEach((img) =>
+      img.people.forEach((p) => {
+        const cleaned = String(p).trim()
+        if (!cleaned) return
+        // Guard against accidental inclusion of DigiKam root nodes.
+        if (cleaned.toLowerCase() === 'people' || cleaned.toLowerCase() === 'persons') return
+        peopleSet.add(cleaned)
+      })
+    )
     return Array.from(peopleSet).sort()
   })
 
   const allLocations = computed(() => {
     const locationSet = new Set<string>()
-    galleryData.value.forEach((img) =>
+    visibleImages.value.forEach((img) =>
       getLocationPathsFromImage(img).forEach((p) => locationSet.add(p))
     )
     return Array.from(locationSet).sort()
@@ -126,7 +140,7 @@ export function useGalleryData() {
 
   const allTags = computed(() => {
     const tagSet = new Set<string>()
-    galleryData.value.forEach((img) => img.tags.forEach((t) => tagSet.add(t)))
+    visibleImages.value.forEach((img) => img.tags.forEach((t) => tagSet.add(t)))
     return Array.from(tagSet).sort()
   })
 
@@ -134,7 +148,7 @@ export function useGalleryData() {
   const timeline = computed(() => {
     const timelineMap = new Map<string, number>()
 
-    galleryData.value.forEach((img) => {
+    visibleImages.value.forEach((img) => {
       if (img.creationDate) {
         const date = new Date(img.creationDate)
         const yearMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
@@ -149,7 +163,7 @@ export function useGalleryData() {
 
   const availableYears = computed(() => {
     const years = new Set<number>()
-    galleryData.value.forEach((img) => {
+    visibleImages.value.forEach((img) => {
       if (!img.creationDate) return
       const y = new Date(img.creationDate).getFullYear()
       if (Number.isFinite(y)) years.add(y)
@@ -157,7 +171,8 @@ export function useGalleryData() {
     return Array.from(years).sort((a, b) => b - a)
   })
 
-  const selectedYear = ref<number | null>(null)
+  // Filter by 0..N years selected via the TreeSelect "Date" group.
+  const selectedYears = ref<number[]>([])
 
   // ==================== Filtering Logic ====================
 
@@ -165,12 +180,13 @@ export function useGalleryData() {
     return (
       selectedFilters.value.people.length > 0 ||
       selectedFilters.value.location.length > 0 ||
-      selectedFilters.value.tags.length > 0
+      selectedFilters.value.tags.length > 0 ||
+      selectedYears.value.length > 0
     )
   })
 
   function imageMatchesFilters(image: GalleryImage): boolean {
-    if (!hasActiveFilters.value && selectedYear.value === null) return true
+    if (!hasActiveFilters.value) return true
 
     const matchesPeople =
       selectedFilters.value.people.length === 0 ||
@@ -185,18 +201,18 @@ export function useGalleryData() {
     const matchesTags = matchesAnyPathOrDescendant(selectedFilters.value.tags, image.tags)
 
     const matchesYear =
-      selectedYear.value === null ||
+      selectedYears.value.length === 0 ||
       (() => {
         if (!image.creationDate) return false
         const year = new Date(image.creationDate).getFullYear()
-        return year === selectedYear.value
+        return selectedYears.value.includes(year)
       })()
 
     return matchesPeople && matchesLocation && matchesTags && matchesYear
   }
 
   const filteredImages = computed(() => {
-    return galleryData.value.filter(imageMatchesFilters).sort((a, b) => {
+    return visibleImages.value.filter(imageMatchesFilters).sort((a, b) => {
       // Sort by creation date descending (newest first)
       const dateA = a.creationDate ? new Date(a.creationDate).getTime() : 0
       const dateB = b.creationDate ? new Date(b.creationDate).getTime() : 0
@@ -291,11 +307,11 @@ export function useGalleryData() {
     selectedFilters.value.people = []
     selectedFilters.value.location = []
     selectedFilters.value.tags = []
-    selectedYear.value = null
+    selectedYears.value = []
   }
 
-  function setYear(year: number | null) {
-    selectedYear.value = year
+  function setYears(years: number[]) {
+    selectedYears.value = years
   }
 
   // ==================== Mode & Selection ====================
@@ -340,11 +356,11 @@ export function useGalleryData() {
 
   const lightboxImage = computed(() => {
     if (lightboxImageId.value === null) return null
-    return galleryData.value.find((img) => img.id === lightboxImageId.value) || null
+    return visibleImages.value.find((img) => img.id === lightboxImageId.value) || null
   })
 
   function getImagesForAlbum(albumName: string): GalleryImage[] {
-    return galleryData.value
+    return visibleImages.value
       .filter((img) => img.albumName === albumName)
       .filter(imageMatchesFilters)
   }
@@ -372,7 +388,7 @@ export function useGalleryData() {
     lightboxImageId,
     lightboxImage,
     hasActiveFilters,
-    selectedYear,
+    selectedYears,
 
     // Actions
     setMode,
@@ -381,7 +397,7 @@ export function useGalleryData() {
     toggleLocationFilter,
     toggleTagFilter,
     clearFilters,
-    setYear,
+    setYears,
     openLightbox,
     closeLightbox,
     nextImage,

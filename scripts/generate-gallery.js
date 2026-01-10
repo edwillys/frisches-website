@@ -335,7 +335,10 @@ try {
       if (!tag) return
       
       if (peopleTagIds.has(tagId)) {
-        people.push(tag.name)
+        // Don't include the People root node itself as a person
+        if (tagId !== peopleRootId) {
+          people.push(tag.name)
+        }
       } else if (locationTagIds.has(tagId)) {
         if (tagId !== locationRootId) {
           const pathSegments = getPathFromAncestor(locationRootId, tagId)

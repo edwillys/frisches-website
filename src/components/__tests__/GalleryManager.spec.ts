@@ -19,7 +19,7 @@ vi.mock('@/composables/useGalleryData', () => {
       selectedFilters.value.tags.length > 0
     )
   })
-  const selectedYear = ref<number | null>(null)
+  const selectedYears = ref<number[]>([])
 
   return {
     useGalleryData: () => ({
@@ -28,20 +28,21 @@ vi.mock('@/composables/useGalleryData', () => {
       allPeople: computed(() => ['Edgar', 'Cami']),
       allLocations: computed(() => ['Munich', 'Germany/Munich']),
       allTags: computed(() => ['Show', 'Proberaum', 'Eisenbahnbrücke']),
+      availableYears: computed(() => [2026, 2025, 2024]),
       mode,
       selectedFilters,
       lightboxImage,
       hasActiveFilters,
-      selectedYear,
+      selectedYears,
       setMode: (m: 'Photos' | 'Albums') => {
         mode.value = m
       },
       clearFilters: () => {
         selectedFilters.value = { people: [], location: [], tags: [] }
-        selectedYear.value = null
+        selectedYears.value = []
       },
-      setYear: (y: number | null) => {
-        selectedYear.value = y
+      setYears: (years: number[]) => {
+        selectedYears.value = years
       },
       openLightbox: () => {},
       closeLightbox: () => {},
@@ -60,13 +61,6 @@ const TreeSelectStub = {
   template: '<div data-testid="treeselect-stub" />',
 }
 
-const DatePickerStub = {
-  name: 'DatePicker',
-  props: ['modelValue'],
-  emits: ['update:modelValue'],
-  template: '<div data-testid="datepicker-stub" />',
-}
-
 describe('GalleryManager', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -81,7 +75,6 @@ describe('GalleryManager', () => {
       global: {
         stubs: {
           TreeSelect: TreeSelectStub,
-          DatePicker: DatePickerStub,
         },
       },
     })
@@ -107,7 +100,6 @@ describe('GalleryManager', () => {
       global: {
         stubs: {
           TreeSelect: TreeSelectStub,
-          DatePicker: DatePickerStub,
         },
       },
     })

@@ -295,15 +295,42 @@ const hasBlockingOverlayOpen = () => {
   // Gallery lightbox + PrimeVue overlays (MultiSelect/DatePicker/etc.) are teleported to body.
   // While any of these are open, CardDealer must not treat Escape or outside-click
   // as a navigation/back action.
-  return Boolean(
-    document.querySelector(
-      '.lightbox, .p-overlay, .p-multiselect-overlay, .p-treeselect-panel, .p-datepicker-panel, .p-dialog-mask, .p-sidebar-mask'
-    )
-  )
+  const selectors = [
+    '.lightbox',
+    '.gallery-config-overlay',
+    '.p-overlay',
+    '.p-overlaypanel',
+    '.p-dialog-mask',
+    '.p-sidebar-mask',
+    '.p-tooltip',
+    '.p-multiselect-overlay',
+    '.p-dropdown-panel',
+    '.p-select-overlay',
+    '.p-treeselect-panel',
+    '.p-treeselect-overlay',
+    '.p-datepicker-panel',
+    '.p-datepicker-overlay',
+  ].join(',')
+
+  const nodes = Array.from(document.querySelectorAll(selectors))
+  return nodes.some((n) => {
+    const el = n as HTMLElement
+    const style = window.getComputedStyle(el)
+    if (style.display === 'none' || style.visibility === 'hidden') return false
+    if (el.getClientRects().length === 0) return false
+    return true
+  })
+}
+
+const eventPathBlocksEscape = (e: KeyboardEvent) => {
+  const path = e.composedPath?.() ?? []
+  return path.some((p) => p instanceof HTMLElement && p.dataset.carddealerEscBlock === 'true')
 }
 
 const handleKeydown = (e: KeyboardEvent) => {
   if (e.key === 'Escape') {
+    if (e.defaultPrevented) return
+    if (eventPathBlocksEscape(e)) return
     if (hasBlockingOverlayOpen()) return
     handleBackClick()
   }
@@ -734,7 +761,7 @@ const playLogoReappear = () => {
   })
 }
 
-const playContentCloseAndCardsReturn = () => {
+const playContentCloseAndCardsReturn = (opts?: { thenToLogo?: boolean }) => {
   const cards = getCardElements()
   const panel = contentPanelRef.value
   const backButton = backButtonRef.value
@@ -766,6 +793,13 @@ const playContentCloseAndCardsReturn = () => {
       selectedCard.value = null
       currentView.value = 'cards'
       isCoverActive.value = false
+
+      if (opts?.thenToLogo) {
+        // Continue the animation chain: cards -> logo.
+        nextTick(() => playCardCloseAndLogoReappear())
+        return
+      }
+
       stopAnimating()
     },
   })
@@ -1158,6 +1192,15 @@ const handleHeaderTitleClick = (menuIndex: number) => {
   syncCoverForMenuIndex(menuIndex)
 }
 
+const handleHeaderHomeClick = () => {
+  if (isAnimating.value) return
+  if (currentView.value !== 'content') return
+
+  // Home should return to the real home screen (logo view), not just the cards.
+  startAnimating()
+  playContentCloseAndCardsReturn({ thenToLogo: true })
+}
+
 type CoverTransitionOptions = {
   enter: boolean
   coverSrc?: string
@@ -1506,6 +1549,15 @@ onBeforeUnmount(() => {
           <!-- Circular avatar shows selected card image as background -->
         </div>
         <div v-if="selectedItem" ref="headerTitleRef" class="card-dealer__header-titles">
+          <button
+            type="button"
+            class="card-dealer__header-title-item"
+            @mouseenter="hoveredHeaderIndex = -1"
+            @mouseleave="hoveredHeaderIndex = null"
+            @click="handleHeaderHomeClick"
+          >
+            Home
+          </button>
           <button
             v-for="(item, index) in menuItems"
             :key="item.route"

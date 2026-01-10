@@ -47,6 +47,7 @@
         <div class="filters-bar__row">
           <div class="filter-group">
             <TreeSelect
+              ref="treeSelectRef"
               v-model="selectedTreeKeys"
               :options="filterTreeNodes"
               selectionMode="checkbox"
@@ -56,24 +57,60 @@
               filterPlaceholder="Search"
               appendTo="body"
               class="filter-select"
-            />
-          </div>
-
-          <div class="filter-group">
-            <DatePicker
-              v-model="selectedYearDate"
-              view="year"
-              dateFormat="yy"
-              placeholder="Year"
-              showClear
-              appendTo="body"
-              class="filter-select"
+              @show="onFilterOverlayShow"
+              @hide="onFilterOverlayHide"
             />
           </div>
 
           <button v-if="hasAnyFilters" class="btn-clear" type="button" @click="clearAll">
             Clear
           </button>
+
+          <button
+            class="btn-gear"
+            type="button"
+            aria-label="Display options"
+            :data-carddealer-esc-block="isConfigOpen ? 'true' : undefined"
+            @click.stop="toggleConfig"
+          >
+            <i class="pi pi-cog" aria-hidden="true" />
+          </button>
+        </div>
+
+        <div
+          v-if="mode === 'Albums' && currentAlbum"
+          class="filters-bar__row filters-bar__row--album"
+        >
+          <button class="btn-back-album" type="button" @click.stop="closeAlbum">
+            <i class="pi pi-arrow-left" aria-hidden="true" />
+            Back to albums
+          </button>
+          <div class="album-title" :title="currentAlbum">{{ currentAlbum }}</div>
+        </div>
+
+        <div
+          v-if="isConfigOpen"
+          class="gallery-config-overlay"
+          role="dialog"
+          aria-label="Display options"
+          :data-carddealer-esc-block="'true'"
+          @click.self="closeConfig"
+        >
+          <div ref="configPanelRef" class="gallery-config-panel" tabindex="-1">
+            <label class="gallery-config-row">
+              <input
+                type="checkbox"
+                :checked="thumbnailLayoutSetting === 'square'"
+                @change="toggleSquareThumbnails"
+              />
+              <span>Square (1:1)</span>
+            </label>
+
+            <label class="gallery-config-row">
+              <input type="checkbox" v-model="timelineEnabledSetting" />
+              <span>Timeline</span>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -85,7 +122,7 @@
         @scroll.passive="onGalleryScroll"
       >
         <div
-          v-if="timelineEnabled && showFloatingMonthYear && floatingMonthYear && isScrolled"
+          v-if="isTimelineEnabled && showFloatingMonthYear && floatingMonthYear && isScrolled"
           class="gallery-floating-date"
           aria-label="Current month"
         >
@@ -94,7 +131,7 @@
 
         <template v-for="group in photoGroups" :key="group.key">
           <div
-            v-if="timelineEnabled && showMonthYearHeaders"
+            v-if="isTimelineEnabled && showMonthYearHeaders"
             class="gallery-month-header"
             :data-month-key="group.key"
           >
@@ -153,7 +190,7 @@
 
       <!-- Albums Mode -->
       <div v-else class="albums-content">
-        <div class="albums-grid">
+        <div v-if="!currentAlbum" class="albums-grid">
           <div
             v-for="album in filteredAlbums"
             :key="album"
@@ -173,36 +210,52 @@
           </div>
         </div>
 
-        <!-- Album View (within Albums mode) -->
-        <div v-if="currentAlbum" class="album-view-modal">
-          <div class="album-view">
-            <div class="album-header">
-              <button class="back-button" type="button" @click.stop="closeAlbum">
-                <span class="back-icon">←</span>
-                Back
-              </button>
-              <h2>{{ currentAlbum }}</h2>
-            </div>
-            <div class="gallery-grid">
-              <div
-                v-for="image in currentAlbumImages"
-                :key="image.id"
-                :class="['gallery-item', { 'is-loaded': isImageLoaded(image.id) }]"
-                @click.stop="openLightbox(image.id)"
-              >
-                <div v-if="!isImageLoaded(image.id)" class="skeleton-loader" aria-hidden="true">
-                  <div class="skeleton-pulse"></div>
-                </div>
-
-                <img
-                  class="gallery-img"
-                  :src="getImageSrc(image.relativePath)"
-                  :alt="''"
-                  loading="lazy"
-                  @load="onImageLoad(image.id)"
-                  @error="onImageError(image.id)"
-                />
+        <div v-else class="album-view">
+          <div v-if="effectiveThumbnailLayout === 'masonry'" class="gallery-masonry">
+            <div
+              v-for="image in currentAlbumImages"
+              :key="image.id"
+              :class="[
+                'gallery-item',
+                'gallery-item--masonry',
+                { 'is-loaded': isImageLoaded(image.id) },
+              ]"
+              @click.stop="openLightbox(image.id)"
+            >
+              <div v-if="!isImageLoaded(image.id)" class="skeleton-loader" aria-hidden="true">
+                <div class="skeleton-pulse"></div>
               </div>
+
+              <img
+                class="gallery-img gallery-img--masonry"
+                :src="getImageSrc(image.relativePath)"
+                :alt="''"
+                loading="lazy"
+                @load="onImageLoad(image.id)"
+                @error="onImageError(image.id)"
+              />
+            </div>
+          </div>
+
+          <div v-else class="gallery-grid">
+            <div
+              v-for="image in currentAlbumImages"
+              :key="image.id"
+              :class="['gallery-item', { 'is-loaded': isImageLoaded(image.id) }]"
+              @click.stop="openLightbox(image.id)"
+            >
+              <div v-if="!isImageLoaded(image.id)" class="skeleton-loader" aria-hidden="true">
+                <div class="skeleton-pulse"></div>
+              </div>
+
+              <img
+                class="gallery-img"
+                :src="getImageSrc(image.relativePath)"
+                :alt="''"
+                loading="lazy"
+                @load="onImageLoad(image.id)"
+                @error="onImageError(image.id)"
+              />
             </div>
           </div>
         </div>
@@ -226,7 +279,7 @@
           aria-label="Previous"
           @click.stop="prevImage"
         >
-          ‹
+          <span aria-hidden="true" class="lightbox-nav__icon" v-html="arrowLeftSvg" />
         </button>
         <button
           class="lightbox-nav lightbox-next"
@@ -234,7 +287,11 @@
           aria-label="Next"
           @click.stop="nextImage"
         >
-          ›
+          <span
+            aria-hidden="true"
+            class="lightbox-nav__icon lightbox-nav__icon--next"
+            v-html="arrowLeftSvg"
+          />
         </button>
 
         <div class="lightbox-content">
@@ -285,10 +342,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import TreeSelect from 'primevue/treeselect'
-import DatePicker from 'primevue/datepicker'
 import { useGalleryData, type ImageOptions } from '@/composables/useGalleryData'
 import librarySplitSvg from '@/assets/icons/library-split.svg?raw'
 import closeSvg from '@/assets/icons/close.svg?raw'
+import arrowLeftSvg from '@/assets/icons/arrow-left.svg?raw'
 
 type ThumbnailLayout = 'square' | 'masonry'
 
@@ -325,14 +382,15 @@ const {
   allPeople,
   allLocations,
   allTags,
+  availableYears,
   mode,
   selectedFilters,
   lightboxImage,
   hasActiveFilters,
-  selectedYear,
+  selectedYears,
   setMode,
   clearFilters,
-  setYear,
+  setYears,
   openLightbox,
   closeLightbox,
   nextImage,
@@ -340,6 +398,55 @@ const {
   getImagesForAlbum,
   resolveImage,
 } = useGalleryData()
+
+const treeSelectRef = ref(null)
+const isFilterOverlayOpen = ref(false)
+
+function focusTreeSelectFilterIfPresent() {
+  // PrimeVue teleports overlay to body. Focus search input when opening.
+  const input = document.querySelector(
+    '.p-treeselect-overlay input, .p-treeselect-panel input, .p-treeselect-filter input'
+  ) as HTMLInputElement | null
+  input?.focus()
+}
+
+function onFilterOverlayShow() {
+  isFilterOverlayOpen.value = true
+  nextTick(() => {
+    window.requestAnimationFrame(() => focusTreeSelectFilterIfPresent())
+  })
+}
+
+function onFilterOverlayHide() {
+  isFilterOverlayOpen.value = false
+}
+
+const thumbnailLayoutSetting = ref<ThumbnailLayout>(props.thumbnailLayout)
+const timelineEnabledSetting = ref<boolean>(props.timelineEnabled)
+
+const isConfigOpen = ref(false)
+const configPanelRef = ref<HTMLElement | null>(null)
+
+function openConfig() {
+  isConfigOpen.value = true
+  nextTick(() => configPanelRef.value?.focus())
+}
+
+function closeConfig() {
+  isConfigOpen.value = false
+}
+
+function toggleConfig() {
+  if (isConfigOpen.value) {
+    closeConfig()
+  } else {
+    openConfig()
+  }
+}
+
+function toggleSquareThumbnails() {
+  thumbnailLayoutSetting.value = thumbnailLayoutSetting.value === 'square' ? 'masonry' : 'square'
+}
 
 const isRailExpanded = ref(false)
 const showRailLabels = computed(() => isRailExpanded.value)
@@ -414,6 +521,8 @@ function insertPathKeyed(
       node = {
         key: nodeKey,
         label: segment,
+        leaf: isLeaf,
+        selectable: isLeaf,
         children: isLeaf ? undefined : [],
       }
       current.push(node)
@@ -447,6 +556,14 @@ const filterTreeNodes = computed<FilterTreeNode[]>(() => {
     key: 'root:tags',
     label: 'Tags',
     icon: 'pi pi-tags',
+    selectable: false,
+    children: [],
+  }
+
+  const dateRoot: FilterTreeNode = {
+    key: 'root:date',
+    label: 'Date',
+    icon: 'pi pi-calendar',
     selectable: false,
     children: [],
   }
@@ -490,13 +607,16 @@ const filterTreeNodes = computed<FilterTreeNode[]>(() => {
     }
   }
 
-  return [peopleRoot, locationRoot, tagsRoot]
+  // Date (years)
+  for (const y of availableYears.value) {
+    dateRoot.children!.push({ key: `date:${y}`, label: String(y), leaf: true })
+  }
+
+  return [peopleRoot, locationRoot, tagsRoot, dateRoot]
 })
 
-const selectedYearDate = ref<Date | null>(null)
-
 const hasAnyFilters = computed(() => {
-  return hasActiveFilters.value || selectedYear.value !== null
+  return hasActiveFilters.value || selectedYears.value.length > 0
 })
 
 // Album view state
@@ -524,35 +644,38 @@ function getAlbumCover(albumName: string): string | null {
   return images.length > 0 ? images[0]?.relativePath || null : null
 }
 
-// Image URL resolution with reactive caching
+// Image URL resolution with reactive caching.
+// IMPORTANT: don't track pending loads in a reactive ref.
+// If resolveImage() returns '' (missing file), a reactive pending Set will
+// repeatedly trigger re-renders and re-requests (can hang Firefox).
 const imageCache = ref<Map<string, string>>(new Map())
-const imagePending = ref<Set<string>>(new Set())
+const imagePending = new Set<string>()
 const imageLoaded = ref<Set<number>>(new Set())
 
 function getImageUrl(relativePath: string, options?: ImageOptions): string {
+  if (!relativePath) return ''
   const cacheKey = JSON.stringify({ relativePath, options })
 
   if (imageCache.value.has(cacheKey)) {
     return imageCache.value.get(cacheKey)!
   }
 
-  if (imagePending.value.has(cacheKey)) {
+  if (imagePending.has(cacheKey)) {
     return ''
   }
 
-  imagePending.value.add(cacheKey)
-  imagePending.value = new Set(imagePending.value)
+  imagePending.add(cacheKey)
 
   // Load async and trigger reactivity when ready
   resolveImage(relativePath).then((url) => {
+    // Cache even empty results so missing files don't trigger endless retries.
+    imageCache.value.set(cacheKey, url || '')
     if (url) {
-      imageCache.value.set(cacheKey, url)
-      // Trigger reactivity
+      // Trigger reactivity only when there's a real URL to render.
       imageCache.value = new Map(imageCache.value)
     }
 
-    imagePending.value.delete(cacheKey)
-    imagePending.value = new Set(imagePending.value)
+    imagePending.delete(cacheKey)
   })
 
   // Return cached or empty while loading
@@ -581,19 +704,37 @@ function isImageLoaded(imageId: number): boolean {
 
 // Keyboard navigation for lightbox
 function handleKeydown(event: KeyboardEvent) {
-  if (!lightboxImage.value) return
+  if (event.key === 'Escape') {
+    if (isConfigOpen.value) {
+      event.preventDefault()
+      event.stopPropagation()
+      closeConfig()
+      return
+    }
 
+    // If the filter overlay is open, PrimeVue will close it on Escape.
+    // We still stop propagation so CardDealer doesn't navigate back.
+    if (isFilterOverlayOpen.value) {
+      event.preventDefault()
+      event.stopPropagation()
+      return
+    }
+
+    if (lightboxImage.value) {
+      event.preventDefault()
+      event.stopPropagation()
+      closeLightbox()
+      return
+    }
+  }
+
+  if (!lightboxImage.value) return
   switch (event.key) {
     case 'ArrowLeft':
       prevImage()
       break
     case 'ArrowRight':
       nextImage()
-      break
-    case 'Escape':
-      event.preventDefault()
-      event.stopPropagation()
-      closeLightbox()
       break
   }
 }
@@ -602,8 +743,6 @@ function handleKeydown(event: KeyboardEvent) {
 function clearAll() {
   clearFilters()
   selectedTreeKeys.value = {}
-  selectedYearDate.value = null
-  setYear(null)
 }
 
 function isKeyChecked(
@@ -636,19 +775,10 @@ function collectCheckedLeafTokens(
   return Array.from(tokens)
 }
 
-function collectCheckedKeys(
-  selectionKeys: Record<string, boolean | { checked?: boolean }>
-): string[] {
-  return Object.keys(selectionKeys).filter((k) => isKeyChecked(selectionKeys, k))
-}
-
 watch(
   [selectedTreeKeys, filterTreeNodes],
   () => {
-    const tokens =
-      hasHierarchicalTagPaths.value || hasHierarchicalLocationPaths.value
-        ? collectCheckedKeys(selectedTreeKeys.value)
-        : collectCheckedLeafTokens(filterTreeNodes.value, selectedTreeKeys.value)
+    const tokens = collectCheckedLeafTokens(filterTreeNodes.value, selectedTreeKeys.value)
 
     selectedFilters.value.people = tokens
       .filter((t) => t.startsWith('people:'))
@@ -659,19 +789,15 @@ watch(
     selectedFilters.value.location = tokens
       .filter((t) => t.startsWith('location:'))
       .map((t) => t.slice('location:'.length))
+
+    const years = tokens
+      .filter((t) => t.startsWith('date:'))
+      .map((t) => Number(t.slice('date:'.length)))
+      .filter((n) => Number.isFinite(n))
+    setYears(years)
   },
   { deep: true }
 )
-
-watch(
-  selectedYearDate,
-  (date) => {
-    const year = date ? date.getFullYear() : null
-    setYear(year)
-  },
-  { deep: false }
-)
-
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
 })
@@ -680,11 +806,11 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
 })
 
-const timelineEnabled = computed(() => props.timelineEnabled)
+const isTimelineEnabled = computed(() => timelineEnabledSetting.value)
 
 const effectiveThumbnailLayout = computed<ThumbnailLayout>(() => {
-  // When timeline is disabled, keep the original "grid fills rows" behavior.
-  return timelineEnabled.value ? props.thumbnailLayout : 'square'
+  // Keep layout independent from timeline.
+  return thumbnailLayoutSetting.value
 })
 
 type PhotoGroup = { key: string; label: string; images: typeof filteredImages.value }
@@ -699,7 +825,7 @@ function formatMonthYear(key: string) {
 }
 
 const photoGroups = computed<PhotoGroup[]>(() => {
-  if (!timelineEnabled.value) {
+  if (!isTimelineEnabled.value) {
     return [{ key: 'all', label: '', images: filteredImages.value }]
   }
 
@@ -731,7 +857,7 @@ function onGalleryScroll() {
 
   isScrolled.value = el.scrollTop > 24
 
-  if (!timelineEnabled.value) {
+  if (!isTimelineEnabled.value) {
     floatingMonthYear.value = ''
     return
   }
@@ -977,9 +1103,11 @@ watch(
   flex-direction: column;
   padding: 8px;
   gap: 8px;
+  overflow-x: hidden;
   flex-shrink: 0;
   border-right: 1px solid var(--color-border);
   transition: width 0.3s ease;
+  box-sizing: border-box;
 }
 
 .gallery-rail.is-expanded {
@@ -991,14 +1119,15 @@ watch(
   height: 56px;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  padding: 0 12px;
+  justify-content: center;
+  padding: 0;
   background: transparent;
   border: none;
   border-radius: 8px;
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: background var(--transition-base);
+  box-sizing: border-box;
 }
 
 .gallery-rail__toggle:hover {
@@ -1016,6 +1145,7 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-x: hidden;
 }
 
 .gallery-rail__item {
@@ -1023,12 +1153,18 @@ watch(
   height: 56px;
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 12px;
-  padding: 0 12px;
+  padding: 0;
   border-radius: 8px;
   transition: background var(--transition-base);
   color: var(--color-text);
+  box-sizing: border-box;
+}
+
+.gallery-rail.is-expanded .gallery-rail__item {
+  justify-content: flex-start;
+  padding: 0 12px;
 }
 
 .gallery-rail__item:hover {
@@ -1098,6 +1234,106 @@ watch(
 
 .filter-select {
   width: 100%;
+}
+
+.btn-gear {
+  margin-left: auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-gear:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-gear .pi {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.gallery-config-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10002;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 68px 14px 14px;
+}
+
+.gallery-config-panel {
+  width: min(260px, calc(100vw - 28px));
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.75);
+  box-shadow: 0 14px 50px rgba(0, 0, 0, 0.45);
+  padding: 10px 12px;
+  outline: none;
+}
+
+.filters-bar__row--album {
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.btn-back-album {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.95);
+  cursor: pointer;
+}
+
+.btn-back-album:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-back-album .pi {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.album-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.gallery-config-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.9);
+  user-select: none;
+}
+
+.gallery-config-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.gallery-config-row input {
+  width: 16px;
+  height: 16px;
 }
 
 /* Content */
@@ -1381,6 +1617,9 @@ watch(
   cursor: pointer;
   transition: all 0.2s ease;
   z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
     background: rgba(255, 255, 255, 0.2);
@@ -1404,7 +1643,9 @@ watch(
   border: none;
   border-radius: 50%;
   color: white;
-  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
   z-index: 10001;
@@ -1420,6 +1661,16 @@ watch(
   &.lightbox-next {
     right: 1rem;
   }
+}
+
+.lightbox-nav__icon :deep(svg) {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.lightbox-nav__icon--next {
+  transform: rotate(180deg);
 }
 
 .lightbox-content {
