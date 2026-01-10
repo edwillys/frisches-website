@@ -154,6 +154,20 @@ try {
     }
     return currentId === ancestorId ? segments : []
   }
+
+  // Build a full path (segments) from the top-most parent down to a tagId.
+  // Example: Activity/Show/Proberaum
+  function getFullTagPath(tagId) {
+    const segments = []
+    let currentId = tagId
+    while (currentId) {
+      const t = tagMap[currentId]
+      if (!t) break
+      segments.unshift(t.name)
+      currentId = t.pid
+    }
+    return segments
+  }
   
   const peopleTagIds = peopleRootId ? getDescendants(peopleRootId) : new Set()
   const locationTagIds = locationRootId ? getDescendants(locationRootId) : new Set()
@@ -335,7 +349,12 @@ try {
       } else {
         // Skip root tags themselves in regular tags
         if (tagId !== peopleRootId && tagId !== locationRootId) {
-          tags.push(tag.name)
+          const pathSegments = getFullTagPath(tagId)
+          if (pathSegments.length) {
+            tags.push(pathSegments.join('/'))
+          } else {
+            tags.push(tag.name)
+          }
         }
       }
     })

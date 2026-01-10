@@ -1383,6 +1383,7 @@ onBeforeUnmount(() => {
   <div
     data-testid="card-dealer"
     :data-animating="isAnimating"
+    :data-active-content="currentView === 'content' ? selectedItem?.title || '' : ''"
     :class="[
       'card-dealer',
       {

@@ -48,12 +48,16 @@ function getLocationPathsFromImage(image: GalleryImage): string[] {
   return Array.from(paths).sort()
 }
 
-function locationPathToLabel(path: string): string {
-  const parts = path
-    .split('/')
-    .map((p) => p.trim())
-    .filter(Boolean)
-  return parts.length ? parts[parts.length - 1]! : path
+function matchesAnyPathOrDescendant(selected: string[], candidatePaths: string[]): boolean {
+  if (selected.length === 0) return true
+  if (candidatePaths.length === 0) return false
+
+  return selected.some((sel) => {
+    const s = String(sel).trim()
+    if (!s) return false
+    const prefix = `${s}/`
+    return candidatePaths.some((p) => p === s || p.startsWith(prefix))
+  })
 }
 
 export type GalleryMode = 'Photos' | 'Albums'
@@ -173,13 +177,12 @@ export function useGalleryData() {
       selectedFilters.value.people.some((p) => image.people.includes(p))
 
     const imageLocationPaths = getLocationPathsFromImage(image)
-    const matchesLocation =
-      selectedFilters.value.location.length === 0 ||
-      selectedFilters.value.location.some((l) => imageLocationPaths.includes(l))
+    const matchesLocation = matchesAnyPathOrDescendant(
+      selectedFilters.value.location,
+      imageLocationPaths
+    )
 
-    const matchesTags =
-      selectedFilters.value.tags.length === 0 ||
-      selectedFilters.value.tags.some((t) => image.tags.includes(t))
+    const matchesTags = matchesAnyPathOrDescendant(selectedFilters.value.tags, image.tags)
 
     const matchesYear =
       selectedYear.value === null ||
@@ -350,10 +353,6 @@ export function useGalleryData() {
     return getLocationPathsFromTags(image.tags)
   }
 
-  function getImageLocationLabels(image: GalleryImage): string[] {
-    return getLocationPathsFromTags(image.tags).map(locationPathToLabel)
-  }
-
   return {
     // Data
     galleryData,
@@ -391,7 +390,6 @@ export function useGalleryData() {
 
     // Helpers
     getImageLocationPaths,
-    getImageLocationLabels,
 
     // Image resolution
     resolveImage,

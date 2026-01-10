@@ -109,7 +109,8 @@
 }
 
 .p-treeselect-panel .p-inputtext:focus {
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: color-mix(in srgb, var(--color-neon-magenta) 55%, rgba(255, 255, 255, 0.22));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-neon-magenta) 18%, transparent);
 }
 
 .p-treeselect-panel .p-treenode-content {
@@ -122,7 +123,22 @@
 }
 
 .p-treeselect-panel .p-treenode-content[data-p-selected='true'] {
-  background: rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--color-neon-magenta) 22%, rgba(255, 255, 255, 0.06));
+}
+
+/* PrimeVue v4 Tree node selected/highlighted states (varies by component + renderer) */
+.p-treeselect-panel .p-treenode-content.p-highlight,
+.p-treeselect-panel .p-treenode-content.p-focus,
+.p-treeselect-panel .p-treenode-content[aria-selected='true'],
+.p-treeselect-panel .p-treenode-content[data-p-highlight='true'],
+.p-treeselect-panel .p-treenode[data-p-selected='true'] > .p-treenode-content,
+.p-treeselect-panel .p-treenode[aria-selected='true'] > .p-treenode-content {
+  background: color-mix(in srgb, var(--color-neon-magenta) 22%, rgba(255, 255, 255, 0.06));
+}
+
+.p-treeselect-panel .p-treenode-content.p-focus {
+  outline: 2px solid color-mix(in srgb, var(--color-neon-magenta) 45%, transparent);
+  outline-offset: -2px;
 }
 
 .p-treeselect-panel .p-treenode-label {
@@ -154,7 +170,8 @@
 }
 
 .p-multiselect-filter:focus {
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: color-mix(in srgb, var(--color-neon-magenta) 55%, rgba(255, 255, 255, 0.22));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-neon-magenta) 18%, transparent);
 }
 
 .p-multiselect-filter-icon {
@@ -182,7 +199,7 @@
 }
 
 .p-multiselect-item.p-highlight {
-  background: rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--color-neon-magenta) 18%, rgba(255, 255, 255, 0.08));
 }
 
 .p-multiselect-item-group {
@@ -208,8 +225,8 @@
 }
 
 .p-checkbox-box.p-highlight {
-  border-color: rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.14);
+  border-color: color-mix(in srgb, var(--color-neon-magenta) 55%, rgba(255, 255, 255, 0.35));
+  background: color-mix(in srgb, var(--color-neon-magenta) 22%, rgba(255, 255, 255, 0.12));
 }
 
 /* Chips */
@@ -222,6 +239,16 @@
   padding: 2px 8px;
   font-size: 12px;
   margin: 2px;
+}
+
+.p-treeselect-chip .p-chip-remove-icon,
+.p-multiselect-chip .p-chip-remove-icon {
+  color: var(--color-text-secondary);
+}
+
+.p-treeselect-chip .p-chip-remove-icon:hover,
+.p-multiselect-chip .p-chip-remove-icon:hover {
+  color: var(--color-neon-magenta);
 }
 
 /* DatePicker year panel */
@@ -238,5 +265,5 @@
 }
 
 .p-datepicker table td > span.p-highlight {
-  background: rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--color-neon-magenta) 18%, rgba(255, 255, 255, 0.08));
 }

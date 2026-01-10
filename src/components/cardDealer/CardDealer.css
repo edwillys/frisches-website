@@ -252,6 +252,12 @@
   z-index: 0;
 }
 
+/* Gallery: keep the background image more visible so transparent thumbnails
+   don't read as "black boxed" against a fully dimmed overlay. */
+.card-dealer[data-active-content='Gallery'] .card-dealer__content-overlay {
+  background: rgba(0, 0, 0, 0.18);
+}
+
 .card-dealer__content-container {
   position: relative;
   z-index: 1;
