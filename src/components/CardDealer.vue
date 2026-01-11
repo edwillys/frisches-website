@@ -98,6 +98,7 @@ const contentPanelRef = ref<HTMLElement | null>(null)
 const logoButtonRef = ref<HTMLElement | Record<string, unknown> | null>(null)
 const backButtonRef = ref<HTMLElement | null>(null)
 const miniCardRef = ref<HTMLElement | null>(null)
+const headerRef = ref<HTMLElement | null>(null)
 const headerTitleRef = ref<HTMLElement | null>(null)
 import { useAudioStore } from '@/stores/audio'
 const currentView = ref<'logo' | 'cards' | 'content'>('logo')
@@ -481,6 +482,7 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
   const clickedInsideContent = contentPanelRef.value?.contains(target) ?? false
   const clickedBackButton = backButtonRef.value?.contains(target) ?? false
   const clickedMiniCard = miniCardRef.value?.contains(target) ?? false
+  const clickedHeader = headerRef.value?.contains(target) ?? false
   const clickedHeaderTitles = headerTitleRef.value?.contains(target) ?? false
 
   if (currentView.value === 'cards') {
@@ -488,7 +490,14 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
     startAnimating()
     playCardCloseAndLogoReappear()
   } else if (currentView.value === 'content') {
-    if (clickedInsideContent || clickedBackButton || clickedMiniCard || clickedHeaderTitles) return
+    if (
+      clickedInsideContent ||
+      clickedBackButton ||
+      clickedMiniCard ||
+      clickedHeader ||
+      clickedHeaderTitles
+    )
+      return
     startAnimating()
     playContentCloseAndCardsReturn()
   }
@@ -1196,9 +1205,49 @@ const handleHeaderHomeClick = () => {
   if (isAnimating.value) return
   if (currentView.value !== 'content') return
 
-  // Home should return to the real home screen (logo view), not just the cards.
-  startAnimating()
-  playContentCloseAndCardsReturn({ thenToLogo: true })
+  // Leaving the Music screen should always exit karaoke mode.
+  if (selectedItem.value?.route === '/music') {
+    audioStore.closeLyrics()
+  }
+
+  // Home should return immediately to the logo view without waiting for card/logo animations.
+  // The background should still animate back to the main background.
+  // IMPORTANT: we must also reset any card transforms; otherwise a subsequent card
+  // selection can read a wrong boundingClientRect (causing the card to appear from
+  // bottom-right sporadically).
+
+  const cards = getCardElements()
+  gsap.killTweensOf(cards)
+  cards.forEach((card) => {
+    card.dataset.deckMasked = 'false'
+    card.removeAttribute('aria-hidden')
+  })
+  gsap.set(cards, { clearProps: 'transform,opacity,visibility,zIndex,borderRadius' })
+
+  // Reset particle color immediately, but animate only the background.
+  emit('palette-change', readParticlesPaletteFromCss('main'))
+
+  // Trigger the same background transition used elsewhere (cover -> main), but do not
+  // animate the UI state.
+  transitionToCover({
+    enter: false,
+    elements: getBackgroundTransitionElements(
+      false,
+      bgMainRef.value,
+      bgSecondaryRef.value,
+      bgSecondaryDimRef.value
+    ),
+  })
+
+  isCoverActive.value = false
+  activeCover.value = null
+  selectedCard.value = null
+  currentView.value = 'logo'
+
+  nextTick(() => {
+    const logoEl = getLogoElement()
+    if (logoEl) gsap.set(logoEl, { clearProps: 'transform,opacity' })
+  })
 }
 
 type CoverTransitionOptions = {
@@ -1541,7 +1590,7 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Header with back button and miniature card (shown in content view) -->
-      <div v-if="currentView === 'content'" class="card-dealer__header">
+      <div v-if="currentView === 'content'" ref="headerRef" class="card-dealer__header">
         <div ref="backButtonRef" class="card-dealer__back-button" @click="handleBackClick">
           <span aria-hidden="true" v-html="arrowLeftSvg" />
         </div>

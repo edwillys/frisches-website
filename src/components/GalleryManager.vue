@@ -32,7 +32,7 @@
           class="gallery-rail__item"
           :class="{ 'is-active': mode === 'Albums' }"
           type="button"
-          @click="setMode('Albums')"
+          @click="handleAlbumsClick"
         >
           <i class="gallery-rail__icon pi pi-folder" aria-hidden="true" />
           <span v-if="showRailLabels" class="gallery-rail__label">Albums</span>
@@ -45,26 +45,58 @@
       <!-- Filters Bar -->
       <div class="filters-bar">
         <div class="filters-bar__row">
-          <div class="filter-group">
-            <TreeSelect
-              ref="treeSelectRef"
-              v-model="selectedTreeKeys"
-              :options="filterTreeNodes"
-              selectionMode="checkbox"
-              placeholder="Filter"
-              display="chip"
-              filter
-              filterPlaceholder="Search"
-              appendTo="body"
-              class="filter-select"
-              @show="onFilterOverlayShow"
-              @hide="onFilterOverlayHide"
-            />
+          <div class="filters-bar__left">
+            <div class="filter-group">
+              <TreeSelect
+                ref="treeSelectRef"
+                v-model="selectedTreeKeys"
+                :options="filterTreeNodes"
+                selectionMode="checkbox"
+                placeholder="Filter"
+                display="comma"
+                filter
+                filterPlaceholder="Search"
+                appendTo="body"
+                class="filter-select"
+                @show="onFilterOverlayShow"
+                @hide="onFilterOverlayHide"
+              >
+                <template #value>
+                  <span
+                    v-if="selectedLeafLabels.length === 0"
+                    class="filter-value filter-value--placeholder"
+                  >
+                    Filter
+                  </span>
+                  <span v-else class="filter-value" :title="selectedLeafLabels.join(', ')">
+                    {{ filterValueText }}
+                  </span>
+                </template>
+              </TreeSelect>
+            </div>
+
+            <button v-if="hasAnyFilters" class="btn-clear" type="button" @click="clearAll">
+              Clear
+            </button>
           </div>
 
-          <button v-if="hasAnyFilters" class="btn-clear" type="button" @click="clearAll">
-            Clear
-          </button>
+          <nav
+            v-if="mode === 'Albums' && currentAlbum"
+            class="breadcrumb breadcrumb--center"
+            aria-label="Album navigation"
+          >
+            <button
+              class="breadcrumb__item breadcrumb__item--link"
+              type="button"
+              @click.stop="closeAlbum"
+            >
+              Albums
+            </button>
+            <span class="breadcrumb__separator" aria-hidden="true">&gt;</span>
+            <span class="breadcrumb__item breadcrumb__item--current" :title="currentAlbum">
+              {{ currentAlbum }}
+            </span>
+          </nav>
 
           <button
             class="btn-gear"
@@ -76,27 +108,20 @@
             <i class="pi pi-cog" aria-hidden="true" />
           </button>
         </div>
+      </div>
 
-        <div
-          v-if="mode === 'Albums' && currentAlbum"
-          class="filters-bar__row filters-bar__row--album"
-        >
-          <button class="btn-back-album" type="button" @click.stop="closeAlbum">
-            <i class="pi pi-arrow-left" aria-hidden="true" />
-            Back to albums
-          </button>
-          <div class="album-title" :title="currentAlbum">{{ currentAlbum }}</div>
-        </div>
-
+      <!-- Config Overlay - teleported to body to avoid z-index/positioning issues -->
+      <Teleport to="body">
         <div
           v-if="isConfigOpen"
           class="gallery-config-overlay"
           role="dialog"
           aria-label="Display options"
           :data-carddealer-esc-block="'true'"
-          @click.self="closeConfig"
+          @click.self.stop="closeConfig"
+          @pointerdown.stop
         >
-          <div ref="configPanelRef" class="gallery-config-panel" tabindex="-1">
+          <div ref="configPanelRef" class="gallery-config-panel" tabindex="-1" @click.stop>
             <label class="gallery-config-row">
               <input
                 type="checkbox"
@@ -108,11 +133,11 @@
 
             <label class="gallery-config-row">
               <input type="checkbox" v-model="timelineEnabledSetting" />
-              <span>Timeline</span>
+              <span>Show Timeline</span>
             </label>
           </div>
         </div>
-      </div>
+      </Teleport>
 
       <!-- Photos Mode -->
       <div
@@ -635,6 +660,16 @@ function closeAlbum() {
   currentAlbum.value = null
 }
 
+function handleAlbumsClick() {
+  // If we're viewing an album, close it and go back to albums list
+  // Otherwise just switch to Albums mode
+  if (mode.value === 'Albums' && currentAlbum.value) {
+    closeAlbum()
+  } else {
+    setMode('Albums')
+  }
+}
+
 function getAlbumImageCount(albumName: string): number {
   return getImagesForAlbum(albumName).length
 }
@@ -774,6 +809,41 @@ function collectCheckedLeafTokens(
   for (const n of nodes) walk(n, false)
   return Array.from(tokens)
 }
+
+function collectCheckedLeafLabels(
+  nodes: FilterTreeNode[],
+  selectionKeys: Record<string, boolean | { checked?: boolean }>
+): string[] {
+  const labels = new Set<string>()
+
+  function walk(node: FilterTreeNode, parentChecked: boolean) {
+    const selfChecked = parentChecked || isKeyChecked(selectionKeys, node.key)
+    if (node.leaf) {
+      if (selfChecked) labels.add(node.label)
+      return
+    }
+    if (!node.children?.length) return
+    for (const child of node.children) walk(child, selfChecked)
+  }
+
+  for (const n of nodes) walk(n, false)
+  return Array.from(labels)
+}
+
+const selectedLeafLabels = computed(() => {
+  return collectCheckedLeafLabels(filterTreeNodes.value, selectedTreeKeys.value)
+})
+
+const filterValueText = computed(() => {
+  const labels = selectedLeafLabels.value
+  const count = labels.length
+  if (count === 0) return ''
+
+  // Keep the control compact: show up to 2 labels, then a +N indicator.
+  const SHOW = 2
+  if (count <= SHOW) return labels.join(', ')
+  return `${labels.slice(0, SHOW).join(', ')} +${count - SHOW}`
+})
 
 watch(
   [selectedTreeKeys, filterTreeNodes],
@@ -1205,11 +1275,18 @@ watch(
 }
 
 .filters-bar__row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 12px;
   padding: 12px;
-  flex-wrap: wrap;
+}
+
+.filters-bar__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
 }
 
 .filter-group {
@@ -1236,8 +1313,25 @@ watch(
   width: 100%;
 }
 
+.filter-select :deep(.p-treeselect-label) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filter-value {
+  display: inline-block;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filter-value--placeholder {
+  color: var(--color-text-secondary);
+}
+
 .btn-gear {
-  margin-left: auto;
   width: 38px;
   height: 38px;
   border-radius: 10px;
@@ -1258,82 +1352,21 @@ watch(
   line-height: 1;
 }
 
-.gallery-config-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 10002;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(6px);
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-  padding: 68px 14px 14px;
-}
+@media (max-width: 720px) {
+  .filters-bar__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+  }
 
-.gallery-config-panel {
-  width: min(260px, calc(100vw - 28px));
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.75);
-  box-shadow: 0 14px 50px rgba(0, 0, 0, 0.45);
-  padding: 10px 12px;
-  outline: none;
-}
+  .filters-bar__left {
+    flex: 1 1 100%;
+  }
 
-.filters-bar__row--album {
-  gap: 10px;
-  padding-top: 2px;
-}
-
-.btn-back-album {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 38px;
-  padding: 0 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.95);
-  cursor: pointer;
-}
-
-.btn-back-album:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.btn-back-album .pi {
-  font-size: 16px;
-  line-height: 1;
-}
-
-.album-title {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.gallery-config-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 8px;
-  border-radius: 10px;
-  color: rgba(255, 255, 255, 0.9);
-  user-select: none;
-}
-
-.gallery-config-row:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.gallery-config-row input {
-  width: 16px;
-  height: 16px;
+  .breadcrumb--center {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
 }
 
 /* Content */
@@ -1419,6 +1452,12 @@ watch(
   width: 100%;
   margin: 0 0 10px;
   break-inside: avoid;
+}
+
+/* Masonry items have auto-height until the image loads; keep a visible skeleton. */
+.gallery-item--masonry:not(.is-loaded) {
+  aspect-ratio: 1 / 1;
+  min-height: 180px;
 }
 
 .gallery-item:hover {
@@ -1746,5 +1785,97 @@ watch(
   text-align: right;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.8);
+}
+
+/* Breadcrumb navigation */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.breadcrumb--center {
+  justify-self: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.breadcrumb__item {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.breadcrumb__item--link {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.2s ease;
+}
+
+.breadcrumb__item--link:hover {
+  color: rgba(255, 255, 255, 1);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.breadcrumb__item--current {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.breadcrumb__separator {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+}
+</style>
+
+<!-- Global styles for teleported elements -->
+<style lang="scss">
+.gallery-config-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10002;
+  background: rgba(0, 0, 0, 0.22);
+  backdrop-filter: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 68px 14px 14px;
+}
+
+.gallery-config-panel {
+  width: min(260px, calc(100vw - 28px));
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.75);
+  box-shadow: 0 14px 50px rgba(0, 0, 0, 0.45);
+  padding: 10px 12px;
+  outline: none;
+}
+
+.gallery-config-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.9);
+  user-select: none;
+  cursor: pointer;
+}
+
+.gallery-config-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.gallery-config-row input {
+  width: 16px;
+  height: 16px;
 }
 </style>

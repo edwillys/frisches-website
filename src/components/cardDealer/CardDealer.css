@@ -142,6 +142,12 @@
   opacity: 0.5;
 }
 
+.card-dealer__social-link :is(svg) {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
 .card-dealer__header {
   position: fixed;
   top: 0;
@@ -153,7 +159,8 @@
   align-items: center;
   padding: var(--spacing-lg);
   gap: var(--spacing-md);
-  pointer-events: none;
+  /* Intercept clicks so the global outside-click handler doesn't treat the header as 'outside' */
+  pointer-events: auto;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%);
   backdrop-filter: blur(8px);
 }
