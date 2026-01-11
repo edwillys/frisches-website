@@ -1276,7 +1276,7 @@ watch(
 
 .filters-bar__row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 12px;
   padding: 12px;
@@ -1287,6 +1287,7 @@ watch(
   align-items: center;
   gap: 12px;
   min-width: 0;
+  grid-column: 1;
 }
 
 .filter-group {
@@ -1341,6 +1342,8 @@ watch(
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  grid-column: 3;
+  justify-self: end;
 }
 
 .btn-gear:hover {
@@ -1799,6 +1802,7 @@ watch(
   justify-self: center;
   min-width: 0;
   max-width: 100%;
+  grid-column: 2;
 }
 
 .breadcrumb__item {
