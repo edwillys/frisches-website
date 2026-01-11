@@ -464,9 +464,9 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* Keep album art aligned left even when collapsed */
+/* Center album art when collapsed */
 .album-rail:not(.is-expanded) .album-rail__item {
-  justify-content: flex-start;
+  justify-content: center;
   padding: 8px;
 }
 
