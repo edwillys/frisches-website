@@ -58,7 +58,7 @@ const TreeSelectStub = {
   name: 'TreeSelect',
   props: ['modelValue', 'options', 'display'],
   emits: ['update:modelValue'],
-  template: '<div data-testid="treeselect-stub" />',
+  template: '<div data-testid="treeselect-stub"><slot name="value" /></div>',
 }
 
 describe('GalleryManager', () => {
@@ -95,7 +95,7 @@ describe('GalleryManager', () => {
     wrapper.unmount()
   })
 
-  it('uses PrimeVue internal chip display for TreeSelect', async () => {
+  it('uses a compact TreeSelect display with custom value slot', async () => {
     const wrapper = mount(GalleryManager, {
       global: {
         stubs: {
@@ -105,7 +105,8 @@ describe('GalleryManager', () => {
     })
 
     const tree = wrapper.getComponent(TreeSelectStub)
-    expect(tree.props('display')).toBe('chip')
+    expect(tree.props('display')).toBe('comma')
+    expect(wrapper.get('.filter-value--placeholder').text()).toBe('Filter')
 
     wrapper.unmount()
   })
