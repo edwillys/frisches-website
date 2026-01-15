@@ -388,7 +388,7 @@ const props = withDefaults(
   }>(),
   {
     thumbnailLayout: 'masonry',
-    timelineEnabled: true,
+    timelineEnabled: false,
     showMonthYearHeaders: true,
     showFloatingMonthYear: false,
     // Sensible defaults for the current (flat) sample data.
@@ -1795,7 +1795,6 @@ watch(
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
 }
 
 .breadcrumb--center {
@@ -1807,6 +1806,7 @@ watch(
 
 .breadcrumb__item {
   color: rgba(255, 255, 255, 0.7);
+  font-size: 20px;
 }
 
 .breadcrumb__item--link {
