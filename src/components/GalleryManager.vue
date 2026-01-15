@@ -168,6 +168,7 @@
               v-for="image in group.images"
               :key="image.id"
               :class="[
+                'gallery-highlight-tile',
                 'gallery-item',
                 'gallery-item--masonry',
                 { 'is-loaded': isImageLoaded(image.id) },
@@ -193,7 +194,11 @@
             <div
               v-for="image in group.images"
               :key="image.id"
-              :class="['gallery-item', { 'is-loaded': isImageLoaded(image.id) }]"
+              :class="[
+                'gallery-highlight-tile',
+                'gallery-item',
+                { 'is-loaded': isImageLoaded(image.id) },
+              ]"
               @click.stop="openLightbox(image.id)"
             >
               <div v-if="!isImageLoaded(image.id)" class="skeleton-loader" aria-hidden="true">
@@ -219,7 +224,7 @@
           <div
             v-for="album in filteredAlbums"
             :key="album"
-            class="album-card"
+            class="album-card gallery-highlight-tile"
             @click.stop="openAlbum(album)"
           >
             <div class="album-thumbnail">
@@ -241,6 +246,7 @@
               v-for="image in currentAlbumImages"
               :key="image.id"
               :class="[
+                'gallery-highlight-tile',
                 'gallery-item',
                 'gallery-item--masonry',
                 { 'is-loaded': isImageLoaded(image.id) },
@@ -266,7 +272,11 @@
             <div
               v-for="image in currentAlbumImages"
               :key="image.id"
-              :class="['gallery-item', { 'is-loaded': isImageLoaded(image.id) }]"
+              :class="[
+                'gallery-highlight-tile',
+                'gallery-item',
+                { 'is-loaded': isImageLoaded(image.id) },
+              ]"
               @click.stop="openLightbox(image.id)"
             >
               <div v-if="!isImageLoaded(image.id)" class="skeleton-loader" aria-hidden="true">
@@ -1449,6 +1459,15 @@ watch(
   cursor: pointer;
 }
 
+.gallery-highlight-tile {
+  cursor: pointer;
+}
+
+.gallery-highlight-tile:hover {
+  border-color: var(--color-neon-magenta);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--color-neon-magenta) 30%, transparent);
+}
+
 .gallery-item--masonry {
   aspect-ratio: auto;
   display: inline-block;
@@ -1461,11 +1480,6 @@ watch(
 .gallery-item--masonry:not(.is-loaded) {
   aspect-ratio: 1 / 1;
   min-height: 180px;
-}
-
-.gallery-item:hover {
-  border-color: var(--color-neon-magenta);
-  box-shadow: 0 0 18px color-mix(in srgb, var(--color-neon-magenta) 30%, transparent);
 }
 
 .gallery-item.selected {
@@ -1538,10 +1552,6 @@ watch(
   overflow: hidden;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.album-card:hover {
-  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .album-thumbnail {
