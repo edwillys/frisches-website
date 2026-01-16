@@ -30,6 +30,7 @@ import MenuCard from './MenuCard.vue'
 import LogoButton from './LogoButton.vue'
 import AudioPlayer from './AudioPlayer.vue'
 import CharacterSelection from './CharacterSelection.vue'
+import GalleryManager from './GalleryManager.vue'
 import { useGSAP } from '../composables/useGSAP'
 import { readParticlesPaletteFromCss } from '../composables/useCardDealerPalette'
 import { getTargetXYToViewportCenter, getViewportCenter } from './cardDealer/viewportCenter'
@@ -97,6 +98,7 @@ const contentPanelRef = ref<HTMLElement | null>(null)
 const logoButtonRef = ref<HTMLElement | Record<string, unknown> | null>(null)
 const backButtonRef = ref<HTMLElement | null>(null)
 const miniCardRef = ref<HTMLElement | null>(null)
+const headerRef = ref<HTMLElement | null>(null)
 const headerTitleRef = ref<HTMLElement | null>(null)
 import { useAudioStore } from '@/stores/audio'
 const currentView = ref<'logo' | 'cards' | 'content'>('logo')
@@ -163,6 +165,7 @@ const selectedItem = computed(() =>
 const hasMountedContentView = ref(false)
 const hasMountedMusic = ref(false)
 const hasMountedAbout = ref(false)
+const hasMountedGallery = ref(false)
 
 const characterSelectionRef = ref<null | { resetToGroup: () => void }>(null)
 
@@ -171,6 +174,7 @@ watch(
   (title) => {
     if (title === 'Music') hasMountedMusic.value = true
     if (title === 'About') hasMountedAbout.value = true
+    if (title === 'Gallery') hasMountedGallery.value = true
   },
   { immediate: true }
 )
@@ -252,7 +256,7 @@ const menuItems = [
     route: '/about',
   },
   {
-    title: 'Galery',
+    title: 'Gallery',
     image: menuTourSmall,
     imageSrcset: menuTourSrcset,
     coverImage: bgGallerySmall,
@@ -288,8 +292,47 @@ const emit = defineEmits<{
   (e: 'palette-change', payload: number[] | null): void
 }>()
 
+const hasBlockingOverlayOpen = () => {
+  // Gallery lightbox + PrimeVue overlays (MultiSelect/DatePicker/etc.) are teleported to body.
+  // While any of these are open, CardDealer must not treat Escape or outside-click
+  // as a navigation/back action.
+  const selectors = [
+    '.lightbox',
+    '.gallery-config-overlay',
+    '.p-overlay',
+    '.p-overlaypanel',
+    '.p-dialog-mask',
+    '.p-sidebar-mask',
+    '.p-tooltip',
+    '.p-multiselect-overlay',
+    '.p-dropdown-panel',
+    '.p-select-overlay',
+    '.p-treeselect-panel',
+    '.p-treeselect-overlay',
+    '.p-datepicker-panel',
+    '.p-datepicker-overlay',
+  ].join(',')
+
+  const nodes = Array.from(document.querySelectorAll(selectors))
+  return nodes.some((n) => {
+    const el = n as HTMLElement
+    const style = window.getComputedStyle(el)
+    if (style.display === 'none' || style.visibility === 'hidden') return false
+    if (el.getClientRects().length === 0) return false
+    return true
+  })
+}
+
+const eventPathBlocksEscape = (e: KeyboardEvent) => {
+  const path = e.composedPath?.() ?? []
+  return path.some((p) => p instanceof HTMLElement && p.dataset.carddealerEscBlock === 'true')
+}
+
 const handleKeydown = (e: KeyboardEvent) => {
   if (e.key === 'Escape') {
+    if (e.defaultPrevented) return
+    if (eventPathBlocksEscape(e)) return
+    if (hasBlockingOverlayOpen()) return
     handleBackClick()
   }
 }
@@ -408,13 +451,38 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
   if (isAnimating.value) return
   if (currentView.value === 'logo') return
 
+  if (hasBlockingOverlayOpen()) return
+
   const target = event.target as Node | null
   if (!target) return
+
+  // PrimeVue overlays (TreeSelect/DatePicker/etc.) are teleported to body.
+  // Clicking inside them must not be treated as an outside click.
+  const targetEl = target instanceof Element ? target : null
+  const clickedInsidePrimeOverlay =
+    targetEl?.closest(
+      [
+        '.p-overlay',
+        '.p-overlaypanel',
+        '.p-dialog-mask',
+        '.p-sidebar-mask',
+        '.p-tooltip',
+        '.p-multiselect-overlay',
+        '.p-dropdown-panel',
+        '.p-select-overlay',
+        '.p-treeselect-panel',
+        '.p-treeselect-overlay',
+        '.p-datepicker-panel',
+        '.p-datepicker-overlay',
+      ].join(',')
+    ) !== null
+  if (clickedInsidePrimeOverlay) return
 
   const clickedInsideCards = cardsContainerRef.value?.contains(target) ?? false
   const clickedInsideContent = contentPanelRef.value?.contains(target) ?? false
   const clickedBackButton = backButtonRef.value?.contains(target) ?? false
   const clickedMiniCard = miniCardRef.value?.contains(target) ?? false
+  const clickedHeader = headerRef.value?.contains(target) ?? false
   const clickedHeaderTitles = headerTitleRef.value?.contains(target) ?? false
 
   if (currentView.value === 'cards') {
@@ -422,7 +490,14 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
     startAnimating()
     playCardCloseAndLogoReappear()
   } else if (currentView.value === 'content') {
-    if (clickedInsideContent || clickedBackButton || clickedMiniCard || clickedHeaderTitles) return
+    if (
+      clickedInsideContent ||
+      clickedBackButton ||
+      clickedMiniCard ||
+      clickedHeader ||
+      clickedHeaderTitles
+    )
+      return
     startAnimating()
     playContentCloseAndCardsReturn()
   }
@@ -695,7 +770,7 @@ const playLogoReappear = () => {
   })
 }
 
-const playContentCloseAndCardsReturn = () => {
+const playContentCloseAndCardsReturn = (opts?: { thenToLogo?: boolean }) => {
   const cards = getCardElements()
   const panel = contentPanelRef.value
   const backButton = backButtonRef.value
@@ -727,6 +802,13 @@ const playContentCloseAndCardsReturn = () => {
       selectedCard.value = null
       currentView.value = 'cards'
       isCoverActive.value = false
+
+      if (opts?.thenToLogo) {
+        // Continue the animation chain: cards -> logo.
+        nextTick(() => playCardCloseAndLogoReappear())
+        return
+      }
+
       stopAnimating()
     },
   })
@@ -1119,6 +1201,55 @@ const handleHeaderTitleClick = (menuIndex: number) => {
   syncCoverForMenuIndex(menuIndex)
 }
 
+const handleHeaderHomeClick = () => {
+  if (isAnimating.value) return
+  if (currentView.value !== 'content') return
+
+  // Leaving the Music screen should always exit karaoke mode.
+  if (selectedItem.value?.route === '/music') {
+    audioStore.closeLyrics()
+  }
+
+  // Home should return immediately to the logo view without waiting for card/logo animations.
+  // The background should still animate back to the main background.
+  // IMPORTANT: we must also reset any card transforms; otherwise a subsequent card
+  // selection can read a wrong boundingClientRect (causing the card to appear from
+  // bottom-right sporadically).
+
+  const cards = getCardElements()
+  gsap.killTweensOf(cards)
+  cards.forEach((card) => {
+    card.dataset.deckMasked = 'false'
+    card.removeAttribute('aria-hidden')
+  })
+  gsap.set(cards, { clearProps: 'transform,opacity,visibility,zIndex,borderRadius' })
+
+  // Reset particle color immediately, but animate only the background.
+  emit('palette-change', readParticlesPaletteFromCss('main'))
+
+  // Trigger the same background transition used elsewhere (cover -> main), but do not
+  // animate the UI state.
+  transitionToCover({
+    enter: false,
+    elements: getBackgroundTransitionElements(
+      false,
+      bgMainRef.value,
+      bgSecondaryRef.value,
+      bgSecondaryDimRef.value
+    ),
+  })
+
+  isCoverActive.value = false
+  activeCover.value = null
+  selectedCard.value = null
+  currentView.value = 'logo'
+
+  nextTick(() => {
+    const logoEl = getLogoElement()
+    if (logoEl) gsap.set(logoEl, { clearProps: 'transform,opacity' })
+  })
+}
+
 type CoverTransitionOptions = {
   enter: boolean
   coverSrc?: string
@@ -1344,6 +1475,7 @@ onBeforeUnmount(() => {
   <div
     data-testid="card-dealer"
     :data-animating="isAnimating"
+    :data-active-content="currentView === 'content' ? selectedItem?.title || '' : ''"
     :class="[
       'card-dealer',
       {
@@ -1458,7 +1590,7 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Header with back button and miniature card (shown in content view) -->
-      <div v-if="currentView === 'content'" class="card-dealer__header">
+      <div v-if="currentView === 'content'" ref="headerRef" class="card-dealer__header">
         <div ref="backButtonRef" class="card-dealer__back-button" @click="handleBackClick">
           <span aria-hidden="true" v-html="arrowLeftSvg" />
         </div>
@@ -1466,6 +1598,15 @@ onBeforeUnmount(() => {
           <!-- Circular avatar shows selected card image as background -->
         </div>
         <div v-if="selectedItem" ref="headerTitleRef" class="card-dealer__header-titles">
+          <button
+            type="button"
+            class="card-dealer__header-title-item"
+            @mouseenter="hoveredHeaderIndex = -1"
+            @mouseleave="hoveredHeaderIndex = null"
+            @click="handleHeaderHomeClick"
+          >
+            Home
+          </button>
           <button
             v-for="(item, index) in menuItems"
             :key="item.route"
@@ -1525,9 +1666,22 @@ onBeforeUnmount(() => {
             />
           </div>
 
+          <!-- Gallery (lazy-mount + keep alive via v-show) -->
+          <div
+            v-if="hasMountedGallery"
+            v-show="selectedItem?.title === 'Gallery'"
+            class="card-dealer__gallery-content"
+          >
+            <GalleryManager />
+          </div>
+
           <!-- Other content -->
           <div
-            v-if="selectedItem?.title !== 'Music' && selectedItem?.title !== 'About'"
+            v-if="
+              selectedItem?.title !== 'Music' &&
+              selectedItem?.title !== 'About' &&
+              selectedItem?.title !== 'Gallery'
+            "
             class="card-dealer__generic-content"
           >
             <p>

@@ -1,0 +1,269 @@
+/* PrimeVue (unstyled) - minimal global styling so overlays are readable in this app.
+   Keep this aligned with the site's design tokens.
+*/
+
+/* Ensure overlays are above the CardDealer content */
+.p-overlay,
+.p-overlaypanel,
+.p-multiselect-overlay,
+.p-dropdown-overlay,
+.p-datepicker-panel,
+.p-treeselect-panel,
+.p-select-overlay {
+  z-index: var(--z-dropdown);
+}
+
+/* Inputs (MultiSelect / TreeSelect / DatePicker) */
+.p-multiselect,
+.p-treeselect,
+.p-datepicker {
+  width: 100%;
+  min-height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+}
+
+.p-multiselect:hover,
+.p-treeselect:hover,
+.p-datepicker:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.p-multiselect-label,
+.p-treeselect-label,
+.p-datepicker-input {
+  padding: 8px 10px;
+  font-size: 14px;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.p-multiselect-trigger,
+.p-treeselect-dropdown,
+.p-datepicker-trigger {
+  width: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+}
+
+/* Gallery UX: TreeSelect should look like a search input (no arrow) */
+.p-treeselect-dropdown {
+  display: none;
+}
+
+.p-treeselect-label-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.p-treeselect-label {
+  flex: 1;
+}
+
+.p-treeselect-label.p-placeholder {
+  color: var(--color-text-secondary);
+}
+
+/* Dropdown panels */
+.p-multiselect-panel,
+.p-treeselect-panel,
+.p-select-overlay,
+.p-datepicker-panel {
+  margin-top: 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-lg);
+  color: var(--color-text);
+}
+
+/* TreeSelect / Tree (used for hierarchical DigiKam filters) */
+.p-treeselect-panel .p-tree {
+  background: transparent;
+  color: var(--color-text);
+}
+
+.p-treeselect-panel .p-iconfield,
+.p-treeselect-panel .p-iconfield .p-inputtext {
+  width: 100%;
+}
+
+.p-treeselect-panel .p-inputtext {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text);
+  padding: 8px 34px 8px 10px;
+  outline: none;
+}
+
+.p-treeselect-panel .p-inputtext:focus {
+  border-color: color-mix(in srgb, var(--color-neon-magenta) 55%, rgba(255, 255, 255, 0.22));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-neon-magenta) 18%, transparent);
+}
+
+.p-treeselect-panel .p-treenode-content {
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.p-treeselect-panel .p-treenode-content:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.p-treeselect-panel .p-treenode-content[data-p-selected='true'] {
+  background: color-mix(in srgb, var(--color-neon-magenta) 22%, rgba(255, 255, 255, 0.06));
+}
+
+/* PrimeVue v4 Tree node selected/highlighted states (varies by component + renderer) */
+.p-treeselect-panel .p-treenode-content.p-highlight,
+.p-treeselect-panel .p-treenode-content.p-focus,
+.p-treeselect-panel .p-treenode-content[aria-selected='true'],
+.p-treeselect-panel .p-treenode-content[data-p-highlight='true'],
+.p-treeselect-panel .p-treenode[data-p-selected='true'] > .p-treenode-content,
+.p-treeselect-panel .p-treenode[aria-selected='true'] > .p-treenode-content {
+  background: color-mix(in srgb, var(--color-neon-magenta) 22%, rgba(255, 255, 255, 0.06));
+}
+
+.p-treeselect-panel .p-treenode-content.p-focus {
+  outline: 2px solid color-mix(in srgb, var(--color-neon-magenta) 45%, transparent);
+  outline-offset: -2px;
+}
+
+.p-treeselect-panel .p-treenode-label {
+  color: var(--color-text);
+}
+
+.p-treeselect-panel .p-treenode-icon {
+  color: var(--color-text-secondary);
+}
+
+/* MultiSelect header (search) */
+.p-multiselect-header {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.p-multiselect-filter-container {
+  position: relative;
+}
+
+.p-multiselect-filter {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text);
+  padding: 8px 34px 8px 10px;
+  outline: none;
+}
+
+.p-multiselect-filter:focus {
+  border-color: color-mix(in srgb, var(--color-neon-magenta) 55%, rgba(255, 255, 255, 0.22));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-neon-magenta) 18%, transparent);
+}
+
+.p-multiselect-filter-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-secondary);
+}
+
+/* Option rows */
+.p-multiselect-items-wrapper {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.p-multiselect-item {
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.p-multiselect-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.p-multiselect-item.p-highlight {
+  background: color-mix(in srgb, var(--color-neon-magenta) 18%, rgba(255, 255, 255, 0.08));
+}
+
+.p-multiselect-item-group {
+  padding: 10px 12px 6px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+/* Checkboxes inside items */
+.p-checkbox {
+  width: 18px;
+  height: 18px;
+}
+
+.p-checkbox-box {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.p-checkbox-box.p-highlight {
+  border-color: color-mix(in srgb, var(--color-neon-magenta) 55%, rgba(255, 255, 255, 0.35));
+  background: color-mix(in srgb, var(--color-neon-magenta) 22%, rgba(255, 255, 255, 0.12));
+}
+
+/* Chips */
+.p-multiselect-chip,
+.p-treeselect-chip {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--color-text);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  margin: 2px;
+}
+
+.p-treeselect-chip .p-chip-remove-icon,
+.p-multiselect-chip .p-chip-remove-icon {
+  color: var(--color-text-secondary);
+}
+
+.p-treeselect-chip .p-chip-remove-icon:hover,
+.p-multiselect-chip .p-chip-remove-icon:hover {
+  color: var(--color-neon-magenta);
+}
+
+/* DatePicker year panel */
+.p-datepicker-year {
+  color: var(--color-text);
+}
+
+.p-datepicker table td > span {
+  border-radius: 8px;
+}
+
+.p-datepicker table td > span:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.p-datepicker table td > span.p-highlight {
+  background: color-mix(in srgb, var(--color-neon-magenta) 18%, rgba(255, 255, 255, 0.08));
+}

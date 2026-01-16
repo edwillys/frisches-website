@@ -1,5 +1,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+import PrimeVue from 'primevue/config'
+import Aura from '@primevue/themes/aura'
 
 import App from './App.vue'
 import router from './router'
@@ -7,6 +9,8 @@ import router from './router'
 // Import global styles
 import './assets/styles/variables.css'
 import './assets/styles/base.css'
+import 'primeicons/primeicons.css'
+import './assets/styles/primevue-unstyled.css'
 
 function loseAllWebGLContexts() {
   if (typeof document === 'undefined') return
@@ -113,5 +117,13 @@ const app = createApp(App)
 
 app.use(createPinia())
 app.use(router)
+app.use(PrimeVue, {
+  theme: {
+    preset: Aura,
+    options: {
+      darkModeSelector: '.dark-theme',
+    },
+  },
+})
 
 app.mount('#app')

@@ -39,11 +39,11 @@ test.describe('Frisches Website - Critical Flows', () => {
     // All three cards should be present
       const musicCard = page.locator('[data-testid="card-music"]')
       const aboutCard = page.locator('[data-testid="card-about"]')
-      const galeryCard = page.locator('[data-testid="card-gallery"]')
+      const galleryCard = page.locator('[data-testid="card-gallery"]')
     
     await expect(musicCard).toBeVisible({ timeout: 10000 })
     await expect(aboutCard).toBeVisible({ timeout: 10000 })
-      await expect(galeryCard).toBeVisible({ timeout: 10000 })
+      await expect(galleryCard).toBeVisible({ timeout: 10000 })
     
     // Logo should be hidden
     await expect(logoButton).toBeHidden()

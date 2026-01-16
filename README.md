@@ -108,3 +108,58 @@ npm run test:e2e -- --debug  # Debug mode
 ```sh
 npm run lint
 ```
+
+## 🖼️ Photo Gallery
+
+The project includes a photo gallery component that uses DigiKam for metadata management and `vite-imagetools` for responsive image optimization.
+
+To view it in the app UI, open the **Gallery** section in the CardDealer header.
+
+### Gallery Setup
+
+1. **DigiKam Database**: The gallery reads metadata from a DigiKam SQLite database. By default, it expects the database at `src/assets/private/images/gallery/digikam4.db`.
+
+2. **Custom Database Path**: Set the `DIGIKAM_DB` environment variable to use a different database location:
+
+```sh
+# Windows (PowerShell)
+$env:DIGIKAM_DB="C:\path\to\your\digikam4.db"; npm run dev
+
+# Linux/macOS
+DIGIKAM_DB=/path/to/your/digikam4.db npm run dev
+```
+
+3. **Generate Gallery Metadata**: The gallery metadata is automatically generated before dev/build. To manually generate:
+
+```sh
+npm run generate:gallery
+```
+
+This creates `src/assets/gallery_data.json` from your DigiKam database.
+
+### Gallery Features
+
+- **Modes**: Toggle between Photos (all images) and Albums (organized by folder)
+- **Filters**: Filter by People, Location, and Tags (persists across modes)
+- **Lightbox**: Double-click any image to open in fullscreen with keyboard navigation
+- **Responsive Images**: Automatically generates optimized sizes using `vite-imagetools`
+- **Metadata Classification**:
+  - Tags under "People" root → People filters
+  - Tags under "Places" root → Location filters
+  - Other tags → General tags
+
+### DigiKam Tag Structure
+
+For proper filter classification, organize your DigiKam tags as:
+
+```
+📁 People
+  └── Alice
+  └── Bob
+📁 Places (or Locations)
+  └── Spain
+  └── France
+📁 Other tags
+  └── beach
+  └── concert
+```

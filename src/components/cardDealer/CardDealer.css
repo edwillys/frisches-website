@@ -142,6 +142,12 @@
   opacity: 0.5;
 }
 
+.card-dealer__social-link :is(svg) {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
 .card-dealer__header {
   position: fixed;
   top: 0;
@@ -153,7 +159,8 @@
   align-items: center;
   padding: var(--spacing-lg);
   gap: var(--spacing-md);
-  pointer-events: none;
+  /* Intercept clicks so the global outside-click handler doesn't treat the header as 'outside' */
+  pointer-events: auto;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%);
   backdrop-filter: blur(8px);
 }
@@ -187,6 +194,13 @@
 .card-dealer__back-button :deep(svg) {
   width: 24px;
   height: 24px;
+  display: block;
+}
+
+.card-dealer__back-button > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .card-dealer__mini-card-wrapper {
@@ -252,6 +266,12 @@
   z-index: 0;
 }
 
+/* Gallery: keep the background image more visible so transparent thumbnails
+   don't read as "black boxed" against a fully dimmed overlay. */
+.card-dealer[data-active-content='Gallery'] .card-dealer__content-overlay {
+  background: rgba(0, 0, 0, 0.18);
+}
+
 .card-dealer__content-container {
   position: relative;
   z-index: 1;
@@ -280,6 +300,15 @@
   display: flex;
   align-items: stretch;
   justify-content: center;
+  width: 100%;
+  height: 100%;
+  max-width: 1400px;
+}
+
+.card-dealer__gallery-content {
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
   width: 100%;
   height: 100%;
   max-width: 1400px;
