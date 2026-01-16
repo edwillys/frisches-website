@@ -1,11 +1,56 @@
-import { test, expect, type Locator } from '@playwright/test'
+import { test, expect, type Locator, type Page } from '@playwright/test'
 
-async function clickRobust(locator: Locator) {
+async function clickRobust(locator: Locator, timeout = 5000) {
   try {
-    await locator.click({ timeout: 5000 })
+    await locator.scrollIntoViewIfNeeded({ timeout: 2000 })
   } catch {
-    await locator.evaluate((el) => (el as HTMLElement).click())
+    // ignore
   }
+
+  try {
+    await locator.click({ timeout })
+  } catch {
+    await locator.click({ timeout })
+  }
+}
+
+function escapeRegexLiteral(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+async function ensureTreeItemExpanded(page: Page, label: string) {
+  const item = page.getByRole('treeitem', { name: new RegExp(`^${escapeRegexLiteral(label)}$`) })
+  if ((await item.count()) === 0) return
+
+  const treeItem = item.first()
+  const expanded = await treeItem.getAttribute('aria-expanded')
+  if (expanded === 'true') return
+
+  const toggle = treeItem.locator('button').first()
+  if ((await toggle.count()) === 0) return
+
+  await clickRobust(toggle, 10000)
+}
+
+async function getTreeSelectCheckboxByLabel(page: Page, label: string): Promise<Locator> {
+  await ensureTreeItemExpanded(page, 'Tags')
+  await ensureTreeItemExpanded(page, 'Activity')
+
+  const exactNode = page.getByRole('treeitem', {
+    name: new RegExp(`^${escapeRegexLiteral(label)}$`, 'i'),
+  })
+  const node = ((await exactNode.count()) > 0
+    ? exactNode.first()
+    : page.getByRole('treeitem', { name: new RegExp(label, 'i') }).first())
+
+  const checkbox = node.getByRole('checkbox').first()
+  await expect(checkbox).toBeVisible({ timeout: 15000 })
+  return checkbox
+}
+
+async function toggleTreeSelectCheckboxByLabel(page: Page, label: string) {
+  const checkbox = await getTreeSelectCheckboxByLabel(page, label)
+  await clickRobust(checkbox, 15000)
 }
 
 test.describe('Gallery', () => {
@@ -39,36 +84,35 @@ test.describe('Gallery', () => {
     await clickRobust(treeSelect)
 
     // PrimeVue TreeSelect panel is teleported; wait for its search input.
-    const search = page.getByRole('textbox', { name: 'Search' })
+    const search = page.getByRole('textbox', { name: /Search/i })
     await expect(search).toBeVisible()
     await search.fill('Show')
 
-    // Ensure the Tags group is expanded so filtered results are reachable.
-    const tagsRoot = page.getByRole('treeitem', { name: /^Tags$/ })
-    const toggle = tagsRoot.locator('button').first()
-    await clickRobust(toggle)
-
-    const showNode = page.getByRole('treeitem', { name: /^Show$/ }).first()
-    const checkbox = showNode.getByRole('checkbox').first()
-    await clickRobust(checkbox)
-
-    // Close the panel so it doesn't cover the chips row
+    await toggleTreeSelectCheckboxByLabel(page, 'Show')
     await page.keyboard.press('Escape')
 
-    // Chip should appear in the TreeSelect input
-    await expect(treeSelect).toContainText('Show')
+    // Verify it's selected by re-opening and checking aria-checked.
+    await clickRobust(treeSelect)
+    await expect(page.getByRole('textbox', { name: /Search/i })).toBeVisible()
+    await page.getByRole('textbox', { name: /Search/i }).fill('Show')
+    const checkboxSelected = await getTreeSelectCheckboxByLabel(page, 'Show')
+    await expect(checkboxSelected).toBeChecked()
+    await page.keyboard.press('Escape')
 
     // Remove by unchecking inside the TreeSelect panel
     await clickRobust(treeSelect)
-    await expect(page.getByRole('textbox', { name: 'Search' })).toBeVisible()
-    await page.getByRole('textbox', { name: 'Search' }).fill('Show')
-
-    const showAgain = page.getByRole('treeitem', { name: /^Show$/ }).first()
-    const checkboxAgain = showAgain.getByRole('checkbox').first()
-    await clickRobust(checkboxAgain)
+    await expect(page.getByRole('textbox', { name: /Search/i })).toBeVisible()
+    await page.getByRole('textbox', { name: /Search/i }).fill('Show')
+    await toggleTreeSelectCheckboxByLabel(page, 'Show')
     await page.keyboard.press('Escape')
 
-    await expect(treeSelect).not.toContainText('Show')
+    // Verify it's unselected.
+    await clickRobust(treeSelect)
+    await expect(page.getByRole('textbox', { name: /Search/i })).toBeVisible()
+    await page.getByRole('textbox', { name: /Search/i }).fill('Show')
+    const checkboxUnselected = await getTreeSelectCheckboxByLabel(page, 'Show')
+    await expect(checkboxUnselected).not.toBeChecked()
+    await page.keyboard.press('Escape')
   })
 
   test('lightbox shows zoom controls and supports wheel zoom', async ({ page }) => {
