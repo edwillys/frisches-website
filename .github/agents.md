@@ -10,7 +10,7 @@ We are building a dynamic website for the rock band **Frisches** using Vue.js. T
 - The dealer will present a set of cards, each representing a menu option:
   - Music
   - About
-  - Galery
+  - Gallery
   - (Other typical band site sections)
 - The cards will be interactive and visually styled to match the mood of the media resources.
 
@@ -150,7 +150,7 @@ The effect maintains a balance between ambient atmosphere and interactive feedba
    - **Phase 2 (Distribution):** Once the deck is fully formed, the cards distribute symmetrically to their final left and right positions, sliding away from the center and appearing from behind the deck.
    - Duration: Phase 1 (0.8s), Phase 2 (1.0s).
 
-- Cards appear side-by-side (Music, About, Galery) in horizontal layout
+- Cards appear side-by-side (Music, About, Gallery) in horizontal layout
 - All 3 cards are now visible and clickable
 
 ### Cards View (Exploration)
@@ -231,7 +231,7 @@ The effect maintains a balance between ambient atmosphere and interactive feedba
 2. Design and develop the home screen layout with the card dealer and menu cards as a proof of concept. Only proceed to further steps once the home screen meets expectations.
 3. Organize the folder tree structure as a typical Vue project, including configuration for GitHub Actions to enable CI/CD.
 4. Plan and implement smooth animations for interactive elements.
-5. Expand the site with additional sections (music, about, galery, etc) after the home screen is approved.
+5. Expand the site with additional sections (music, about, gallery, etc) after the home screen is approved.
 
 ## Project Structure
 

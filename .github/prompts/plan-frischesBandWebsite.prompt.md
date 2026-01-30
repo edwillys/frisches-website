@@ -10,7 +10,7 @@ Build a Vue.js website for rock band Frisches with a card dealer-themed home scr
 
 3. **Extract design system** - Analyze `Intro_Voyante_00020.jpg` color palette, create `src/assets/styles/variables.css` with CSS custom properties for primary/secondary/accent colors, typography scale, spacing, and brand-consistent design tokens
 
-4. **Build core home screen components** - Create `views/HomeView.vue` as main container, implement `components/CardDealer.vue` with `Intro_Voyante_00020.jpg` background, build `components/MenuCard.vue` for interactive menu items (Music, About, Galery) using `Voyante_Carte_1/2/3_00000.jpg` images
+4. **Build core home screen components** - Create `views/HomeView.vue` as main container, implement `components/CardDealer.vue` with `Intro_Voyante_00020.jpg` background, build `components/MenuCard.vue` for interactive menu items (Music, About, Gallery) using `Voyante_Carte_1/2/3_00000.jpg` images
 
 5. **Implement GSAP animation system** - Create `composables/useGSAP.js` with gsap.context() for cleanup, add card dealing entrance sequence with stagger, hover scale/rotation effects, smooth transitions between states, use gsap.matchMedia() for responsive animation adjustments
 

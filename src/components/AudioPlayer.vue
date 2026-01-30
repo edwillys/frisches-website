@@ -40,7 +40,7 @@ const albumSongCount = computed(() => albumTracks.value.length)
 const selectedArtist = computed(() => selectedAlbum.value?.artist ?? 'Frisches')
 
 const bandLogoUrl = new URL(
-  '../assets/private/image/Frisches_Logo-Mood-3-Round.png',
+  '../assets/private/images/Frisches_Logo-Mood-3-Round.png',
   import.meta.url
 ).href
 
@@ -393,9 +393,11 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   gap: 8px;
   padding: 8px;
   overflow-y: auto;
+  overflow-x: hidden;
   flex-shrink: 0;
   transition: width 0.3s ease;
   border-right: 1px solid var(--color-border);
+  box-sizing: border-box;
 }
 
 .album-rail.is-expanded {
@@ -408,12 +410,20 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
   background: transparent;
   border: none;
   color: var(--color-text-secondary);
   cursor: pointer;
   border-radius: 8px;
   transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.album-rail__toggle :deep(svg) {
+  width: 24px;
+  height: 24px;
+  display: block;
 }
 
 .album-rail__toggle:hover {
@@ -425,9 +435,11 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-x: hidden;
 }
 
 .album-rail__item {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -440,6 +452,8 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   color: var(--color-text);
   text-align: left;
   min-height: 56px;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 .album-rail__item:hover {
@@ -450,8 +464,10 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   background: rgba(255, 255, 255, 0.15);
 }
 
+/* Center album art when collapsed */
 .album-rail:not(.is-expanded) .album-rail__item {
   justify-content: center;
+  padding: 8px;
 }
 
 .album-rail__cover {
