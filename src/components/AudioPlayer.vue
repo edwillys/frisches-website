@@ -12,7 +12,6 @@ import {
 } from '@/data/albums'
 import LyricsDisplay from './LyricsDisplay.vue'
 import closeSvg from '@/assets/icons/close.svg?raw'
-import librarySplitSvg from '@/assets/icons/library-split.svg?raw'
 import playSvg from '@/assets/icons/play.svg?raw'
 import pauseSvg from '@/assets/icons/pause.svg?raw'
 import shuffleSvg from '@/assets/icons/shuffle.svg?raw'
@@ -23,7 +22,6 @@ const audioStore = useAudioStore()
 
 // Current selected album
 const selectedAlbumId = ref('tftc')
-const isAlbumDrawerExpanded = ref(false)
 const selectedTrackId = ref<string | null>(null)
 const hoveredTrackId = ref<string | null>(null)
 
@@ -60,11 +58,6 @@ const isShuffle = computed(() => audioStore.isShuffle)
 
 function selectAlbum(albumId: string) {
   selectedAlbumId.value = albumId
-  isAlbumDrawerExpanded.value = false
-}
-
-function toggleAlbumDrawer() {
-  isAlbumDrawerExpanded.value = !isAlbumDrawerExpanded.value
 }
 
 function playAlbum() {
@@ -167,44 +160,37 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 
 <template>
   <div class="spotify-layout" data-testid="audio-player">
-    <!-- Left Sidebar: Album Rail -->
-    <aside class="album-rail" :class="{ 'is-expanded': isAlbumDrawerExpanded }">
-      <button
-        class="album-rail__toggle"
-        @click="toggleAlbumDrawer"
-        :data-tooltip="isAlbumDrawerExpanded ? 'Collapse library' : 'Expand library'"
-        :aria-label="isAlbumDrawerExpanded ? 'Collapse albums' : 'Expand albums'"
-        data-testid="album-rail-toggle"
-      >
-        <span aria-hidden="true" v-html="librarySplitSvg" />
-      </button>
-
-      <div class="album-rail__list">
+    <!-- Top: Album Carousel -->
+    <nav class="album-carousel" aria-label="Albums" data-testid="album-carousel">
+      <div class="album-carousel__list" role="list">
         <button
           v-for="album in albums"
           :key="album.albumId"
-          class="album-rail__item"
+          class="album-carousel__item"
           :class="{ 'is-active': album.albumId === selectedAlbumId }"
           :data-tooltip="`${album.title} • ${album.trackIds.length} songs`"
-          :aria-label="album.title"
+          :aria-label="`${album.title} (${album.trackIds.length} songs)`"
           @click="selectAlbum(album.albumId)"
-          data-testid="album-rail-item"
+          data-testid="album-carousel-item"
+          role="listitem"
         >
           <img
             :src="album.coverUrl"
             :srcset="album.coverSrcset"
             sizes="48px"
-            class="album-rail__cover"
+            class="album-carousel__cover"
             width="48"
             height="48"
+            :alt="album.title"
           />
-          <div v-if="isAlbumDrawerExpanded" class="album-rail__info">
-            <div class="album-rail__title">{{ album.title }}</div>
-            <div class="album-rail__meta">{{ album.trackIds.length }} songs</div>
+
+          <div class="album-carousel__info">
+            <div class="album-carousel__title">{{ album.title }}</div>
+            <div class="album-carousel__meta">{{ album.trackIds.length }} songs</div>
           </div>
         </button>
       </div>
-    </aside>
+    </nav>
 
     <!-- Main Content -->
     <main class="main-content">
@@ -377,6 +363,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   position: absolute;
   inset: 0;
   display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
   background: var(--color-background);
@@ -384,128 +371,86 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   overflow: hidden;
 }
 
-/* Album Rail */
-.album-rail {
-  width: 72px;
-  background: var(--color-surface);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 8px;
-  overflow-y: auto;
-  overflow-x: hidden;
+/* Album Carousel */
+.album-carousel {
   flex-shrink: 0;
-  transition: width 0.3s ease;
-  border-right: 1px solid var(--color-border);
-  box-sizing: border-box;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: 5px 24px;
 }
 
-.album-rail.is-expanded {
-  width: 240px;
-}
-
-.album-rail__toggle {
-  width: 100%;
-  height: 56px;
+.album-carousel__list {
   display: flex;
+  align-items: stretch;
+  gap: 5px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  padding: 2px 2px;
+}
+
+.album-carousel__item {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 5px;
   align-items: center;
-  justify-content: center;
-  padding: 0;
+  padding: 2px 2px;
   background: transparent;
-  border: none;
-  color: var(--color-text-secondary);
+  border: 1px solid transparent;
+  border-radius: 10px;
   cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  box-sizing: border-box;
-}
-
-.album-rail__toggle :deep(svg) {
-  width: 24px;
-  height: 24px;
-  display: block;
-}
-
-.album-rail__toggle:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--color-text);
-}
-
-.album-rail__list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  overflow-x: hidden;
-}
-
-.album-rail__item {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.2s ease;
   color: var(--color-text);
   text-align: left;
-  min-height: 56px;
-  box-sizing: border-box;
-  max-width: 100%;
+  scroll-snap-align: start;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+  width: 220px;
+  max-width: 220px;
 }
 
-.album-rail__item:hover {
-  background: rgba(255, 255, 255, 0.1);
+.album-carousel__item:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.album-rail__item.is-active {
-  background: rgba(255, 255, 255, 0.15);
+.album-carousel__item.is-active {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
-/* Center album art when collapsed */
-.album-rail:not(.is-expanded) .album-rail__item {
-  justify-content: center;
-  padding: 8px;
-}
-
-.album-rail__cover {
+.album-carousel__cover {
   display: block;
   width: 48px;
   height: 48px;
-  min-width: 48px;
-  min-height: 48px;
-  max-width: 48px;
-  max-height: 48px;
-  border-radius: 4px;
-  object-fit: contain;
-  object-position: center;
+  border-radius: 6px;
+  object-fit: cover;
   flex-shrink: 0;
   aspect-ratio: 1 / 1;
 }
 
-.album-rail__info {
+.album-carousel__info {
   min-width: 0;
-  opacity: 0;
-  transition: opacity 0.3s ease;
+  max-width: 150px;
 }
 
-.album-rail.is-expanded .album-rail__info {
-  opacity: 1;
-}
-
-.album-rail__title {
-  font-size: 14px;
-  font-weight: 600;
+.album-carousel__title {
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.album-rail__meta {
+.album-carousel__meta {
   font-size: 12px;
   color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Main Content */
@@ -520,11 +465,11 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 /* Album Hero Header */
 .album-hero {
   background: linear-gradient(180deg, #d4711c 0%, #8b4f1a 40%, var(--color-background) 100%);
-  padding: 24px 24px 48px;
+  padding: 4px 24px 8px;
   display: flex;
   gap: 24px;
   align-items: center;
-  min-height: 280px;
+  min-height: 265px;
 }
 
 .album-hero__cover-wrapper {
@@ -590,7 +535,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 
 /* Actions Row */
 .actions-row {
-  padding: 0 24px 24px;
+  padding: 0 24px 8px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -809,12 +754,17 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 
 /* Responsive */
 @media (max-width: 768px) {
-  .album-rail {
-    width: 64px;
+  .album-carousel {
+    padding: 8px 10px;
   }
 
-  .album-rail.is-expanded {
-    width: 200px;
+  .album-carousel__item {
+    width: 190px;
+    max-width: 190px;
+  }
+
+  .album-carousel__info {
+    max-width: 120px;
   }
 
   .album-hero {

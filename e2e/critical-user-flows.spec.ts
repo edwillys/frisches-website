@@ -64,7 +64,7 @@ test.describe('Frisches Website - Critical Flows', () => {
     
     // Verify music content - wait for AudioPlayer internal elements to render
     await expect(page.locator('[data-testid="audio-player"]')).toBeVisible({ timeout: 10000 })
-    await expect(page.locator('[data-testid="album-rail-toggle"]')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('[data-testid="album-carousel"]')).toBeVisible({ timeout: 10000 })
     await expect(page.locator('[data-testid="album-title"]')).toBeVisible({ timeout: 10000 })
 
     // Regression guard: album hero cover should be visible
@@ -89,7 +89,7 @@ test.describe('Frisches Website - Critical Flows', () => {
     
     // Wait for AudioPlayer and its internal elements to be fully rendered
     await expect(page.locator('[data-testid="audio-player"]')).toBeVisible({ timeout: 10000 })
-    await expect(page.locator('[data-testid="album-rail-toggle"]')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('[data-testid="album-carousel"]')).toBeVisible({ timeout: 10000 })
     await expect(page.locator('[data-testid="album-title"]')).toBeVisible({ timeout: 10000 })
 
     // Start playback via an explicit user gesture
