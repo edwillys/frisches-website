@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAudioStore } from '@/stores/audio'
 import InstrumentFaders from './InstrumentFaders.vue'
 
@@ -22,10 +22,17 @@ const audioStore = useAudioStore()
 
 const audioEl = ref<HTMLAudioElement | null>(null)
 const miniPlayerEl = ref<HTMLElement | null>(null)
+const titleEl = ref<HTMLElement | null>(null)
+const artistEl = ref<HTMLElement | null>(null)
 let miniPlayerResizeObserver: ResizeObserver | null = null
+let textResizeObserver: ResizeObserver | null = null
 let lastMiniPlayerOffsetPx = -1
+let rafOverflowUpdateId = 0
+let windowResizeHandler: (() => void) | null = null
 
 const showStemFaders = ref(false)
+const isTitleOverflowing = ref(false)
+const isArtistOverflowing = ref(false)
 
 const shouldShowMiniPlayer = computed(
   () => audioStore.persistAcrossPages && audioStore.hasUserStartedPlayback && !audioStore.isStopped
@@ -219,15 +226,53 @@ watch(
   }
 )
 
+function updateTextOverflow() {
+  const title = titleEl.value
+  const artist = artistEl.value
+
+  if (title) {
+    const overflow = title.scrollWidth > title.clientWidth + 1
+    isTitleOverflowing.value = overflow
+    const distance = Math.max(0, title.scrollWidth - title.clientWidth)
+    title.style.setProperty('--marquee-distance', `${distance}px`)
+  }
+
+  if (artist) {
+    const overflow = artist.scrollWidth > artist.clientWidth + 1
+    isArtistOverflowing.value = overflow
+    const distance = Math.max(0, artist.scrollWidth - artist.clientWidth)
+    artist.style.setProperty('--marquee-distance', `${distance}px`)
+  }
+}
+
+function scheduleOverflowUpdate() {
+  if (rafOverflowUpdateId) return
+  rafOverflowUpdateId = window.requestAnimationFrame(() => {
+    rafOverflowUpdateId = 0
+    updateTextOverflow()
+  })
+}
+
+watch(
+  () => [currentTitle.value, currentArtist.value],
+  async () => {
+    await nextTick()
+    scheduleOverflowUpdate()
+  },
+  { immediate: true }
+)
+
 watch(
   shouldShowMiniPlayer,
-  (show) => {
+  async (show) => {
     if (!show) {
       audioStore.closeLyrics()
       showStemFaders.value = false
       setMiniPlayerOffset(0)
       miniPlayerResizeObserver?.disconnect()
       miniPlayerResizeObserver = null
+      textResizeObserver?.disconnect()
+      textResizeObserver = null
       return
     }
 
@@ -239,11 +284,24 @@ watch(
 
     setMiniPlayerOffset(el.getBoundingClientRect().height)
 
+    await nextTick()
+    scheduleOverflowUpdate()
+
+    if (typeof ResizeObserver !== 'undefined') {
+      textResizeObserver?.disconnect()
+      textResizeObserver = new ResizeObserver(() => {
+        scheduleOverflowUpdate()
+      })
+      if (titleEl.value) textResizeObserver.observe(titleEl.value)
+      if (artistEl.value) textResizeObserver.observe(artistEl.value)
+    }
+
     if (typeof ResizeObserver === 'undefined') return
 
     miniPlayerResizeObserver?.disconnect()
     miniPlayerResizeObserver = new ResizeObserver(() => {
       setMiniPlayerOffset(el.getBoundingClientRect().height)
+      scheduleOverflowUpdate()
     })
     miniPlayerResizeObserver.observe(el)
   },
@@ -267,10 +325,35 @@ onMounted(() => {
   }
 
   window.addEventListener('keydown', handleGlobalKeydown)
+
+  windowResizeHandler = () => {
+    // Layout can change without affecting mini-player height, so recompute overflow on resize.
+    scheduleOverflowUpdate()
+  }
+  window.addEventListener('resize', windowResizeHandler, { passive: true })
+  window.addEventListener('orientationchange', windowResizeHandler, { passive: true })
+
+  nextTick(() => {
+    scheduleOverflowUpdate()
+  })
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleGlobalKeydown)
+
+  if (windowResizeHandler) {
+    window.removeEventListener('resize', windowResizeHandler)
+    window.removeEventListener('orientationchange', windowResizeHandler)
+    windowResizeHandler = null
+  }
+
+  if (rafOverflowUpdateId) {
+    window.cancelAnimationFrame(rafOverflowUpdateId)
+    rafOverflowUpdateId = 0
+  }
+
+  textResizeObserver?.disconnect()
+  textResizeObserver = null
 
   miniPlayerResizeObserver?.disconnect()
   miniPlayerResizeObserver = null
@@ -340,8 +423,20 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
         </div>
 
         <div class="mini-player__info">
-          <div class="mini-player__title">{{ currentTitle }}</div>
-          <div class="mini-player__artist">{{ currentArtist }}</div>
+          <div
+            ref="titleEl"
+            class="mini-player__title"
+            :class="{ 'is-marquee': isTitleOverflowing }"
+          >
+            <span class="mini-player__text">{{ currentTitle }}</span>
+          </div>
+          <div
+            ref="artistEl"
+            class="mini-player__artist"
+            :class="{ 'is-marquee': isArtistOverflowing }"
+          >
+            <span class="mini-player__text">{{ currentArtist }}</span>
+          </div>
         </div>
       </div>
 
@@ -418,20 +513,22 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
           </button>
         </div>
 
-        <div class="mini-player__progress-row">
-          <span class="mini-player__time">{{ formatTime(audioStore.currentTime) }}</span>
-          <input
-            type="range"
-            class="mini-player__progress"
-            min="0"
-            :max="audioStore.duration || 100"
-            :value="audioStore.currentTime"
-            :style="{ '--progress-percent': progressPercent }"
-            @input="onSeek"
-            aria-label="Seek"
-          />
-          <span class="mini-player__time">{{ formatTime(audioStore.duration) }}</span>
-        </div>
+        <span class="mini-player__time mini-player__time--current">{{
+          formatTime(audioStore.currentTime)
+        }}</span>
+        <input
+          type="range"
+          class="mini-player__progress"
+          min="0"
+          :max="audioStore.duration || 100"
+          :value="audioStore.currentTime"
+          :style="{ '--progress-percent': progressPercent }"
+          @input="onSeek"
+          aria-label="Seek"
+        />
+        <span class="mini-player__time mini-player__time--duration">{{
+          formatTime(audioStore.duration)
+        }}</span>
       </div>
 
       <!-- Right: Lyrics + Close -->
@@ -522,13 +619,20 @@ audio {
   pointer-events: auto;
   width: 100%;
   display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
   align-items: center;
   gap: 16px;
   padding: 12px 16px;
   background: rgba(0, 0, 0, 0.92);
   backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+  --mini-btn-size: 32px;
+}
+
+.mini-player__left,
+.mini-player__center,
+.mini-player__right {
+  min-width: 0;
 }
 
 :deep(.mini-player__icon svg) {
@@ -572,6 +676,8 @@ audio {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex: 1 1 auto;
+  width: 100%;
 }
 
 .mini-player__title,
@@ -579,6 +685,25 @@ audio {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  --marquee-distance: 0px;
+  display: block;
+  width: 100%;
+}
+
+.mini-player__title.is-marquee,
+.mini-player__artist.is-marquee {
+  text-overflow: clip;
+}
+
+.mini-player__text {
+  display: inline-block;
+  transform: translateX(0);
+  will-change: transform;
+}
+
+.mini-player__title.is-marquee .mini-player__text,
+.mini-player__artist.is-marquee .mini-player__text {
+  animation: mini-player-marquee 10s linear infinite;
 }
 
 .mini-player__title {
@@ -594,12 +719,17 @@ audio {
 
 /* Center: Controls + Progress */
 .mini-player__center {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  --mini-time-width: 40px;
+  --mini-time-gap: 8px;
+  display: grid;
+  grid-template-columns: var(--mini-time-width) minmax(0, 1fr) var(--mini-time-width);
+  grid-template-rows: auto auto;
+  column-gap: var(--mini-time-gap);
+  row-gap: 8px;
   align-items: center;
-  justify-content: center;
+  justify-items: center;
   max-width: 722px;
+  min-width: 0;
 }
 
 .mini-player__controls {
@@ -607,6 +737,10 @@ audio {
   align-items: center;
   gap: 16px;
   justify-content: center;
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+  min-width: 0;
 }
 
 :deep(.mini-player__btn) {
@@ -614,14 +748,19 @@ audio {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--mini-btn-size);
+  height: var(--mini-btn-size);
+  min-width: var(--mini-btn-size);
+  min-height: var(--mini-btn-size);
+  aspect-ratio: 1 / 1;
   border-radius: 50%;
   border: none;
   background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
+  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 
 :deep(.mini-player__btn:hover) {
@@ -630,8 +769,8 @@ audio {
 }
 
 :deep(.mini-player__btn--play) {
-  width: 32px;
-  height: 32px;
+  width: var(--mini-btn-size);
+  height: var(--mini-btn-size);
   background: white;
   color: black;
 }
@@ -673,19 +812,24 @@ audio {
   transform: none;
 }
 
-.mini-player__progress-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-}
-
 .mini-player__time {
   font-size: 11px;
   color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
   min-width: 40px;
   text-align: center;
+}
+
+.mini-player__time--current {
+  grid-column: 1;
+  grid-row: 2;
+  justify-self: end;
+}
+
+.mini-player__time--duration {
+  grid-column: 3;
+  grid-row: 2;
+  justify-self: start;
 }
 
 .mini-player__progress {
@@ -695,6 +839,9 @@ audio {
   background: rgba(255, 255, 255, 0.3);
   appearance: none;
   cursor: pointer;
+  grid-column: 2;
+  grid-row: 2;
+  width: 100%;
 }
 
 .mini-player__progress::-webkit-slider-thumb {
@@ -771,6 +918,7 @@ audio {
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
+  align-self: center;
 }
 
 .mini-player__volume-wrap {
@@ -801,7 +949,7 @@ audio {
 }
 
 .mini-player__volume {
-  width: 130px;
+  width: clamp(64px, 12vw, 130px);
   height: 4px;
   border-radius: 999px;
   appearance: none;
@@ -884,21 +1032,96 @@ audio {
   height: 32px;
 }
 
+@keyframes mini-player-marquee {
+  /*
+    Behavior:
+    - Start at beginning
+    - Scroll to the end (last letter touches the right edge)
+    - Hold at the end
+    - Snap immediately back to the beginning
+  */
+  0% {
+    transform: translateX(0);
+  }
+  6% {
+    transform: translateX(0);
+  }
+  66% {
+    transform: translateX(calc(-1 * var(--marquee-distance)));
+  }
+  82% {
+    transform: translateX(calc(-1 * var(--marquee-distance)));
+  }
+  82.01% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
 /* Responsive */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .mini-player {
-    grid-template-columns: 1fr;
-    gap: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .mini-player__left {
+    flex: 1 1 28%;
+    min-width: 0;
+  }
+
+  .mini-player__info {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mini-player__title,
+  .mini-player__artist {
+    max-width: 100%;
   }
 
   .mini-player__center {
-    order: 3;
+    flex: 1 1 44%;
+    min-width: 0;
+    row-gap: 6px;
+    --mini-time-width: 32px;
+    --mini-time-gap: 6px;
+  }
+
+  .mini-player__controls {
+    gap: 10px;
   }
 
   .mini-player__right {
-    position: absolute;
-    top: 12px;
-    right: 12px;
+    flex: 0 0 auto;
+    gap: 6px;
+    align-self: center;
+  }
+
+  .mini-player__artwork {
+    width: 44px;
+    height: 44px;
+  }
+
+  .mini-player__title {
+    font-size: 13px;
+  }
+
+  .mini-player__artist {
+    font-size: 11px;
+  }
+
+  .mini-player__time {
+    font-size: 10px;
+    min-width: 32px;
+  }
+
+  .mini-player__volume {
+    width: 72px;
   }
 }
 </style>
