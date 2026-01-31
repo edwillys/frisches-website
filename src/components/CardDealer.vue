@@ -107,8 +107,15 @@ const isAnimating = ref(false)
 
 const isHeaderNavOpen = ref(false)
 
+// The header drawer is a mobile-only affordance.
+const isMobileNavMode = ref(false)
+
 const hoveredHeaderIndex = ref<number | null>(null)
 const isCoverActive = ref(false)
+
+const isGalleryActive = computed(
+  () => currentView.value === 'content' && selectedItem.value?.title === 'Gallery'
+)
 
 const activeCover = ref<{ src: string; srcset?: string; key?: string } | null>(null)
 
@@ -223,6 +230,7 @@ const miniCardStyle = computed(() => {
 })
 
 function openHeaderNav() {
+  if (!isMobileNavMode.value) return
   isHeaderNavOpen.value = !isHeaderNavOpen.value
 }
 
@@ -238,6 +246,20 @@ function onHeaderNavHomeClick() {
 function onHeaderNavItemClick(index: number) {
   closeHeaderNav()
   handleHeaderTitleClick(index)
+}
+
+function handleMobileNavButtonClick() {
+  if (!isMobileNavMode.value && !isGalleryActive.value) return
+
+  // On mobile the header (and its back button) is hidden. When Gallery is open,
+  // use the top-right button as a close affordance instead of a hamburger.
+  if (isGalleryActive.value) {
+    closeHeaderNav()
+    handleBackClick()
+    return
+  }
+
+  openHeaderNav()
 }
 
 // Background zoom-in animation on mount
@@ -1512,6 +1534,42 @@ const transitionCoverToCover = ({
 onMounted(() => {
   window.addEventListener('pointerdown', handleGlobalPointerDown)
 
+  // Mobile nav drawer is only relevant on small screens.
+  // If the user resizes to a larger layout while it is open, close it.
+  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    const mql = window.matchMedia('(max-width: 768px)')
+    const onChange = () => {
+      const nextIsMobile = mql.matches
+      const changed = isMobileNavMode.value !== nextIsMobile
+      isMobileNavMode.value = nextIsMobile
+
+      // Any breakpoint flip should reset drawer state to avoid stranded UI.
+      if (changed) closeHeaderNav()
+      // Also: if we're leaving mobile, ensure the drawer is closed.
+      if (!nextIsMobile) closeHeaderNav()
+    }
+
+    // Sync once on mount.
+    onChange()
+
+    if (typeof mql.addEventListener === 'function') {
+      mql.addEventListener('change', onChange)
+      onBeforeUnmount(() => mql.removeEventListener('change', onChange))
+    } else {
+      const legacyMql = mql as unknown as {
+        addListener?: (cb: () => void) => void
+        removeListener?: (cb: () => void) => void
+      }
+
+      if (typeof legacyMql.addListener === 'function') {
+        legacyMql.addListener(onChange)
+        onBeforeUnmount(() => {
+          legacyMql.removeListener?.(onChange)
+        })
+      }
+    }
+  }
+
   // Preload any configured cover images (future-proof for multiple covers)
   const coverImages = new Set(
     menuItems
@@ -1594,7 +1652,6 @@ onBeforeUnmount(() => {
         :src="bgHomeSmall"
         :srcset="bgHomeSrcset"
         sizes="100vw"
-        alt="Mysterious card dealer"
         class="card-dealer__bg-image card-dealer__bg-main"
       />
       <img
@@ -1649,63 +1706,92 @@ onBeforeUnmount(() => {
 
       <!-- Header with back button and miniature card (shown in content view) -->
       <div v-if="currentView === 'content'" ref="headerRef" class="card-dealer__header">
-        <div ref="backButtonRef" class="card-dealer__back-button" @click="handleBackClick">
-          <span aria-hidden="true" v-html="arrowLeftSvg" />
-        </div>
-        <div ref="miniCardRef" class="card-dealer__mini-card-wrapper" :style="miniCardStyle">
-          <!-- Circular avatar shows selected card image as background -->
-        </div>
-        <div v-if="selectedItem" ref="headerTitleRef" class="card-dealer__header-titles">
-          <button
-            type="button"
-            class="card-dealer__header-title-item"
-            @mouseenter="hoveredHeaderIndex = -1"
-            @mouseleave="hoveredHeaderIndex = null"
-            @click="handleHeaderHomeClick"
-          >
-            Home
-          </button>
-          <button
-            v-for="(item, index) in menuItems"
-            :key="item.route"
-            type="button"
-            class="card-dealer__header-title-item"
-            :class="{
-              'card-dealer__header-title-item--active': selectedCard === index,
-              'card-dealer__header-title-item--hovered': hoveredHeaderIndex === index,
-            }"
-            :aria-current="selectedCard === index ? 'page' : undefined"
-            @mouseenter="hoveredHeaderIndex = index"
-            @mouseleave="hoveredHeaderIndex = null"
-            @click="handleHeaderTitleClick(index)"
-          >
-            {{ item.title }}
-          </button>
+        <div class="card-dealer__header-left">
+          <div ref="backButtonRef" class="card-dealer__back-button" @click="handleBackClick">
+            <span aria-hidden="true" v-html="arrowLeftSvg" />
+          </div>
+
+          <div v-if="selectedItem" ref="headerTitleRef" class="card-dealer__header-titles">
+            <button
+              type="button"
+              class="card-dealer__header-title-item"
+              @mouseenter="hoveredHeaderIndex = -1"
+              @mouseleave="hoveredHeaderIndex = null"
+              @click="handleHeaderHomeClick"
+            >
+              Home
+            </button>
+            <button
+              v-for="(item, index) in menuItems"
+              :key="item.route"
+              type="button"
+              class="card-dealer__header-title-item"
+              :class="{
+                'card-dealer__header-title-item--active': selectedCard === index,
+                'card-dealer__header-title-item--hovered': hoveredHeaderIndex === index,
+              }"
+              :aria-current="selectedCard === index ? 'page' : undefined"
+              @mouseenter="hoveredHeaderIndex = index"
+              @mouseleave="hoveredHeaderIndex = null"
+              @click="handleHeaderTitleClick(index)"
+            >
+              {{ item.title }}
+            </button>
+          </div>
         </div>
 
-        <button
-          type="button"
-          class="card-dealer__header-menu-btn"
-          aria-label="Open navigation"
-          @click="openHeaderNav"
-        >
-          <span class="card-dealer__header-menu-icon" aria-hidden="true"></span>
-        </button>
+        <div class="card-dealer__header-right">
+          <div ref="miniCardRef" class="card-dealer__mini-card-wrapper" :style="miniCardStyle">
+            <!-- Circular avatar shows selected card image as background -->
+          </div>
+
+          <button
+            type="button"
+            class="card-dealer__header-menu-btn"
+            :aria-label="
+              isGalleryActive
+                ? 'Close gallery'
+                : isHeaderNavOpen
+                  ? 'Close navigation'
+                  : 'Open navigation'
+            "
+            @click="isGalleryActive ? handleBackClick() : openHeaderNav"
+          >
+            <span
+              class="card-dealer__header-menu-icon"
+              :class="{
+                'card-dealer__header-menu-icon--close': isGalleryActive || isHeaderNavOpen,
+              }"
+              aria-hidden="true"
+            ></span>
+          </button>
+        </div>
       </div>
 
       <button
-        v-if="currentView === 'content'"
+        v-if="currentView === 'content' && isMobileNavMode"
         type="button"
         class="card-dealer__mobile-nav-btn"
-        aria-label="Open navigation"
+        :class="{ 'is-close': isGalleryActive || isHeaderNavOpen }"
+        :aria-label="
+          isGalleryActive
+            ? 'Close gallery'
+            : isHeaderNavOpen
+              ? 'Close navigation'
+              : 'Open navigation'
+        "
         @pointerdown.stop
-        @click.stop="openHeaderNav"
+        @click.stop="handleMobileNavButtonClick"
       >
-        <span class="card-dealer__header-menu-icon" aria-hidden="true"></span>
+        <span
+          class="card-dealer__header-menu-icon"
+          :class="{ 'card-dealer__header-menu-icon--close': isGalleryActive || isHeaderNavOpen }"
+          aria-hidden="true"
+        ></span>
       </button>
 
       <div
-        v-if="currentView === 'content' && isHeaderNavOpen"
+        v-if="currentView === 'content' && isMobileNavMode && isHeaderNavOpen"
         class="card-dealer__header-drawer"
         role="dialog"
         aria-modal="true"

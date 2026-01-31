@@ -99,6 +99,7 @@
           </nav>
 
           <button
+            v-if="showUserConfigUi"
             class="btn-gear"
             type="button"
             aria-label="Display options"
@@ -113,7 +114,7 @@
       <!-- Config Overlay - teleported to body to avoid z-index/positioning issues -->
       <Teleport to="body">
         <div
-          v-if="isConfigOpen"
+          v-if="showUserConfigUi && isConfigOpen"
           class="gallery-config-overlay"
           role="dialog"
           aria-label="Display options"
@@ -459,10 +460,15 @@ function onFilterOverlayHide() {
 const thumbnailLayoutSetting = ref<ThumbnailLayout>(props.thumbnailLayout)
 const timelineEnabledSetting = ref<boolean>(props.timelineEnabled)
 
+// Keep these settings so they can still be adjusted in code,
+// but do not expose a user-facing config UI.
+const showUserConfigUi = false
+
 const isConfigOpen = ref(false)
 const configPanelRef = ref<HTMLElement | null>(null)
 
 function openConfig() {
+  if (!showUserConfigUi) return
   isConfigOpen.value = true
   nextTick(() => configPanelRef.value?.focus())
 }
@@ -472,6 +478,7 @@ function closeConfig() {
 }
 
 function toggleConfig() {
+  if (!showUserConfigUi) return
   if (isConfigOpen.value) {
     closeConfig()
   } else {
@@ -1379,6 +1386,11 @@ watch(
   .breadcrumb--center {
     flex: 1 1 100%;
     justify-content: center;
+  }
+
+  .btn-gear {
+    margin-left: auto;
+    flex: 0 0 auto;
   }
 }
 
