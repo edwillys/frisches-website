@@ -105,6 +105,8 @@ const currentView = ref<'logo' | 'cards' | 'content'>('logo')
 const selectedCard = ref<number | null>(null)
 const isAnimating = ref(false)
 
+const isHeaderNavOpen = ref(false)
+
 const hoveredHeaderIndex = ref<number | null>(null)
 const isCoverActive = ref(false)
 
@@ -183,9 +185,20 @@ watch(
   () => currentView.value,
   (view) => {
     if (view === 'content') hasMountedContentView.value = true
+    if (view !== 'content') isHeaderNavOpen.value = false
   },
   { immediate: true }
 )
+
+watch(isHeaderNavOpen, (open) => {
+  if (typeof document === 'undefined') return
+
+  if (open) {
+    document.documentElement.style.overflow = 'hidden'
+  } else {
+    document.documentElement.style.overflow = ''
+  }
+})
 
 watch(
   [() => currentView.value, () => selectedItem.value?.title],
@@ -208,6 +221,24 @@ const miniCardStyle = computed(() => {
   }
   return {}
 })
+
+function openHeaderNav() {
+  isHeaderNavOpen.value = !isHeaderNavOpen.value
+}
+
+function closeHeaderNav() {
+  isHeaderNavOpen.value = false
+}
+
+function onHeaderNavHomeClick() {
+  closeHeaderNav()
+  handleHeaderHomeClick()
+}
+
+function onHeaderNavItemClick(index: number) {
+  closeHeaderNav()
+  handleHeaderTitleClick(index)
+}
 
 // Background zoom-in animation on mount
 useGSAP(() => {
@@ -332,6 +363,11 @@ const handleKeydown = (e: KeyboardEvent) => {
   if (e.key === 'Escape') {
     if (e.defaultPrevented) return
     if (eventPathBlocksEscape(e)) return
+
+    if (isHeaderNavOpen.value) {
+      isHeaderNavOpen.value = false
+      return
+    }
     if (hasBlockingOverlayOpen()) return
     handleBackClick()
   }
@@ -477,6 +513,28 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
       ].join(',')
     ) !== null
   if (clickedInsidePrimeOverlay) return
+
+  const isMobileNavMode =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(max-width: 768px)').matches
+
+  const clickedMobileNavBtn = targetEl?.closest('.card-dealer__mobile-nav-btn') !== null
+  const clickedInsideHeaderDrawer = targetEl?.closest('.card-dealer__header-drawer-panel') !== null
+
+  // Mobile nav drawer: clicking outside closes the drawer (never triggers back).
+  if (isHeaderNavOpen.value) {
+    if (clickedInsideHeaderDrawer) return
+    if (clickedMobileNavBtn) return
+    isHeaderNavOpen.value = false
+    return
+  }
+
+  // Clicking the mobile nav button should not be treated as an outside-click back action.
+  if (clickedMobileNavBtn) return
+
+  // On small screens we don't use outside-click as a back gesture (browser UI already provides back).
+  if (isMobileNavMode) return
 
   const clickedInsideCards = cardsContainerRef.value?.contains(target) ?? false
   const clickedInsideContent = contentPanelRef.value?.contains(target) ?? false
@@ -1620,6 +1678,55 @@ onBeforeUnmount(() => {
             @mouseenter="hoveredHeaderIndex = index"
             @mouseleave="hoveredHeaderIndex = null"
             @click="handleHeaderTitleClick(index)"
+          >
+            {{ item.title }}
+          </button>
+        </div>
+
+        <button
+          type="button"
+          class="card-dealer__header-menu-btn"
+          aria-label="Open navigation"
+          @click="openHeaderNav"
+        >
+          <span class="card-dealer__header-menu-icon" aria-hidden="true"></span>
+        </button>
+      </div>
+
+      <button
+        v-if="currentView === 'content'"
+        type="button"
+        class="card-dealer__mobile-nav-btn"
+        aria-label="Open navigation"
+        @pointerdown.stop
+        @click.stop="openHeaderNav"
+      >
+        <span class="card-dealer__header-menu-icon" aria-hidden="true"></span>
+      </button>
+
+      <div
+        v-if="currentView === 'content' && isHeaderNavOpen"
+        class="card-dealer__header-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation"
+        @pointerdown.self="closeHeaderNav"
+      >
+        <div class="card-dealer__header-drawer-panel" @pointerdown.stop @click.stop>
+          <button
+            type="button"
+            class="card-dealer__header-drawer-item"
+            @click="onHeaderNavHomeClick"
+          >
+            Home
+          </button>
+          <button
+            v-for="(item, index) in menuItems"
+            :key="item.route"
+            type="button"
+            class="card-dealer__header-drawer-item"
+            :class="{ 'is-active': selectedCard === index }"
+            @click="onHeaderNavItemClick(index)"
           >
             {{ item.title }}
           </button>

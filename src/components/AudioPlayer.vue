@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { Track } from '@/data/tracks'
 import type { LyricsData } from '@/types/lyrics'
 import { useAudioStore } from '@/stores/audio'
@@ -37,6 +37,16 @@ const albumDurationFormatted = computed(() =>
 const albumSongCount = computed(() => albumTracks.value.length)
 const selectedArtist = computed(() => selectedAlbum.value?.artist ?? 'Frisches')
 
+const heroTitleEl = ref<HTMLElement | null>(null)
+const heroTitleTextEl = ref<HTMLElement | null>(null)
+const isHeroTitleMarquee = ref(false)
+let rafHeroTitleFitId = 0
+let heroTitleResizeObserver: ResizeObserver | null = null
+let windowResizeHandler: (() => void) | null = null
+
+const HERO_TITLE_MAX_PX = 72
+const HERO_TITLE_MIN_PX = 48
+
 const bandLogoUrl = new URL(
   '../assets/private/images/Frisches_Logo-Mood-3-Round.png',
   import.meta.url
@@ -58,6 +68,66 @@ const isShuffle = computed(() => audioStore.isShuffle)
 
 function selectAlbum(albumId: string) {
   selectedAlbumId.value = albumId
+}
+
+function scheduleHeroTitleFit() {
+  if (rafHeroTitleFitId) return
+  rafHeroTitleFitId = window.requestAnimationFrame(() => {
+    rafHeroTitleFitId = 0
+    void updateHeroTitleFit()
+  })
+}
+
+async function updateHeroTitleFit() {
+  await nextTick()
+  const el = heroTitleEl.value
+  const textEl = heroTitleTextEl.value
+  if (!el || !textEl) return
+
+  // If hidden (e.g., stacked mobile mode), do nothing.
+  const available = Math.floor(el.getBoundingClientRect().width)
+  if (available <= 1) return
+
+  isHeroTitleMarquee.value = false
+
+  const setSize = (px: number) => {
+    el.style.setProperty('--hero-title-size', `${px}px`)
+    // Force layout so subsequent measurements are accurate.
+    void el.offsetWidth
+  }
+
+  // Fast path: max size fits.
+  setSize(HERO_TITLE_MAX_PX)
+  if (textEl.scrollWidth <= available + 1) {
+    el.style.setProperty('--hero-marquee-distance', `0px`)
+    return
+  }
+
+  // Binary search for best fit.
+  let low = HERO_TITLE_MIN_PX
+  let high = HERO_TITLE_MAX_PX
+  for (let i = 0; i < 10; i++) {
+    const mid = Math.floor((low + high) / 2)
+    setSize(mid)
+    if (textEl.scrollWidth <= available + 1) {
+      low = mid
+    } else {
+      high = mid - 1
+    }
+  }
+  setSize(low)
+
+  // If we still overflow at min size, enable marquee.
+  if (textEl.scrollWidth > available + 1) {
+    setSize(HERO_TITLE_MIN_PX)
+    isHeroTitleMarquee.value = true
+    // After toggling marquee, text width can change slightly due to subpixel rounding.
+    void el.offsetWidth
+    const distance = Math.max(0, textEl.scrollWidth - available)
+    el.style.setProperty('--hero-marquee-distance', `${distance}px`)
+  } else {
+    el.style.setProperty('--hero-marquee-distance', `0px`)
+  }
 }
 
 function playAlbum() {
@@ -125,7 +195,55 @@ onMounted(() => {
   if (audioStore.currentTrackId) {
     selectedTrackId.value = audioStore.currentTrackId
   }
+
+  // Keep hero title fitted on resize.
+  if (typeof ResizeObserver !== 'undefined') {
+    heroTitleResizeObserver?.disconnect()
+    heroTitleResizeObserver = new ResizeObserver(() => {
+      scheduleHeroTitleFit()
+    })
+    if (heroTitleEl.value) heroTitleResizeObserver.observe(heroTitleEl.value)
+  }
+
+  scheduleHeroTitleFit()
+
+  windowResizeHandler = () => {
+    scheduleHeroTitleFit()
+  }
+  window.addEventListener('resize', windowResizeHandler, { passive: true })
 })
+
+onUnmounted(() => {
+  if (rafHeroTitleFitId) {
+    window.cancelAnimationFrame(rafHeroTitleFitId)
+    rafHeroTitleFitId = 0
+  }
+  heroTitleResizeObserver?.disconnect()
+  heroTitleResizeObserver = null
+
+  if (windowResizeHandler) {
+    window.removeEventListener('resize', windowResizeHandler)
+    windowResizeHandler = null
+  }
+})
+
+watch(
+  () => selectedAlbum.value?.title,
+  async () => {
+    await nextTick()
+    scheduleHeroTitleFit()
+  }
+)
+
+watch(
+  () => audioStore.showLyrics,
+  async (show) => {
+    if (!show) {
+      await nextTick()
+      scheduleHeroTitleFit()
+    }
+  }
+)
 
 // Watch for showLyrics changes from store (triggered by mini-player button)
 watch(
@@ -201,7 +319,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
             v-if="selectedAlbum?.coverUrl"
             :src="selectedAlbum.coverUrl"
             :srcset="selectedAlbum.coverSrcset"
-            sizes="(max-width: 768px) 160px, 320px"
+            sizes="(max-width: 520px) 192px, 232px"
             :alt="selectedAlbum.title"
             class="album-hero__cover"
             data-testid="album-hero-cover"
@@ -210,7 +328,16 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 
         <div class="album-hero__info">
           <div class="album-hero__label">Album</div>
-          <h1 class="album-hero__title" data-testid="album-title">{{ selectedAlbum?.title }}</h1>
+          <h1
+            ref="heroTitleEl"
+            class="album-hero__title"
+            :class="{ 'is-marquee': isHeroTitleMarquee }"
+            data-testid="album-title"
+          >
+            <span ref="heroTitleTextEl" class="album-hero__title-text">{{
+              selectedAlbum?.title
+            }}</span>
+          </h1>
           <div class="album-hero__meta">
             <img :src="bandLogoUrl" :alt="selectedArtist" class="album-hero__artist-avatar" />
             <span class="album-hero__artist">{{ selectedAlbum?.artist }}</span>
@@ -388,7 +515,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   scroll-snap-type: x proximity;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
-  padding: 2px 2px;
+  padding: 2px 0;
 }
 
 .album-carousel__item {
@@ -491,6 +618,9 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   flex-direction: column;
   gap: 8px;
   color: white;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
 }
 
 .album-hero__label {
@@ -502,11 +632,33 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 }
 
 .album-hero__title {
-  font-size: 72px;
+  --hero-title-min: 48px;
+  --hero-title-max: 72px;
+  font-size: clamp(var(--hero-title-min), var(--hero-title-size, 72px), var(--hero-title-max));
   font-weight: 900;
   line-height: 1;
   margin: 0;
   text-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  max-width: 100%;
+  width: 100%;
+  text-align: left;
+}
+
+.album-hero__title-text {
+  display: inline-block;
+  transform: translateX(0);
+  will-change: transform;
+}
+
+.album-hero__title.is-marquee {
+  text-overflow: clip;
+}
+
+.album-hero__title.is-marquee .album-hero__title-text {
+  animation: album-hero-marquee 12s linear infinite;
 }
 
 .album-hero__meta {
@@ -535,11 +687,22 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 
 /* Actions Row */
 .actions-row {
-  padding: 0 24px 8px;
-  display: flex;
+  padding: 0 40px 8px;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 80px;
+  column-gap: 16px;
   align-items: center;
-  gap: 16px;
   background: var(--color-background);
+}
+
+.actions-row .btn-play-big {
+  grid-column: 1;
+  justify-self: center;
+}
+
+.actions-row .btn-shuffle {
+  grid-column: 2;
+  justify-self: start;
 }
 
 .btn-play-big {
@@ -754,8 +917,20 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 
 /* Responsive */
 @media (max-width: 768px) {
+  .actions-row {
+    padding: 0 40px 8px;
+    grid-template-columns: 40px minmax(0, 1fr) 60px;
+    column-gap: 12px;
+  }
+
+  .actions-row .btn-play-big,
+  .actions-row .btn-shuffle {
+    width: 40px;
+    height: 40px;
+  }
+
   .album-carousel {
-    padding: 8px 10px;
+    padding: 8px 24px;
   }
 
   .album-carousel__item {
@@ -767,6 +942,23 @@ watch(currentTrack, async (newTrack, oldTrack) => {
     max-width: 120px;
   }
 
+  .track-table {
+    padding: 0 24px 16px;
+  }
+
+  .track-table__header {
+    display: none;
+  }
+
+  .track-table__row {
+    grid-template-columns: 40px 1fr 60px;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+}
+
+/* Mobile portrait: switch to stacked hero and hide label+title */
+@media (max-width: 520px) {
   .album-hero {
     flex-direction: column;
     align-items: center;
@@ -780,22 +972,34 @@ watch(currentTrack, async (newTrack, oldTrack) => {
     height: 192px;
   }
 
+  .album-hero__label,
   .album-hero__title {
-    font-size: 48px;
-  }
-
-  .track-table {
-    padding: 0 16px 16px;
-  }
-
-  .track-table__header {
     display: none;
   }
 
-  .track-table__row {
-    grid-template-columns: 40px 1fr 60px;
-    gap: 12px;
-    padding: 12px 8px;
+  .album-hero__meta {
+    justify-content: center;
+  }
+}
+
+@keyframes album-hero-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  8% {
+    transform: translateX(0);
+  }
+  70% {
+    transform: translateX(calc(-1 * var(--hero-marquee-distance, 0px)));
+  }
+  86% {
+    transform: translateX(calc(-1 * var(--hero-marquee-distance, 0px)));
+  }
+  86.01% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(0);
   }
 }
 

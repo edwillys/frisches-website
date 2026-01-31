@@ -7,6 +7,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  --card-dealer-header-height: 80px;
 }
 
 .card-dealer__background {
@@ -153,16 +154,126 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 100px;
+  height: var(--card-dealer-header-height);
   z-index: 99;
   display: flex;
   align-items: center;
-  padding: var(--spacing-lg);
+  padding: 16px 24px;
   gap: var(--spacing-md);
   /* Intercept clicks so the global outside-click handler doesn't treat the header as 'outside' */
   pointer-events: auto;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%);
   backdrop-filter: blur(8px);
+}
+
+.card-dealer__header-menu-btn {
+  display: none;
+  margin-left: auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--color-text);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-dealer__header-menu-btn:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.card-dealer__header-menu-icon {
+  display: block;
+  width: 20px;
+  height: 14px;
+  position: relative;
+}
+
+.card-dealer__header-menu-icon::before,
+.card-dealer__header-menu-icon::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.card-dealer__header-menu-icon::before {
+  top: 0;
+  box-shadow: 0 6px 0 rgba(255, 255, 255, 0.92);
+}
+
+.card-dealer__header-menu-icon::after {
+  bottom: 0;
+}
+
+.card-dealer__header-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  /* No visible overlay; just a click-catcher for outside-close */
+  background: transparent;
+  pointer-events: auto;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.card-dealer__header-drawer-panel {
+  width: min(360px, 86vw);
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(12px);
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card-dealer__header-drawer-item {
+  appearance: none;
+  border: 0;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text);
+  padding: 14px 12px;
+  border-radius: 12px;
+  text-align: left;
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+.card-dealer__header-drawer-item.is-active {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.card-dealer__mobile-nav-btn {
+  display: none;
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 101;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--color-text);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.card-dealer__mobile-nav-btn:hover {
+  background: rgba(0, 0, 0, 0.5);
 }
 
 .card-dealer__back-button {
@@ -329,7 +440,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-top: 100px;
+  padding-top: var(--card-dealer-header-height);
   box-sizing: border-box;
   z-index: 4;
   pointer-events: none;
@@ -373,6 +484,9 @@
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {
+  .card-dealer {
+    --card-dealer-header-height: 0px;
+  }
   .card-dealer__content {
     gap: var(--spacing-xl);
     padding: var(--spacing-lg);
@@ -388,12 +502,15 @@
   }
 
   .card-dealer__content-view {
-    padding-top: 100px;
+    padding-top: var(--card-dealer-header-height);
   }
 
   .card-dealer__header {
-    height: 80px;
-    gap: var(--spacing-sm);
+    display: none;
+  }
+
+  .card-dealer__mobile-nav-btn {
+    display: inline-flex;
   }
 
   .card-dealer__back-button {
