@@ -56,8 +56,14 @@ defineExpose({
 <style scoped>
 .menu-card {
   position: relative;
-  width: 180px;
-  height: 280px;
+  --menu-card-aspect-ratio: 9 / 14;
+  --menu-card-min-height: 220px;
+  --menu-card-max-height: 320px;
+
+  aspect-ratio: var(--menu-card-aspect-ratio);
+  height: clamp(var(--menu-card-min-height), 36vh, var(--menu-card-max-height));
+  min-height: var(--menu-card-min-height);
+  width: auto;
   border-radius: var(--radius-lg);
   cursor: pointer;
   overflow: hidden;
@@ -124,8 +130,7 @@ defineExpose({
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .menu-card {
-    width: 140px;
-    height: 220px;
+    --menu-card-max-height: 280px;
   }
 
   .menu-card__title {

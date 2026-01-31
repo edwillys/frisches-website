@@ -498,6 +498,7 @@
 
   .card-dealer__content-container {
     padding: var(--spacing-lg);
+    padding-top: calc(var(--spacing-lg) + 56px);
     padding-bottom: calc(var(--spacing-lg) + var(--mini-player-offset, 0px));
   }
 
