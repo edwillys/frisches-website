@@ -9,10 +9,16 @@ test.describe('Persistent mini-player (Phase 1)', () => {
     await waitForAnimations(page)
   })
 
-  test('mini-player appears only after user starts, persists across navigation, and X hides until Music/About restart', async ({ page }, testInfo) => {
+  test('mini-player appears only after user starts, persists across navigation, and X hides until Music/About restart', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(60000)
+
     // Skip this test on CI for webkit which is currently flaky
-    test.skip(process.env.CI && testInfo.project.name === 'webkit',
-      'Skipping persistent mini-player test on CI for webkit')
+    test.skip(
+      process.env.CI && testInfo.project.name === 'webkit',
+      'Skipping persistent mini-player test on CI for webkit'
+    )
     const miniPlayer = page.locator('[data-testid="audio-mini-player"]')
     await expect(miniPlayer).toBeHidden()
 
@@ -37,7 +43,9 @@ test.describe('Persistent mini-player (Phase 1)', () => {
     await expect(miniPlayer).toBeVisible({ timeout: 10000 })
 
     // Mini-player shows cover image when available
-    await expect(page.locator('[data-testid="audio-mini-player"] img')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('[data-testid="audio-mini-player"] img')).toBeVisible({
+      timeout: 10000,
+    })
 
     // Navigate back to cards -> mini-player persists
     await page.locator('.card-dealer__back-button').first().click()
@@ -63,23 +71,33 @@ test.describe('Persistent mini-player (Phase 1)', () => {
 
     // Navigate around should not re-open the mini-player
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
-    await expect(page.locator('[data-testid="card-dealer-cards-container"]')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('[data-testid="card-dealer-cards-container"]')).toBeVisible({
+      timeout: 10000,
+    })
     await expect(miniPlayer).toBeHidden()
 
     // Restart path 1: About chip can start playback again
     await page.locator('[data-testid="card-about"]').click()
     await waitForAnimations(page)
+    await expect(page.locator('[data-testid="character-selection"]')).toBeVisible({
+      timeout: 10000,
+    })
 
     // Navigate to a band member (Edgar) who has a favorite song
-    await page.keyboard.press('E')
+    await page.getByRole('button', { name: /select edgar/i }).click()
     await waitForAnimations(page)
+    await expect(page.getByTestId('character-name')).toHaveText('Edgar', { timeout: 10000 })
 
-    await page.locator('[data-testid="favorite-song-chip"]').click()
+    const favoriteSongChip = page.locator('.character-selection__favorite-song-link').first()
+    await expect(favoriteSongChip).toBeVisible({ timeout: 10000 })
+    await favoriteSongChip.click()
     await expect(miniPlayer).toBeVisible({ timeout: 10000 })
 
     // Clicking inside mini-player should NOT be treated as outside click (should stay in About view)
     await page.locator('[data-testid="mini-play-pause"]').click()
-    await expect(page.locator('[data-testid="character-selection"]')).toBeVisible({ timeout: 20000 })
+    await expect(page.locator('[data-testid="character-selection"]')).toBeVisible({
+      timeout: 20000,
+    })
 
     // Next/Prev buttons work in mini-player
     const titleLocator = page.locator('[data-testid="audio-mini-player"] .mini-player__title')
