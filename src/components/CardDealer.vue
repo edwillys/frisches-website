@@ -36,6 +36,11 @@ import { readParticlesPaletteFromCss } from '../composables/useCardDealerPalette
 import { getTargetXYToViewportCenter, getViewportCenter } from './cardDealer/viewportCenter'
 import { computeLeadStagger, distanceFromLead } from './cardDealer/leadStagger'
 import { getOffsetsToContainerCenter } from './cardDealer/containerOffsets'
+import {
+  NAVIGATION_SECTIONS,
+  titleContainsSection,
+  type MenuSectionKey,
+} from './cardDealer/menuSections'
 import gsap from 'gsap'
 import { CustomEase } from 'gsap/CustomEase'
 
@@ -113,10 +118,6 @@ const isMobileNavMode = ref(false)
 const hoveredHeaderIndex = ref<number | null>(null)
 const isCoverActive = ref(false)
 
-const isGalleryActive = computed(
-  () => currentView.value === 'content' && selectedItem.value?.title === 'Gallery'
-)
-
 const activeCover = ref<{ src: string; srcset?: string; key?: string } | null>(null)
 
 let bgTransitionTimeline: gsap.core.Timeline | null = null
@@ -164,6 +165,13 @@ const stopAnimating = () => {
 
 const audioStore = useAudioStore()
 
+const selectedItemMatchesSection = (sectionKey: MenuSectionKey) =>
+  titleContainsSection(selectedItem.value?.title, sectionKey)
+
+const isGalleryActive = computed(
+  () => currentView.value === 'content' && selectedItemMatchesSection('gallery')
+)
+
 const selectedItem = computed(() =>
   selectedCard.value !== null ? (menuItems[selectedCard.value] ?? null) : null
 )
@@ -181,9 +189,9 @@ const characterSelectionRef = ref<null | { resetToGroup: () => void }>(null)
 watch(
   () => selectedItem.value?.title,
   (title) => {
-    if (title === 'Music') hasMountedMusic.value = true
-    if (title === 'About') hasMountedAbout.value = true
-    if (title === 'Gallery') hasMountedGallery.value = true
+    if (titleContainsSection(title, 'music')) hasMountedMusic.value = true
+    if (titleContainsSection(title, 'about')) hasMountedAbout.value = true
+    if (titleContainsSection(title, 'gallery')) hasMountedGallery.value = true
   },
   { immediate: true }
 )
@@ -210,7 +218,7 @@ watch(isHeaderNavOpen, (open) => {
 watch(
   [() => currentView.value, () => selectedItem.value?.title],
   async ([view, title]) => {
-    if (view !== 'content' || title !== 'About') return
+    if (view !== 'content' || !titleContainsSection(title, 'about')) return
     await nextTick()
     characterSelectionRef.value?.resetToGroup()
   },
@@ -295,13 +303,15 @@ useGSAP(() => {
 // Menu items configuration
 const menuItems = [
   {
-    title: 'Music',
+    title: NAVIGATION_SECTIONS.music.title,
+    headerTitle: NAVIGATION_SECTIONS.music.headerTitle,
     image: menuMusicSmall,
     imageSrcset: menuMusicSrcset,
     route: '/music',
   },
   {
-    title: 'About',
+    title: NAVIGATION_SECTIONS.about.title,
+    headerTitle: NAVIGATION_SECTIONS.about.headerTitle,
     image: menuAboutSmall,
     imageSrcset: menuAboutSrcset,
     coverImage: bgAboutSmall,
@@ -309,7 +319,8 @@ const menuItems = [
     route: '/about',
   },
   {
-    title: 'Gallery',
+    title: NAVIGATION_SECTIONS.gallery.title,
+    headerTitle: NAVIGATION_SECTIONS.gallery.headerTitle,
     image: menuTourSmall,
     imageSrcset: menuTourSrcset,
     coverImage: bgGallerySmall,
@@ -1651,6 +1662,7 @@ onBeforeUnmount(() => {
         ref="bgMainRef"
         :src="bgHomeSmall"
         :srcset="bgHomeSrcset"
+        alt="Mysterious card dealer"
         sizes="100vw"
         class="card-dealer__bg-image card-dealer__bg-main"
       />
@@ -1719,7 +1731,7 @@ onBeforeUnmount(() => {
               @mouseleave="hoveredHeaderIndex = null"
               @click="handleHeaderHomeClick"
             >
-              Home
+              {{ NAVIGATION_SECTIONS.home.headerTitle }}
             </button>
             <button
               v-for="(item, index) in menuItems"
@@ -1735,7 +1747,7 @@ onBeforeUnmount(() => {
               @mouseleave="hoveredHeaderIndex = null"
               @click="handleHeaderTitleClick(index)"
             >
-              {{ item.title }}
+              {{ item.headerTitle }}
             </button>
           </div>
         </div>
@@ -1804,7 +1816,7 @@ onBeforeUnmount(() => {
             class="card-dealer__header-drawer-item"
             @click="onHeaderNavHomeClick"
           >
-            Home
+            {{ NAVIGATION_SECTIONS.home.headerTitle }}
           </button>
           <button
             v-for="(item, index) in menuItems"
@@ -1814,7 +1826,7 @@ onBeforeUnmount(() => {
             :class="{ 'is-active': selectedCard === index }"
             @click="onHeaderNavItemClick(index)"
           >
-            {{ item.title }}
+            {{ item.headerTitle }}
           </button>
         </div>
       </div>
@@ -1840,7 +1852,7 @@ onBeforeUnmount(() => {
           <!-- Music Player (lazy-mount + keep alive via v-show) -->
           <div
             v-if="hasMountedMusic"
-            v-show="selectedItem?.title === 'Music'"
+            v-show="selectedItemMatchesSection('music')"
             class="card-dealer__music-content"
           >
             <AudioPlayer @back="handleBackClick" />
@@ -1849,7 +1861,7 @@ onBeforeUnmount(() => {
           <!-- About / Character Selection (lazy-mount + keep alive via v-show) -->
           <div
             v-if="hasMountedAbout"
-            v-show="selectedItem?.title === 'About'"
+            v-show="selectedItemMatchesSection('about')"
             class="card-dealer__about-content"
           >
             <CharacterSelection
@@ -1862,7 +1874,7 @@ onBeforeUnmount(() => {
           <!-- Gallery (lazy-mount + keep alive via v-show) -->
           <div
             v-if="hasMountedGallery"
-            v-show="selectedItem?.title === 'Gallery'"
+            v-show="selectedItemMatchesSection('gallery')"
             class="card-dealer__gallery-content"
           >
             <GalleryManager />
@@ -1871,9 +1883,9 @@ onBeforeUnmount(() => {
           <!-- Other content -->
           <div
             v-if="
-              selectedItem?.title !== 'Music' &&
-              selectedItem?.title !== 'About' &&
-              selectedItem?.title !== 'Gallery'
+              !selectedItemMatchesSection('music') &&
+              !selectedItemMatchesSection('about') &&
+              !selectedItemMatchesSection('gallery')
             "
             class="card-dealer__generic-content"
           >

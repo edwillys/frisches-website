@@ -117,10 +117,10 @@ defineExpose({
 }
 
 .menu-card__title {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
   color: var(--color-text);
-  font-family: 'Orbitron', sans-serif;
+  font-family: var(--font-family-display);
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.05em;

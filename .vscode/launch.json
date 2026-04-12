@@ -1,0 +1,39 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug app in Chrome",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}",
+      "preLaunchTask": "Start dev server"
+    },
+    {
+      "name": "Debug app in Edge",
+      "type": "pwa-msedge",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}",
+      "preLaunchTask": "Start dev server"
+    },
+    {
+      "name": "Debug app in Firefox",
+      "type": "firefox",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "reAttach": true,
+      "pathMappings": [
+        {
+          "url": "webpack:///src/",
+          "path": "${workspaceFolder}/src"
+        },
+        {
+          "url": "webpack:///${workspaceFolder}/",
+          "path": "${workspaceFolder}"
+        }
+      ],
+      "preLaunchTask": "Start dev server"
+    }
+  ]
+}

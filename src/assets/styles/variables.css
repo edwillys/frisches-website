@@ -80,6 +80,8 @@
   --bg-cover-transition-duration: 1.6s;
 
   /* Typography Scale */
+  --font-family-base: 'Space Mono', 'Courier New', monospace;
+  --font-family-display: var(--font-family-base);
   --font-size-xs: 0.75rem;
   /* 12px */
   --font-size-sm: 0.875rem;

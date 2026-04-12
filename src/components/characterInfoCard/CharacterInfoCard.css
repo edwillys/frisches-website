@@ -167,7 +167,7 @@
   font-size: 2.5rem;
   font-weight: bold;
   color: var(--color-text);
-  font-family: 'Cinzel', 'Georgia', serif;
+  font-family: var(--font-family-display);
   box-shadow: 0 0 20px rgba(224, 0, 224, 0.3);
   position: relative;
   overflow: hidden;
@@ -197,13 +197,13 @@
   color: var(--color-neon-cyan);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  font-family: 'Cinzel', 'Georgia', serif;
+  font-family: var(--font-family-display);
 }
 
 .character-info-card__info-value {
   font-size: 0.85rem;
   color: var(--color-text);
-  font-family: 'Georgia', serif;
+  font-family: var(--font-family-base);
   font-weight: 500;
 }
 
@@ -228,7 +228,7 @@
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 3px;
-  font-family: 'Cinzel', 'Georgia', serif;
+  font-family: var(--font-family-display);
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
@@ -245,7 +245,7 @@
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 1.5px;
-  font-family: 'Cinzel', 'Georgia', serif;
+  font-family: var(--font-family-display);
   border-bottom: 1px solid var(--color-border);
   padding-bottom: 0.4rem;
 }
@@ -255,7 +255,7 @@
   font-size: 0.9rem;
   line-height: 1.5;
   color: var(--color-text);
-  font-family: 'Georgia', serif;
+  font-family: var(--font-family-base);
   margin: 0;
   font-style: italic;
   text-align: justify;
@@ -275,7 +275,7 @@
   padding: 0.3rem 0.65rem;
   border-radius: 14px;
   font-size: 0.8rem;
-  font-family: 'Georgia', serif;
+  font-family: var(--font-family-base);
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
@@ -306,7 +306,7 @@
   padding: 0.5rem 0.75rem;
   border-radius: 8px;
   font-size: 0.9rem;
-  font-family: 'Georgia', serif;
+  font-family: var(--font-family-base);
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   cursor: pointer;

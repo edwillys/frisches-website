@@ -1023,7 +1023,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   border-radius: 8px;
   pointer-events: none;
   z-index: 10000;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-family: var(--font-family-base);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   animation: tooltip-fade-in 0.15s ease-out;
   backdrop-filter: blur(8px);
