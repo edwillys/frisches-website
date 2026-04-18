@@ -6,6 +6,13 @@ import AboutFlipCard from '../AboutFlipCard.vue'
 import { getAboutMembers } from '@/data/aboutMembers'
 
 const aboutMembers = getAboutMembers('en')
+const edgarMember = aboutMembers[0]
+const camiMember = aboutMembers[1]
+const steffMember = aboutMembers[2]
+
+if (!edgarMember || !camiMember || !steffMember) {
+  throw new Error('Expected about members fixtures to include Edgar, Cami, and Steff')
+}
 
 const gsapMocks = vi.hoisted(() => ({
   to: vi.fn(),
@@ -35,7 +42,7 @@ describe('AboutFlipCard', () => {
   it('renders a centered front title and keeps badges on the back only', () => {
     const wrapper = mount(AboutFlipCard, {
       props: {
-        member: aboutMembers[0],
+        member: edgarMember,
         isFlipped: false,
       },
     })
@@ -62,7 +69,7 @@ describe('AboutFlipCard', () => {
   it('emits toggle on click and on keyboard activation', async () => {
     const wrapper = mount(AboutFlipCard, {
       props: {
-        member: aboutMembers[1],
+        member: camiMember,
         isFlipped: false,
       },
       attachTo: document.body,
@@ -80,7 +87,7 @@ describe('AboutFlipCard', () => {
   it('emits favorite-song playback without toggling the card', async () => {
     const wrapper = mount(AboutFlipCard, {
       props: {
-        member: aboutMembers[0],
+        member: edgarMember,
         isFlipped: true,
       },
     })
@@ -94,7 +101,7 @@ describe('AboutFlipCard', () => {
   it('renders the favorite song as an inline description link on the back', () => {
     const wrapper = mount(AboutFlipCard, {
       props: {
-        member: aboutMembers[0],
+        member: edgarMember,
         isFlipped: true,
       },
     })
@@ -115,7 +122,7 @@ describe('AboutFlipCard', () => {
 
     const wrapper = mount(AboutFlipCard, {
       props: {
-        member: aboutMembers[1],
+        member: camiMember,
         isFlipped: false,
       },
     })
@@ -140,7 +147,7 @@ describe('AboutFlipCard', () => {
 
     const wrapper = mount(AboutFlipCard, {
       props: {
-        member: aboutMembers[0],
+        member: edgarMember,
         isFlipped: false,
       },
     })
@@ -163,7 +170,7 @@ describe('AboutFlipCard', () => {
   it('animates the card rotation when flipped state changes', async () => {
     const wrapper = mount(AboutFlipCard, {
       props: {
-        member: aboutMembers[2],
+        member: steffMember,
         isFlipped: false,
       },
     })

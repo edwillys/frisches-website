@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch, type ComponentPublicInstance } from 'vue'
 
 import AboutFlipCard from './AboutFlipCard.vue'
 import { useAboutMembers } from '@/composables/useAboutMembers'
@@ -32,8 +32,15 @@ const setCardRef = (instance: AboutFlipCardHandle | null, index: number) => {
   cardRefs.value[index] = instance
 }
 
-const setCellRef = (element: Element | null, index: number) => {
-  cellRefs.value[index] = element instanceof HTMLElement ? element : null
+const setCellRef = (element: Element | ComponentPublicInstance | null, index: number) => {
+  const resolvedElement =
+    element instanceof HTMLElement
+      ? element
+      : element && '$el' in element && element.$el instanceof HTMLElement
+        ? element.$el
+        : null
+
+  cellRefs.value[index] = resolvedElement
 }
 
 const getScrollBehavior = (): ScrollBehavior => {
