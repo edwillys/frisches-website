@@ -55,11 +55,16 @@ const focusCardAtIndex = async (index: number) => {
   const boundedIndex = Math.min(Math.max(index, 0), aboutMembers.value.length - 1)
   focusedIndex.value = boundedIndex
   await nextTick()
-  cellRefs.value[boundedIndex]?.scrollIntoView({
-    behavior: getScrollBehavior(),
-    block: 'nearest',
-    inline: 'center',
-  })
+  const cellElement = cellRefs.value[boundedIndex]
+
+  if (cellElement && typeof cellElement.scrollIntoView === 'function') {
+    cellElement.scrollIntoView({
+      behavior: getScrollBehavior(),
+      block: 'nearest',
+      inline: 'center',
+    })
+  }
+
   cardRefs.value[boundedIndex]?.focusCard()
 }
 
