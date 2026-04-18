@@ -15,6 +15,9 @@ import { getAlbumById } from '@/data/albums'
 import { useAudioStore } from '@/stores/audio'
 import { useCharacterPreloader } from '@/composables/useCharacterPreloader'
 
+// Retained temporarily while AboutMembersView rollout settles.
+// Remove after the remaining references and tests are migrated.
+
 // Enable Three.js cache - this is critical for sharing loaded models across loaders
 // Wrapped in try-catch to handle test environments where Cache may not be available
 try {

@@ -79,23 +79,24 @@ test.describe('Persistent mini-player (Phase 1)', () => {
     // Restart path 1: About chip can start playback again
     await page.locator('[data-testid="card-about"]').click()
     await waitForAnimations(page)
-    await expect(page.locator('[data-testid="character-selection"]')).toBeVisible({
+    await expect(page.locator('[data-testid="about-members-view"]')).toBeVisible({
       timeout: 10000,
     })
 
-    // Navigate to a band member (Edgar) who has a favorite song
-    await page.getByRole('button', { name: /select edgar/i }).click()
+    // Flip Edgar's card to expose the favorite-song chip
+    const edgarCard = page.getByRole('button', { name: /edgar profile card/i })
+    await edgarCard.click()
     await waitForAnimations(page)
-    await expect(page.getByTestId('character-name')).toHaveText('Edgar', { timeout: 10000 })
 
-    const favoriteSongChip = page.locator('.character-selection__favorite-song-link').first()
+    const favoriteSongChip = edgarCard.getByTestId('favorite-song-chip')
     await expect(favoriteSongChip).toBeVisible({ timeout: 10000 })
-    await favoriteSongChip.click()
+    await favoriteSongChip.focus()
+    await page.keyboard.press('Enter')
     await expect(miniPlayer).toBeVisible({ timeout: 10000 })
 
     // Clicking inside mini-player should NOT be treated as outside click (should stay in About view)
     await page.locator('[data-testid="mini-play-pause"]').click()
-    await expect(page.locator('[data-testid="character-selection"]')).toBeVisible({
+    await expect(page.locator('[data-testid="about-members-view"]')).toBeVisible({
       timeout: 20000,
     })
 

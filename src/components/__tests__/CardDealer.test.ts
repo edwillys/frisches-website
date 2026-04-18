@@ -402,6 +402,35 @@ describe('CardDealer', () => {
     wrapper.unmount()
   })
 
+  it('renders the new About members view when selecting the About card', async () => {
+    const wrapper = mount(CardDealer, {
+      attachTo: document.body,
+      global: {
+        stubs: {
+          AboutMembersView: {
+            template: '<div data-testid="about-members-view-stub" />',
+          },
+        },
+      },
+    })
+
+    await wrapper.find('.logo-button').trigger('click')
+    await vi.advanceTimersByTimeAsync(1000)
+    await nextTick()
+
+    const aboutCard = wrapper.findAllComponents(MenuCard)[1]
+    if (!aboutCard) {
+      throw new Error('Expected About menu card to exist')
+    }
+
+    await aboutCard.trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="about-members-view-stub"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
   it('animates card stack and content fade when selecting a card', async () => {
     const wrapper = mount(CardDealer, {
       attachTo: document.body,

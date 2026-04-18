@@ -1,0 +1,18 @@
+export interface AboutMemberBadge {
+  title: string
+  image: string
+}
+
+export interface AboutMember {
+  id: string
+  name: string
+  initial: string
+  avatar: string
+  avatarSrcset: string
+  avatarAlt: string
+  badges: AboutMemberBadge[]
+  descriptionLead: string
+  descriptionTail?: string
+  favoriteTrackId?: string
+  favoriteTrackTitle?: string
+}

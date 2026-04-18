@@ -119,7 +119,7 @@ test.describe('Frisches Website - Critical Flows', () => {
     expect(hasLoadedAudio).toBe(true)
   })
 
-  test('3D character models load correctly', async ({ page }) => {
+  test('about member cards load correctly', async ({ page }) => {
     // Navigate to about section
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
 
@@ -127,32 +127,17 @@ test.describe('Frisches Website - Critical Flows', () => {
     await aboutCard.click()
     await waitForAnimations(page)
 
-    const charSelection = page.locator('[data-testid="character-selection"]')
-    await expect(charSelection).toBeVisible({ timeout: 20000 })
+    const aboutMembersView = page.locator('[data-testid="about-members-view"]')
+    await expect(aboutMembersView).toBeVisible({ timeout: 20000 })
 
-    // Navigate to a band member (Edgar) to see the 3D model (default is Frisches which is group with no model)
-    await page.keyboard.press('E')
-    await waitForAnimations(page)
+    const memberCards = page.locator('[data-member-card="true"]')
+    await expect(memberCards).toHaveCount(4, { timeout: 20000 })
 
-    // CI Firefox often runs without a working WebGL stack (no GPU / missing GL drivers).
-    // When WebGL can't initialize, Three.js never renders and the loading spinner never hides.
-    const hasWebGL = await page.evaluate(() => {
-      const canvas = document.createElement('canvas')
-      return Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'))
-    })
-    test.skip(!hasWebGL, 'Skipping 3D model rendering test: WebGL unavailable in this environment')
-
-    // Wait for loading spinner to disappear (means model loaded successfully)
-    // This will fail if Git LFS files aren't pulled (.glb will be a pointer file and fail to load)
-    const loadingSpinner = charSelection.locator('.character-selection__loading')
-    await expect(loadingSpinner).toBeHidden({ timeout: 20000 })
-
-    // Verify the 3D GLTF canvas exists (indicates WebGL rendered the model successfully)
-    const canvas = page.locator('[data-testid="gltf-canvas"]')
-    await expect(canvas).toBeVisible({ timeout: 5000 })
+    await page.getByRole('button', { name: /edgar profile card/i }).click()
+    await expect(page.locator('.about-flip-card--flipped')).toHaveCount(1, { timeout: 5000 })
   })
 
-  test('navigates to about content with character selection', async ({ page }) => {
+  test('navigates to about content with flip cards', async ({ page }) => {
     // Navigate to cards
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
 
@@ -165,12 +150,11 @@ test.describe('Frisches Website - Critical Flows', () => {
     await aboutCard.click()
     await waitForAnimations(page)
 
-    // Verify character selection with 5 buttons (E, C, F, S, T)
-    const charSelection = page.locator('[data-testid="character-selection"]')
-    await expect(charSelection).toBeVisible({ timeout: 20000 })
+    const aboutMembersView = page.locator('[data-testid="about-members-view"]')
+    await expect(aboutMembersView).toBeVisible({ timeout: 20000 })
 
-    const characters = page.locator('[data-testid="character-card"]')
-    await expect(characters).toHaveCount(5, { timeout: 20000 })
+    const characters = page.locator('[data-member-card="true"]')
+    await expect(characters).toHaveCount(4, { timeout: 20000 })
   })
 
   test('complete navigation cycle: logo → cards → content → cards → logo', async ({ page }) => {

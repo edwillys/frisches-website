@@ -25,22 +25,19 @@
  *    - No stagger: cards disappear as one unified deck
  *    - Duration: 0.8s with power2.inOut easing
  */
-import { ref, onMounted, nextTick, onBeforeUnmount, computed, watch } from 'vue'
+import { ref, reactive, onMounted, nextTick, onBeforeUnmount, computed, watch } from 'vue'
 import MenuCard from './MenuCard.vue'
 import LogoButton from './LogoButton.vue'
 import AudioPlayer from './AudioPlayer.vue'
-import CharacterSelection from './CharacterSelection.vue'
+import AboutMembersView from './AboutMembersView.vue'
 import GalleryManager from './GalleryManager.vue'
 import { useGSAP } from '../composables/useGSAP'
+import { useNavigationSections } from '../composables/useNavigationSections'
 import { readParticlesPaletteFromCss } from '../composables/useCardDealerPalette'
 import { getTargetXYToViewportCenter, getViewportCenter } from './cardDealer/viewportCenter'
 import { computeLeadStagger, distanceFromLead } from './cardDealer/leadStagger'
 import { getOffsetsToContainerCenter } from './cardDealer/containerOffsets'
-import {
-  NAVIGATION_SECTIONS,
-  titleContainsSection,
-  type MenuSectionKey,
-} from './cardDealer/menuSections'
+import { titleContainsSection, type MenuSectionKey } from './cardDealer/menuSections'
 import gsap from 'gsap'
 import { CustomEase } from 'gsap/CustomEase'
 
@@ -164,9 +161,11 @@ const stopAnimating = () => {
 }
 
 const audioStore = useAudioStore()
+const navigationSections = useNavigationSections()
+const initialNavigationSections = navigationSections.value
 
 const selectedItemMatchesSection = (sectionKey: MenuSectionKey) =>
-  titleContainsSection(selectedItem.value?.title, sectionKey)
+  titleContainsSection(selectedItem.value?.title, sectionKey, navigationSections.value)
 
 const isGalleryActive = computed(
   () => currentView.value === 'content' && selectedItemMatchesSection('gallery')
@@ -177,21 +176,20 @@ const selectedItem = computed(() =>
 )
 
 // Keep content subviews mounted once visited.
-// This is important for WebGL (About) so the canvas/context is not destroyed
-// when navigating between Music/About or back to cards.
+// This keeps content views warm between Music/About/Gallery and cards.
 const hasMountedContentView = ref(false)
 const hasMountedMusic = ref(false)
 const hasMountedAbout = ref(false)
 const hasMountedGallery = ref(false)
 
-const characterSelectionRef = ref<null | { resetToGroup: () => void }>(null)
-
 watch(
   () => selectedItem.value?.title,
   (title) => {
-    if (titleContainsSection(title, 'music')) hasMountedMusic.value = true
-    if (titleContainsSection(title, 'about')) hasMountedAbout.value = true
-    if (titleContainsSection(title, 'gallery')) hasMountedGallery.value = true
+    if (titleContainsSection(title, 'music', navigationSections.value)) hasMountedMusic.value = true
+    if (titleContainsSection(title, 'about', navigationSections.value)) hasMountedAbout.value = true
+    if (titleContainsSection(title, 'gallery', navigationSections.value)) {
+      hasMountedGallery.value = true
+    }
   },
   { immediate: true }
 )
@@ -214,16 +212,6 @@ watch(isHeaderNavOpen, (open) => {
     document.documentElement.style.overflow = ''
   }
 })
-
-watch(
-  [() => currentView.value, () => selectedItem.value?.title],
-  async ([view, title]) => {
-    if (view !== 'content' || !titleContainsSection(title, 'about')) return
-    await nextTick()
-    characterSelectionRef.value?.resetToGroup()
-  },
-  { immediate: false }
-)
 
 const miniCardStyle = computed(() => {
   if (selectedItem.value) {
@@ -301,17 +289,17 @@ useGSAP(() => {
 })
 
 // Menu items configuration
-const menuItems = [
+const menuItems = reactive([
   {
-    title: NAVIGATION_SECTIONS.music.title,
-    headerTitle: NAVIGATION_SECTIONS.music.headerTitle,
+    title: initialNavigationSections.music.title,
+    headerTitle: initialNavigationSections.music.headerTitle,
     image: menuMusicSmall,
     imageSrcset: menuMusicSrcset,
     route: '/music',
   },
   {
-    title: NAVIGATION_SECTIONS.about.title,
-    headerTitle: NAVIGATION_SECTIONS.about.headerTitle,
+    title: initialNavigationSections.about.title,
+    headerTitle: initialNavigationSections.about.headerTitle,
     image: menuAboutSmall,
     imageSrcset: menuAboutSrcset,
     coverImage: bgAboutSmall,
@@ -319,15 +307,35 @@ const menuItems = [
     route: '/about',
   },
   {
-    title: NAVIGATION_SECTIONS.gallery.title,
-    headerTitle: NAVIGATION_SECTIONS.gallery.headerTitle,
+    title: initialNavigationSections.gallery.title,
+    headerTitle: initialNavigationSections.gallery.headerTitle,
     image: menuTourSmall,
     imageSrcset: menuTourSrcset,
     coverImage: bgGallerySmall,
     coverSrcset: bgGallerySrcset,
     route: '/gallery',
   },
-]
+])
+
+const syncMenuItemLabels = (sections: typeof initialNavigationSections) => {
+  const [musicItem, aboutItem, galleryItem] = menuItems
+  if (!musicItem || !aboutItem || !galleryItem) return
+
+  musicItem.title = sections.music.title
+  musicItem.headerTitle = sections.music.headerTitle
+  aboutItem.title = sections.about.title
+  aboutItem.headerTitle = sections.about.headerTitle
+  galleryItem.title = sections.gallery.title
+  galleryItem.headerTitle = sections.gallery.headerTitle
+}
+
+watch(
+  navigationSections,
+  (sections) => {
+    syncMenuItemLabels(sections)
+  },
+  { immediate: true }
+)
 
 const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
 
@@ -1731,7 +1739,7 @@ onBeforeUnmount(() => {
               @mouseleave="hoveredHeaderIndex = null"
               @click="handleHeaderHomeClick"
             >
-              {{ NAVIGATION_SECTIONS.home.headerTitle }}
+              {{ navigationSections.home.headerTitle }}
             </button>
             <button
               v-for="(item, index) in menuItems"
@@ -1816,7 +1824,7 @@ onBeforeUnmount(() => {
             class="card-dealer__header-drawer-item"
             @click="onHeaderNavHomeClick"
           >
-            {{ NAVIGATION_SECTIONS.home.headerTitle }}
+            {{ navigationSections.home.headerTitle }}
           </button>
           <button
             v-for="(item, index) in menuItems"
@@ -1864,11 +1872,7 @@ onBeforeUnmount(() => {
             v-show="selectedItemMatchesSection('about')"
             class="card-dealer__about-content"
           >
-            <CharacterSelection
-              ref="characterSelectionRef"
-              @back="handleBackClick"
-              @open-music="handleHeaderTitleClick(0)"
-            />
+            <AboutMembersView :is-active="selectedItemMatchesSection('about')" />
           </div>
 
           <!-- Gallery (lazy-mount + keep alive via v-show) -->

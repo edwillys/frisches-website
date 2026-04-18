@@ -1,3 +1,6 @@
+import type { AppLocale } from '@/i18n/locale'
+import { getNavigationText } from '@/i18n/navigationText'
+
 export const NAVIGATION_SECTION_KEYS = ['home', 'music', 'about', 'gallery'] as const
 
 export type NavigationSectionKey = (typeof NAVIGATION_SECTION_KEYS)[number]
@@ -10,31 +13,29 @@ export type NavigationSectionConfig = {
   matchTokens: readonly string[]
 }
 
-export const NAVIGATION_SECTIONS: Record<NavigationSectionKey, NavigationSectionConfig> = {
-  home: {
-    key: 'home',
-    title: 'Home',
-    headerTitle: '_Home',
-    matchTokens: ['home'],
-  },
-  music: {
-    key: 'music',
-    title: 'Music',
-    headerTitle: '_Music',
-    matchTokens: ['music'],
-  },
-  about: {
-    key: 'about',
-    title: 'About',
-    headerTitle: '_About',
-    matchTokens: ['about'],
-  },
-  gallery: {
-    key: 'gallery',
-    title: 'Gallery',
-    headerTitle: '_Gallery',
-    matchTokens: ['gallery'],
-  },
+export type NavigationSectionsMap = Record<NavigationSectionKey, NavigationSectionConfig>
+
+export const getNavigationSections = (locale: AppLocale): NavigationSectionsMap => {
+  const localeText = getNavigationText(locale)
+
+  return {
+    home: {
+      key: 'home',
+      ...localeText.home,
+    },
+    music: {
+      key: 'music',
+      ...localeText.music,
+    },
+    about: {
+      key: 'about',
+      ...localeText.about,
+    },
+    gallery: {
+      key: 'gallery',
+      ...localeText.gallery,
+    },
+  }
 }
 
 export const normalizeSectionLabel = (value: string | null | undefined) =>
@@ -42,12 +43,11 @@ export const normalizeSectionLabel = (value: string | null | undefined) =>
 
 export const titleContainsSection = (
   value: string | null | undefined,
-  sectionKey: MenuSectionKey
+  sectionKey: MenuSectionKey,
+  sections: NavigationSectionsMap
 ) => {
   const normalizedValue = normalizeSectionLabel(value)
   if (!normalizedValue) return false
 
-  return NAVIGATION_SECTIONS[sectionKey].matchTokens.some((token) =>
-    normalizedValue.includes(token)
-  )
+  return sections[sectionKey].matchTokens.some((token) => normalizedValue.includes(token))
 }
