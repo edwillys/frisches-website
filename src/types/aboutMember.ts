@@ -15,4 +15,9 @@ export interface AboutMember {
   descriptionTail?: string
   favoriteTrackId?: string
   favoriteTrackTitle?: string
+  flipFrames?: string[]
+  flipFps?: number
+  hoverPoseFrame?: number
+  avatarBack?: string
+  avatarBackSrcset?: string
 }

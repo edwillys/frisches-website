@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import gsap from 'gsap'
 
 import AnimatedLoadingGlyph from './AnimatedLoadingGlyph.vue'
@@ -52,6 +52,20 @@ const isHoveringCard = ref(false)
 const isTypingFrontTitle = ref(false)
 const isTypingBackText = ref(false)
 const isAvatarLoaded = ref(false)
+const isPlayingFlipAnimation = ref(false)
+const currentFlipFrameIndex = ref(0)
+const hoverFrameSrc = ref<string | null>(null)
+let lastHoverFrameIndex = -1
+
+const isShowingHoverFrame = computed(
+  () => hoverFrameSrc.value !== null && !isPlayingFlipAnimation.value
+)
+
+const currentFlipFrameSrc = computed<string>(
+  () => props.member.flipFrames?.[currentFlipFrameIndex.value] ?? ''
+)
+
+let frameTimer: ReturnType<typeof setInterval> | null = null
 
 let titleTypingTimeoutIds: ReturnType<typeof setTimeout>[] = []
 let typingTimeoutIds: ReturnType<typeof setTimeout>[] = []
@@ -212,6 +226,28 @@ const startFrontTitleTyping = () => {
   )
 }
 
+const pickHoverFrame = () => {
+  const frames = props.member.flipFrames
+  if (!frames?.length) return
+
+  const fixedIndex = props.member.hoverPoseFrame
+  if (fixedIndex !== undefined) {
+    hoverFrameSrc.value = frames[Math.min(fixedIndex, frames.length - 1)] ?? null
+    return
+  }
+
+  let index: number
+  if (frames.length === 1) {
+    index = 0
+  } else {
+    do {
+      index = Math.floor(Math.random() * frames.length)
+    } while (index === lastHoverFrameIndex)
+  }
+  lastHoverFrameIndex = index
+  hoverFrameSrc.value = frames[index] ?? null
+}
+
 const handleMouseenter = (event: MouseEvent) => {
   if (suppressHoverUntilPointerLeaves) return
   if (!enteredFromOutside(event)) return
@@ -220,12 +256,14 @@ const handleMouseenter = (event: MouseEvent) => {
 
   if (!props.isFlipped) {
     startFrontTitleTyping()
+    pickHoverFrame()
   }
 }
 
 const handleMouseleave = () => {
   isHoveringCard.value = false
   suppressHoverUntilPointerLeaves = false
+  hoverFrameSrc.value = null
   clearTitleTypingTimers()
   setFullFrontTitle()
 }
@@ -364,12 +402,17 @@ const animateAvatarTransition = (flipped: boolean, duration: number) => {
     },
   })
 
-  gsap.to(flipped ? backAvatar : frontAvatar, {
-    autoAlpha: 1,
-    duration: Math.min(duration * 0.22, 0.2),
-    delay: duration * 0.58,
-    overwrite: 'auto',
-  })
+  // Only pre-fade the back avatar (front→back) so it blends with the arriving floating avatar.
+  // For back→front let onComplete handle the reveal — avoids the static front avatar
+  // overlapping the still-moving floating avatar.
+  if (flipped) {
+    gsap.to(backAvatar, {
+      autoAlpha: 1,
+      duration: Math.min(duration * 0.22, 0.2),
+      delay: duration * 0.58,
+      overwrite: 'auto',
+    })
+  }
 }
 
 const animateFlip = (flipped: boolean) => {
@@ -395,7 +438,7 @@ const handleCardKeydown = (event: KeyboardEvent) => {
 
   if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault()
-    emit('toggle')
+    triggerToggle()
   }
 }
 
@@ -404,8 +447,49 @@ const handleFavoriteSongClick = () => {
   emit('play-favorite', props.member.favoriteTrackId)
 }
 
-const handleCardClick = () => {
+const onFlipAnimationEnded = () => {
+  if (frameTimer !== null) {
+    clearInterval(frameTimer)
+    frameTimer = null
+  }
+  isPlayingFlipAnimation.value = false
   emit('toggle')
+}
+
+const playFlipAnimation = () => {
+  const frames = props.member.flipFrames
+  if (!frames?.length) {
+    emit('toggle')
+    return
+  }
+
+  hoverFrameSrc.value = null
+  currentFlipFrameIndex.value = 0
+  isPlayingFlipAnimation.value = true
+
+  const intervalMs = Math.round(1000 / (props.member.flipFps ?? 8))
+
+  frameTimer = setInterval(() => {
+    const next = currentFlipFrameIndex.value + 1
+    if (next >= frames.length) {
+      onFlipAnimationEnded()
+    } else {
+      currentFlipFrameIndex.value = next
+    }
+  }, intervalMs)
+}
+
+const triggerToggle = () => {
+  if (isPlayingFlipAnimation.value) return
+  if (!props.isFlipped && props.member.flipFrames?.length) {
+    playFlipAnimation()
+    return
+  }
+  emit('toggle')
+}
+
+const handleCardClick = () => {
+  triggerToggle()
 }
 
 const focusCard = () => {
@@ -436,6 +520,13 @@ watch(
 watch(
   () => props.member.id,
   async () => {
+    if (frameTimer !== null) {
+      clearInterval(frameTimer)
+      frameTimer = null
+    }
+    isPlayingFlipAnimation.value = false
+    hoverFrameSrc.value = null
+    lastHoverFrameIndex = -1
     clearTitleTypingTimers()
     setFullFrontTitle()
     clearTypingTimers()
@@ -457,6 +548,14 @@ watch(
 onMounted(() => {
   if (typeof window !== 'undefined') {
     window.addEventListener('pointermove', handleWindowPointerMove, { passive: true })
+  }
+
+  // Preload frames into browser cache so first playback is instant.
+  if (props.member.flipFrames?.length) {
+    for (const src of props.member.flipFrames) {
+      const img = new Image()
+      img.src = src
+    }
   }
 
   ctx = gsap.context(() => {
@@ -486,6 +585,10 @@ onBeforeUnmount(() => {
 
   clearTitleTypingTimers()
   clearTypingTimers()
+  if (frameTimer !== null) {
+    clearInterval(frameTimer)
+    frameTimer = null
+  }
   ctx?.revert()
 })
 </script>
@@ -537,12 +640,23 @@ onBeforeUnmount(() => {
             :src="member.avatar"
             :srcset="member.avatarSrcset"
             class="about-flip-card__avatar"
-            :class="{ 'about-flip-card__avatar--loaded': isAvatarLoaded }"
+            :class="{
+              'about-flip-card__avatar--loaded': isAvatarLoaded,
+              'about-flip-card__avatar--playing': isPlayingFlipAnimation || isShowingHoverFrame,
+            }"
             data-testid="member-avatar-front"
             loading="lazy"
             @error="resolveAvatarLoading"
             @load="resolveAvatarLoading"
             sizes="(max-width: 767px) 280px, 320px"
+          />
+          <img
+            v-if="member.flipFrames?.length"
+            v-show="isPlayingFlipAnimation || isShowingHoverFrame"
+            :src="isPlayingFlipAnimation ? currentFlipFrameSrc : (hoverFrameSrc ?? '')"
+            :alt="member.avatarAlt"
+            class="about-flip-card__flip-video"
+            aria-hidden="true"
           />
         </div>
       </section>
@@ -569,8 +683,8 @@ onBeforeUnmount(() => {
             <img
               ref="backAvatarImageRef"
               :alt="member.avatarAlt"
-              :src="member.avatar"
-              :srcset="member.avatarSrcset"
+              :src="member.avatarBack ?? member.avatar"
+              :srcset="member.avatarBack ? member.avatarBackSrcset : member.avatarSrcset"
               class="about-flip-card__back-avatar"
               data-testid="member-avatar-back"
               loading="lazy"
@@ -614,8 +728,8 @@ onBeforeUnmount(() => {
       <img
         ref="floatingAvatarImageRef"
         :alt="member.avatarAlt"
-        :src="member.avatar"
-        :srcset="member.avatarSrcset"
+        :src="member.avatarBack ?? member.avatar"
+        :srcset="member.avatarBack ? member.avatarBackSrcset : member.avatarSrcset"
       />
     </div>
   </article>
@@ -841,6 +955,23 @@ onBeforeUnmount(() => {
 
 .about-flip-card__avatar--loaded {
   opacity: 1;
+}
+
+/* Instantly hide the static avatar while pose-frame animation is running */
+.about-flip-card__avatar--playing {
+  opacity: 0 !important;
+  transition: none !important;
+}
+
+.about-flip-card__flip-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
 }
 
 .about-flip-card__back-avatar-slot {
