@@ -64,6 +64,7 @@ describe('AboutFlipCard', () => {
     expect(
       wrapper.findAll('.about-flip-card__face--back [data-testid="member-badge"]')
     ).toHaveLength(2)
+    expect(wrapper.find('[data-testid="member-avatar-skeleton"]').exists()).toBe(true)
   })
 
   it('emits toggle on click and on keyboard activation', async () => {
@@ -121,15 +122,34 @@ describe('AboutFlipCard', () => {
     vi.useFakeTimers()
 
     const wrapper = mount(AboutFlipCard, {
+      attachTo: document.body,
       props: {
         member: camiMember,
         isFlipped: false,
       },
     })
 
+    Object.defineProperty(wrapper.element, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({
+        left: 0,
+        top: 0,
+        right: 200,
+        bottom: 300,
+        width: 200,
+        height: 300,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }),
+    })
+
+    window.dispatchEvent(new MouseEvent('pointermove', { clientX: -20, clientY: -20 }))
+    window.dispatchEvent(new MouseEvent('pointermove', { clientX: 24, clientY: 30 }))
+
     expect(wrapper.find('.about-flip-card__title').text()).toBe('Cami')
 
-    await wrapper.trigger('mouseenter')
+    await wrapper.trigger('mouseenter', { clientX: 24, clientY: 30 })
     await nextTick()
 
     expect(wrapper.classes()).toContain('about-flip-card--title-typing')
@@ -140,6 +160,73 @@ describe('AboutFlipCard', () => {
     expect(wrapper.find('.about-flip-card__title').text()).toBe('Cami')
     expect(wrapper.classes()).not.toContain('about-flip-card--title-typing')
     expect(wrapper.classes()).toContain('about-flip-card--show-title-cursor')
+  })
+
+  it('does not trigger hover typing when the pointer was already inside the card', async () => {
+    const originalRect = HTMLElement.prototype.getBoundingClientRect
+
+    Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({
+        left: 0,
+        top: 0,
+        right: 200,
+        bottom: 300,
+        width: 200,
+        height: 300,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }),
+    })
+
+    window.dispatchEvent(new MouseEvent('pointermove', { clientX: -20, clientY: -20 }))
+    window.dispatchEvent(new MouseEvent('pointermove', { clientX: 38, clientY: 42 }))
+
+    const wrapper = mount(AboutFlipCard, {
+      attachTo: document.body,
+      props: {
+        member: camiMember,
+        isFlipped: false,
+      },
+    })
+
+    window.dispatchEvent(new MouseEvent('pointermove', { clientX: -20, clientY: -20 }))
+    window.dispatchEvent(new MouseEvent('pointermove', { clientX: 38, clientY: 42 }))
+
+    await wrapper.setProps({ member: edgarMember })
+    await nextTick()
+
+    await wrapper.trigger('mouseenter', { clientX: 38, clientY: 42 })
+    await nextTick()
+
+    expect(wrapper.classes()).not.toContain('about-flip-card--title-typing')
+    expect(wrapper.classes()).not.toContain('about-flip-card--show-title-cursor')
+
+    wrapper.unmount()
+    Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value: originalRect,
+    })
+  })
+
+  it('hides the loading glyph after the avatar resolves', async () => {
+    const wrapper = mount(AboutFlipCard, {
+      props: {
+        member: edgarMember,
+        isFlipped: false,
+      },
+    })
+
+    expect(wrapper.find('[data-testid="member-avatar-skeleton"]').exists()).toBe(true)
+
+    await wrapper.find('[data-testid="member-avatar-front"]').trigger('load')
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="member-avatar-skeleton"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="member-avatar-front"]').classes()).toContain(
+      'about-flip-card__avatar--loaded'
+    )
   })
 
   it('types the back copy when the card flips open', async () => {

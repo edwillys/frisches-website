@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import gsap from 'gsap'
 
+import AnimatedLoadingGlyph from './AnimatedLoadingGlyph.vue'
 import type { AboutMember } from '@/types/aboutMember'
 
 interface Props {
@@ -50,9 +51,13 @@ const displayedDescriptionTail = ref(props.isFlipped ? (props.member.description
 const isHoveringCard = ref(false)
 const isTypingFrontTitle = ref(false)
 const isTypingBackText = ref(false)
+const isAvatarLoaded = ref(false)
 
 let titleTypingTimeoutIds: ReturnType<typeof setTimeout>[] = []
 let typingTimeoutIds: ReturnType<typeof setTimeout>[] = []
+let lastPointerPosition: { x: number; y: number } | null = null
+let previousPointerPosition: { x: number; y: number } | null = null
+let suppressHoverUntilPointerLeaves = false
 
 const getFlipDuration = () => {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
@@ -119,6 +124,57 @@ const clearTitleTypingTimers = () => {
   titleTypingTimeoutIds = []
 }
 
+const handleWindowPointerMove = (event: PointerEvent) => {
+  previousPointerPosition = lastPointerPosition
+  lastPointerPosition = { x: event.clientX, y: event.clientY }
+}
+
+const isPointInsideCard = (point: { x: number; y: number } | null) => {
+  const rootElement = rootRef.value
+  if (!rootElement || !point) return false
+
+  const rect = rootElement.getBoundingClientRect()
+
+  return (
+    point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom
+  )
+}
+
+const enteredFromOutside = (event: MouseEvent) => {
+  const rootElement = rootRef.value
+  if (!rootElement) return true
+
+  const relatedTarget = event.relatedTarget
+  if (relatedTarget instanceof Node && rootElement.contains(relatedTarget)) {
+    return false
+  }
+
+  const currentPoint = { x: event.clientX, y: event.clientY }
+
+  if (!isPointInsideCard(currentPoint)) {
+    return false
+  }
+
+  // No movement history means we cannot confirm the cursor came from outside.
+  // Treat as "did not enter from outside" to prevent false hover on mount.
+  if (!previousPointerPosition) return false
+
+  return !isPointInsideCard(previousPointerPosition)
+}
+
+const syncHoverSuppressionState = () => {
+  suppressHoverUntilPointerLeaves = isPointInsideCard(lastPointerPosition)
+}
+
+const syncAvatarLoadState = () => {
+  const avatar = frontAvatarImageRef.value
+  isAvatarLoaded.value = Boolean(avatar?.complete && avatar.naturalWidth > 0)
+}
+
+const resolveAvatarLoading = () => {
+  isAvatarLoaded.value = true
+}
+
 const setFullFrontTitle = () => {
   displayedTitleText.value = props.member.name
   isTypingFrontTitle.value = false
@@ -156,7 +212,10 @@ const startFrontTitleTyping = () => {
   )
 }
 
-const handleMouseenter = () => {
+const handleMouseenter = (event: MouseEvent) => {
+  if (suppressHoverUntilPointerLeaves) return
+  if (!enteredFromOutside(event)) return
+
   isHoveringCard.value = true
 
   if (!props.isFlipped) {
@@ -166,6 +225,7 @@ const handleMouseenter = () => {
 
 const handleMouseleave = () => {
   isHoveringCard.value = false
+  suppressHoverUntilPointerLeaves = false
   clearTitleTypingTimers()
   setFullFrontTitle()
 }
@@ -344,6 +404,10 @@ const handleFavoriteSongClick = () => {
   emit('play-favorite', props.member.favoriteTrackId)
 }
 
+const handleCardClick = () => {
+  emit('toggle')
+}
+
 const focusCard = () => {
   rootRef.value?.focus()
 }
@@ -371,21 +435,30 @@ watch(
 
 watch(
   () => props.member.id,
-  () => {
+  async () => {
     clearTitleTypingTimers()
     setFullFrontTitle()
     clearTypingTimers()
+    isHoveringCard.value = false
+    isAvatarLoaded.value = false
 
     if (props.isFlipped) {
       setFullBackText()
-      return
+    } else {
+      resetBackText()
     }
 
-    resetBackText()
+    await nextTick()
+    syncAvatarLoadState()
+    syncHoverSuppressionState()
   }
 )
 
 onMounted(() => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('pointermove', handleWindowPointerMove, { passive: true })
+  }
+
   ctx = gsap.context(() => {
     if (!innerRef.value) return
 
@@ -402,9 +475,15 @@ onMounted(() => {
   }
 
   setFullFrontTitle()
+  syncAvatarLoadState()
+  syncHoverSuppressionState()
 })
 
 onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('pointermove', handleWindowPointerMove)
+  }
+
   clearTitleTypingTimers()
   clearTypingTimers()
   ctx?.revert()
@@ -418,6 +497,7 @@ onBeforeUnmount(() => {
     :class="{
       'about-flip-card--flipped': isFlipped,
       'about-flip-card--focused': isFocused,
+      'about-flip-card--hovered': isHoveringCard,
       'about-flip-card--title-typing': isTypingFrontTitle,
       'about-flip-card--show-title-cursor': isHoveringCard && !isFlipped && !isTypingFrontTitle,
       'about-flip-card--typing': isTypingBackText,
@@ -428,7 +508,7 @@ onBeforeUnmount(() => {
     :tabindex="isFocused ? 0 : -1"
     data-member-card="true"
     role="button"
-    @click="emit('toggle')"
+    @click="handleCardClick"
     @focus="emit('focus-card')"
     @mouseenter="handleMouseenter"
     @mouseleave="handleMouseleave"
@@ -446,14 +526,22 @@ onBeforeUnmount(() => {
           </h3>
         </div>
         <div class="about-flip-card__avatar-frame">
+          <AnimatedLoadingGlyph
+            v-if="!isAvatarLoaded"
+            class="about-flip-card__avatar-skeleton"
+            data-testid="member-avatar-skeleton"
+          />
           <img
             ref="frontAvatarImageRef"
             :alt="member.avatarAlt"
             :src="member.avatar"
             :srcset="member.avatarSrcset"
             class="about-flip-card__avatar"
+            :class="{ 'about-flip-card__avatar--loaded': isAvatarLoaded }"
             data-testid="member-avatar-front"
             loading="lazy"
+            @error="resolveAvatarLoading"
+            @load="resolveAvatarLoading"
             sizes="(max-width: 767px) 280px, 320px"
           />
         </div>
@@ -717,14 +805,22 @@ onBeforeUnmount(() => {
 .about-flip-card__avatar-frame {
   flex: 1;
   min-height: 0;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   padding: var(--about-card-avatar-frame-padding);
   border-radius: var(--about-card-frame-radius);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(10, 10, 18, 0.35) 100%),
     radial-gradient(circle at top, rgba(104, 198, 224, 0.16), transparent 45%);
+}
+
+.about-flip-card__avatar-skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
 }
 
 .about-flip-card__avatar {
@@ -736,7 +832,15 @@ onBeforeUnmount(() => {
   object-fit: contain;
   object-position: center center;
   flex: 0 0 auto;
+  opacity: 0;
+  position: relative;
+  z-index: 1;
+  transition: opacity 240ms ease;
   filter: var(--about-card-avatar-filter) var(--about-card-avatar-drop-shadow);
+}
+
+.about-flip-card__avatar--loaded {
+  opacity: 1;
 }
 
 .about-flip-card__back-avatar-slot {
@@ -831,9 +935,8 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.04);
 }
 
-.about-flip-card:hover .about-flip-card__cursor-indicator--title,
 .about-flip-card--show-title-cursor .about-flip-card__cursor-indicator--title,
-.about-flip-card--flipped:hover .about-flip-card__cursor-indicator--copy {
+.about-flip-card--flipped.about-flip-card--hovered .about-flip-card__cursor-indicator--copy {
   opacity: 1;
   animation: about-flip-card-cursor-blink var(--about-card-cursor-blink-duration) step-end infinite;
 }

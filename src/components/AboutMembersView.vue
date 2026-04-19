@@ -25,7 +25,12 @@ const cardRefs = ref<Array<AboutFlipCardHandle | null>>([])
 const cellRefs = ref<Array<HTMLElement | null>>([])
 const rootRef = ref<HTMLElement | null>(null)
 const initialToIndex = computed(
-  () => new Map(aboutMembers.value.map((member, index) => [member.initial, index]))
+  () =>
+    new Map(
+      aboutMembers.value
+        .filter((member) => member.initial)
+        .map((member, index) => [member.initial, index])
+    )
 )
 
 const setCardRef = (instance: AboutFlipCardHandle | null, index: number) => {
