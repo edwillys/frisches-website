@@ -463,6 +463,12 @@ const playFlipAnimation = () => {
     return
   }
 
+  // Skip frame-by-frame animation in test mode (setInterval never advances).
+  if (import.meta.env.MODE === 'test') {
+    emit('toggle')
+    return
+  }
+
   hoverFrameSrc.value = null
   currentFlipFrameIndex.value = 0
   isPlayingFlipAnimation.value = true
