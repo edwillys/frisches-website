@@ -8,6 +8,7 @@ export interface GalleryImage {
   location: string[]
   rating: number
   creationDate: string | null
+  photoCredit: string | null
 }
 
 declare module '@/assets/gallery_data.json' {

@@ -18,6 +18,7 @@ export interface GalleryImage {
   location: string[]
   rating: number
   creationDate: string | null
+  photoCredit: string | null
 }
 
 const LOCATION_TAG_PREFIX = 'Location/'

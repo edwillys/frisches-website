@@ -188,6 +188,9 @@
                 @load="onImageLoad(image.id)"
                 @error="onImageError(image.id)"
               />
+              <span v-if="image.photoCredit" class="gallery-credit" aria-label="Photo credit">
+                &#169; {{ image.photoCredit }}
+              </span>
             </div>
           </div>
 
@@ -214,6 +217,9 @@
                 @load="onImageLoad(image.id)"
                 @error="onImageError(image.id)"
               />
+              <span v-if="image.photoCredit" class="gallery-credit" aria-label="Photo credit">
+                &#169; {{ image.photoCredit }}
+              </span>
             </div>
           </div>
         </template>
@@ -266,6 +272,9 @@
                 @load="onImageLoad(image.id)"
                 @error="onImageError(image.id)"
               />
+              <span v-if="image.photoCredit" class="gallery-credit" aria-label="Photo credit">
+                &#169; {{ image.photoCredit }}
+              </span>
             </div>
           </div>
 
@@ -292,6 +301,9 @@
                 @load="onImageLoad(image.id)"
                 @error="onImageError(image.id)"
               />
+              <span v-if="image.photoCredit" class="gallery-credit" aria-label="Photo credit">
+                &#169; {{ image.photoCredit }}
+              </span>
             </div>
           </div>
         </div>
@@ -348,6 +360,13 @@
               :style="lightboxImgStyle"
               draggable="false"
             />
+            <span
+              v-if="lightboxImage.photoCredit"
+              class="lightbox-credit"
+              aria-label="Photo credit"
+            >
+              &#169; {{ lightboxImage.photoCredit }}
+            </span>
           </div>
 
           <div class="lightbox-controls" aria-label="Zoom controls">
@@ -1472,6 +1491,7 @@ watch(
 }
 
 .gallery-highlight-tile {
+  position: relative;
   cursor: pointer;
 }
 
@@ -1903,5 +1923,49 @@ watch(
 .gallery-config-row input {
   width: 16px;
   height: 16px;
+}
+
+/* Photo credit badge – thumbnail */
+.gallery-credit {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  padding: 0.18em 0.45em;
+  font-size: 0.62rem;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-top-left-radius: 4px;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80%;
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+
+.gallery-item.is-loaded .gallery-credit,
+.gallery-highlight-tile.is-loaded .gallery-credit {
+  opacity: 1;
+}
+
+/* Photo credit badge – lightbox */
+.lightbox-credit {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  padding: 0.2em 0.55em;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: 4px;
+  pointer-events: none;
+  white-space: nowrap;
 }
 </style>

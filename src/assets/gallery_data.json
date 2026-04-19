@@ -8,7 +8,8 @@
     "people": ["Cami", "Edgar", "Steff", "Tobi"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2021-06-27T15:03:51.000"
+    "creationDate": "2021-06-27T15:03:51.000",
+    "photoCredit": null
   },
   {
     "id": 2,
@@ -19,7 +20,8 @@
     "people": ["Steff"],
     "location": ["Sammerberg"],
     "rating": 0,
-    "creationDate": "2026-01-07T19:44:01.111"
+    "creationDate": "2026-01-07T19:44:01.111",
+    "photoCredit": null
   },
   {
     "id": 3,
@@ -30,7 +32,8 @@
     "people": ["Edgar", "Steff"],
     "location": ["Sammerberg"],
     "rating": 0,
-    "creationDate": "2026-01-07T19:42:28.280"
+    "creationDate": "2026-01-07T19:42:28.280",
+    "photoCredit": null
   },
   {
     "id": 4,
@@ -41,7 +44,8 @@
     "people": ["Cami"],
     "location": ["Sammerberg"],
     "rating": 0,
-    "creationDate": "2026-01-07T19:44:19.369"
+    "creationDate": "2026-01-07T19:44:19.369",
+    "photoCredit": null
   },
   {
     "id": 5,
@@ -52,7 +56,8 @@
     "people": ["Cami", "Edgar", "Steff", "Tobi"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2023-08-12T18:02:00.000"
+    "creationDate": "2023-08-12T18:02:00.000",
+    "photoCredit": null
   },
   {
     "id": 6,
@@ -63,7 +68,8 @@
     "people": ["Edgar", "Steff"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2023-08-12T18:02:00.000"
+    "creationDate": "2023-08-12T18:02:00.000",
+    "photoCredit": null
   },
   {
     "id": 7,
@@ -74,7 +80,8 @@
     "people": ["Edgar"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2023-08-12T17:20:22.000"
+    "creationDate": "2023-08-12T17:20:22.000",
+    "photoCredit": null
   },
   {
     "id": 8,
@@ -85,7 +92,8 @@
     "people": ["Cami"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2023-08-12T17:21:56.000"
+    "creationDate": "2023-08-12T17:21:56.000",
+    "photoCredit": null
   },
   {
     "id": 9,
@@ -96,7 +104,8 @@
     "people": ["Tobi"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2023-08-12T17:22:23.000"
+    "creationDate": "2023-08-12T17:22:23.000",
+    "photoCredit": null
   },
   {
     "id": 10,
@@ -107,7 +116,8 @@
     "people": ["Tobi"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2023-08-12T17:22:44.000"
+    "creationDate": "2023-08-12T17:22:44.000",
+    "photoCredit": null
   },
   {
     "id": 11,
@@ -118,7 +128,8 @@
     "people": ["Cami"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2023-08-12T17:22:52.000"
+    "creationDate": "2023-08-12T17:22:52.000",
+    "photoCredit": null
   },
   {
     "id": 12,
@@ -129,7 +140,8 @@
     "people": ["Steff"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2023-08-12T17:23:32.000"
+    "creationDate": "2023-08-12T17:23:32.000",
+    "photoCredit": null
   },
   {
     "id": 13,
@@ -140,7 +152,8 @@
     "people": ["Tobi"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2025-05-10T20:09:57.000"
+    "creationDate": "2025-05-10T20:09:57.000",
+    "photoCredit": "Tobias Tschepe"
   },
   {
     "id": 14,
@@ -151,7 +164,8 @@
     "people": ["Cami", "Edgar", "Steff", "Tobi"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2025-05-10T20:13:11.000"
+    "creationDate": "2025-05-10T20:13:11.000",
+    "photoCredit": "Tobias Tschepe"
   },
   {
     "id": 15,
@@ -162,7 +176,8 @@
     "people": ["Cami", "Steff"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2025-05-10T20:39:59.000"
+    "creationDate": "2025-05-10T20:39:59.000",
+    "photoCredit": "Tobias Tschepe"
   },
   {
     "id": 16,
@@ -173,7 +188,8 @@
     "people": ["Cami", "Edgar", "Steff", "Tobi"],
     "location": [],
     "rating": 0,
-    "creationDate": "2023-08-12T19:11:32.948"
+    "creationDate": "2023-08-12T19:11:32.948",
+    "photoCredit": null
   },
   {
     "id": 17,
@@ -184,7 +200,8 @@
     "people": ["Cami", "Edgar", "Steff", "Tobi"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2024-03-10T20:51:06.000"
+    "creationDate": "2024-03-10T20:51:06.000",
+    "photoCredit": null
   },
   {
     "id": 18,
@@ -195,7 +212,8 @@
     "people": ["Cami", "Edgar", "Steff", "Tobi"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2023-06-24T19:42:18.000"
+    "creationDate": "2023-06-24T19:42:18.000",
+    "photoCredit": null
   },
   {
     "id": 19,
@@ -206,7 +224,8 @@
     "people": ["Cami", "Edgar", "Steff", "Tobi"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2021-06-27T15:03:51.000"
+    "creationDate": "2021-06-27T15:03:51.000",
+    "photoCredit": null
   },
   {
     "id": 20,
@@ -217,7 +236,8 @@
     "people": ["Edgar", "Steff"],
     "location": ["Sammerberg"],
     "rating": 0,
-    "creationDate": "2026-01-07T19:42:28.280"
+    "creationDate": "2026-01-07T19:42:28.280",
+    "photoCredit": null
   },
   {
     "id": 21,
@@ -228,7 +248,8 @@
     "people": ["Cami"],
     "location": ["Sammerberg"],
     "rating": 0,
-    "creationDate": "2026-01-07T19:44:19.369"
+    "creationDate": "2026-01-07T19:44:19.369",
+    "photoCredit": null
   },
   {
     "id": 22,
@@ -239,7 +260,8 @@
     "people": ["Steff"],
     "location": ["Sammerberg"],
     "rating": 0,
-    "creationDate": "2026-01-07T19:44:01.111"
+    "creationDate": "2026-01-07T19:44:01.111",
+    "photoCredit": null
   },
   {
     "id": 23,
@@ -250,7 +272,8 @@
     "people": ["Edgar", "Steff"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2023-08-12T18:02:00.000"
+    "creationDate": "2023-08-12T18:02:00.000",
+    "photoCredit": "Filippos Ineglis"
   },
   {
     "id": 24,
@@ -261,7 +284,8 @@
     "people": ["Cami", "Edgar", "Steff", "Tobi"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2023-08-12T18:02:00.000"
+    "creationDate": "2023-08-12T18:02:00.000",
+    "photoCredit": "Filippos Ineglis"
   },
   {
     "id": 25,
@@ -272,7 +296,8 @@
     "people": ["Cami"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2023-08-12T17:22:52.000"
+    "creationDate": "2023-08-12T17:22:52.000",
+    "photoCredit": "Filippos Ineglis"
   },
   {
     "id": 26,
@@ -283,7 +308,8 @@
     "people": ["Tobi"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2023-08-12T17:22:44.000"
+    "creationDate": "2023-08-12T17:22:44.000",
+    "photoCredit": "Filippos Ineglis"
   },
   {
     "id": 27,
@@ -294,7 +320,8 @@
     "people": ["Edgar"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2023-08-12T17:20:22.000"
+    "creationDate": "2023-08-12T17:20:22.000",
+    "photoCredit": "Filippos Ineglis"
   },
   {
     "id": 28,
@@ -305,7 +332,8 @@
     "people": ["Steff"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2023-08-12T17:23:32.000"
+    "creationDate": "2023-08-12T17:23:32.000",
+    "photoCredit": "Filippos Ineglis"
   },
   {
     "id": 29,
@@ -316,7 +344,8 @@
     "people": ["Cami", "Edgar", "Steff", "Tobi"],
     "location": [],
     "rating": 0,
-    "creationDate": "2023-08-12T19:11:32.948"
+    "creationDate": "2023-08-12T19:11:32.000",
+    "photoCredit": "Filippos Ineglis"
   },
   {
     "id": 30,
@@ -327,7 +356,8 @@
     "people": ["Cami", "Edgar", "Steff", "Tobi"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2025-05-10T20:13:11.000"
+    "creationDate": "2025-05-10T20:13:11.000",
+    "photoCredit": "Tobias Tschepe"
   },
   {
     "id": 31,
@@ -338,7 +368,8 @@
     "people": ["Cami", "Steff"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2025-05-10T20:39:59.000"
+    "creationDate": "2025-05-10T20:39:59.000",
+    "photoCredit": "Tobias Tschepe"
   },
   {
     "id": 32,
@@ -349,7 +380,8 @@
     "people": ["Tobi"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2025-05-10T20:09:57.000"
+    "creationDate": "2025-05-10T20:09:57.000",
+    "photoCredit": "Tobias Tschepe"
   },
   {
     "id": 33,
@@ -360,6 +392,7 @@
     "people": ["Cami", "Edgar", "Steff", "Tobi"],
     "location": ["Munich"],
     "rating": 0,
-    "creationDate": "2023-06-24T19:42:18.000"
+    "creationDate": "2023-06-24T19:42:18.000",
+    "photoCredit": null
   }
 ]
