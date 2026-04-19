@@ -46,6 +46,7 @@ import choirSvg from '@/assets/badges/choir.svg'
 import instagramSvg from '@/assets/icons/social-instagram.svg?raw'
 import spotifySvg from '@/assets/icons/social-spotify.svg?raw'
 import youtubeSvg from '@/assets/icons/social-youtube.svg?raw'
+import githubSvg from '@/assets/icons/social-github.svg?raw'
 import emailSvg from '@/assets/icons/email.svg?raw'
 
 const badgeMap: Record<string, string> = {
@@ -356,6 +357,13 @@ const cardLeftBadges = computed<Badge[]>(() => {
         title: 'YouTube',
         link: socialLinks.youtube,
         icon: youtubeSvg,
+      })
+    }
+    if (socialLinks?.github) {
+      badges.push({
+        title: 'GitHub',
+        link: socialLinks.github,
+        icon: githubSvg,
       })
     }
     if (socialLinks?.email) {

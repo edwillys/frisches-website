@@ -44,6 +44,7 @@ import { CustomEase } from 'gsap/CustomEase'
 import instagramSvg from '@/assets/icons/social-instagram.svg?raw'
 import spotifySvg from '@/assets/icons/social-spotify.svg?raw'
 import youtubeSvg from '@/assets/icons/social-youtube.svg?raw'
+import githubSvg from '@/assets/icons/social-github.svg?raw'
 import emailSvg from '@/assets/icons/email.svg?raw'
 import arrowLeftSvg from '@/assets/icons/arrow-left.svg?raw'
 
@@ -351,7 +352,7 @@ const deckLeadIndex = Math.floor(menuItems.length / 2)
 // Component props
 const props = withDefaults(
   defineProps<{
-    socialLinks?: { instagram?: string; spotify?: string; youtube?: string }
+    socialLinks?: { instagram?: string; spotify?: string; youtube?: string; github?: string }
   }>(),
   {
     socialLinks: () => ({}),
@@ -1659,6 +1660,17 @@ onBeforeUnmount(() => {
         rel="noopener noreferrer"
       >
         <span aria-hidden="true" v-html="youtubeSvg" />
+      </a>
+
+      <a
+        v-if="props.socialLinks?.github"
+        :href="props.socialLinks.github"
+        class="card-dealer__social-link"
+        aria-label="GitHub"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <span aria-hidden="true" v-html="githubSvg" />
       </a>
 
       <a href="mailto:frisches.band@gmail.com" class="card-dealer__social-link" aria-label="Email">
