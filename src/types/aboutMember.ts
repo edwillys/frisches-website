@@ -9,7 +9,6 @@ export interface AboutMember {
   initial: string
   avatar: string
   avatarSrcset: string
-  avatarAlt: string
   badges: AboutMemberBadge[]
   descriptionLead: string
   descriptionTail?: string

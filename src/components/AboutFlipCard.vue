@@ -9,10 +9,12 @@ interface Props {
   member: AboutMember
   isFlipped: boolean
   isFocused?: boolean
+  skeletonOffset?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isFocused: false,
+  skeletonOffset: 0,
 })
 
 const emit = defineEmits<{
@@ -637,12 +639,13 @@ onBeforeUnmount(() => {
         <div class="about-flip-card__avatar-frame">
           <AnimatedLoadingGlyph
             v-if="!isAvatarLoaded"
+            :start-at="props.skeletonOffset"
             class="about-flip-card__avatar-skeleton"
             data-testid="member-avatar-skeleton"
           />
           <img
             ref="frontAvatarImageRef"
-            :alt="member.avatarAlt"
+            alt=""
             :src="member.avatar"
             :srcset="member.avatarSrcset"
             class="about-flip-card__avatar"
@@ -660,7 +663,7 @@ onBeforeUnmount(() => {
             v-if="member.flipFrames?.length"
             v-show="isPlayingFlipAnimation || isShowingHoverFrame"
             :src="isPlayingFlipAnimation ? currentFlipFrameSrc : (hoverFrameSrc ?? '')"
-            :alt="member.avatarAlt"
+            alt=""
             class="about-flip-card__flip-video"
             aria-hidden="true"
           />
@@ -688,7 +691,7 @@ onBeforeUnmount(() => {
           >
             <img
               ref="backAvatarImageRef"
-              :alt="member.avatarAlt"
+              alt=""
               :src="member.avatarBack ?? member.avatar"
               :srcset="member.avatarBack ? member.avatarBackSrcset : member.avatarSrcset"
               class="about-flip-card__back-avatar"
@@ -733,7 +736,7 @@ onBeforeUnmount(() => {
     <div ref="floatingAvatarRef" class="about-flip-card__floating-avatar" aria-hidden="true">
       <img
         ref="floatingAvatarImageRef"
-        :alt="member.avatarAlt"
+        alt=""
         :src="member.avatarBack ?? member.avatar"
         :srcset="member.avatarBack ? member.avatarBackSrcset : member.avatarSrcset"
       />

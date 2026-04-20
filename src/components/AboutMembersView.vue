@@ -185,6 +185,7 @@ watch(
           :is-flipped="flippedMemberIds.includes(member.id)"
           :is-focused="focusedIndex === index"
           :member="member"
+          :skeleton-offset="[0, 3, 6, 2][index] ?? 0"
           @focus-card="focusedIndex = index"
           @play-favorite="playFavoriteSong"
           @toggle="toggleCard(index)"

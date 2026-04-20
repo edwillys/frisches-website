@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 
+const props = withDefaults(defineProps<{ startAt?: number }>(), { startAt: 0 })
+
 const LOADING_SEGMENT_INTERVAL_MS = 170
 
 const segments = Array.from({ length: 8 }, (_, index) => index)
@@ -11,7 +13,7 @@ let progressTimer: ReturnType<typeof setInterval> | null = null
 onMounted(() => {
   if (import.meta.env.MODE === 'test') return
 
-  let nextCount = 0
+  let nextCount = Math.max(0, props.startAt % (segments.length + 1))
 
   progressTimer = setInterval(() => {
     activeSegmentCount.value = nextCount

@@ -93,7 +93,6 @@ const { frames: tobiFlipFrames, avatarBack: tobiAvatarBack } = resolveFlipFrames
 const edgarTrackId = 'tftc:02-tojd'
 const camiTrackId = 'tftc:04-mr-red-jacket'
 const steffTrackId = 'tftc:03-etiquette'
-const tobiTrackId = 'tftc:01-misled'
 
 const avatarSrcset = (small: string, medium: string, large: string) =>
   `${small} 128w, ${medium} 256w, ${large} 384w`
@@ -117,7 +116,6 @@ export const getAboutMembers = (locale: AppLocale): AboutMember[] => {
       avatarBack: edgarAvatarBack,
       flipFrames: edgarFlipFrames,
       flipFps: 8,
-      avatarAlt: memberText.edgar.avatarAlt,
       badges: createBadges(memberText.edgar.badgeTitles, [guitarHeadSvg, choirSvg]),
       descriptionLead: memberText.edgar.descriptionLead,
       descriptionTail: memberText.edgar.descriptionTail,
@@ -133,7 +131,6 @@ export const getAboutMembers = (locale: AppLocale): AboutMember[] => {
       avatarBack: camiAvatarBack,
       flipFrames: camiFlipFrames,
       flipFps: 8,
-      avatarAlt: memberText.cami.avatarAlt,
       badges: createBadges(memberText.cami.badgeTitles, [microphoneSvg, fluteSvg]),
       descriptionLead: memberText.cami.descriptionLead,
       descriptionTail: memberText.cami.descriptionTail,
@@ -149,7 +146,6 @@ export const getAboutMembers = (locale: AppLocale): AboutMember[] => {
       avatarBack: steffAvatarBack,
       flipFrames: steffFlipFrames,
       flipFps: 8,
-      avatarAlt: memberText.steff.avatarAlt,
       badges: createBadges(memberText.steff.badgeTitles, [drumSticksSvg]),
       descriptionLead: memberText.steff.descriptionLead,
       descriptionTail: memberText.steff.descriptionTail,
@@ -165,12 +161,9 @@ export const getAboutMembers = (locale: AppLocale): AboutMember[] => {
       avatarBack: tobiAvatarBack,
       flipFrames: tobiFlipFrames,
       flipFps: 8,
-      avatarAlt: memberText.tobi.avatarAlt,
       badges: createBadges(memberText.tobi.badgeTitles, [bassHeadSvg]),
       descriptionLead: memberText.tobi.descriptionLead,
       descriptionTail: memberText.tobi.descriptionTail,
-      favoriteTrackId: tobiTrackId,
-      favoriteTrackTitle: getTrackById(tobiTrackId)?.title,
     },
   ]
 }
