@@ -111,7 +111,7 @@ describe('AboutFlipCard', () => {
     })
 
     const description = wrapper.find('.about-flip-card__copy').text()
-    expect(description).toContain('Edgar still chases Zeppelin-sized weight')
+    expect(description).toContain('Plays the guitar and sometimes the fool')
     expect(description).toContain('Tears Of Joyful Despair')
     expect(wrapper.find('.about-flip-card__face--back .about-flip-card__song-chip').exists()).toBe(
       true

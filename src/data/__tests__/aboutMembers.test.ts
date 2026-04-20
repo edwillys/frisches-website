@@ -13,7 +13,7 @@ describe('About members registry', () => {
   })
 
   it('falls back to the default locale for unknown runtime locale values', () => {
-    const members = getAboutMembers('de' as never)
+    const members = getAboutMembers('xx' as never)
 
     expect(members[1]?.name).toBe('Cami')
     expect(members[1]?.badges[1]?.title).toBe('Flute')

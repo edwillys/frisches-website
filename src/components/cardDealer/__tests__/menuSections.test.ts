@@ -11,7 +11,7 @@ describe('menuSections', () => {
   })
 
   it('falls back to the default locale for unknown runtime locale values', () => {
-    const sections = getNavigationSections('de' as never)
+    const sections = getNavigationSections('xx' as never)
 
     expect(sections.gallery.title).toBe('Gallery')
   })
