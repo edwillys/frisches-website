@@ -25,6 +25,10 @@ export const useAudioStore = defineStore('audio', () => {
   const hasUserStartedPlayback = ref(false)
   const isStopped = ref(false)
 
+  // Analytics: track which percentage milestones have been fired for the current track session.
+  // Reset whenever a new track starts playing.
+  const reportedMilestones = ref(new Set<number>())
+
   // Lyrics display state
   const showLyrics = ref(false)
 
@@ -87,6 +91,22 @@ export const useAudioStore = defineStore('audio', () => {
 
   function updateFromAudioTime(nextTimeSeconds: number) {
     currentTime.value = nextTimeSeconds
+
+    // Fire milestone events at 25 / 50 / 75 % of the track.
+    const dur = duration.value
+    if (dur <= 0 || !isPlaying.value) return
+    const pct = (nextTimeSeconds / dur) * 100
+    for (const milestone of [25, 50, 75] as const) {
+      if (pct >= milestone && !reportedMilestones.value.has(milestone)) {
+        reportedMilestones.value.add(milestone)
+        trackEvent('song-milestone', {
+          trackId: currentTrackId.value,
+          title: currentTrack.value?.title ?? currentTrackId.value,
+          album: currentTrack.value?.album ?? '',
+          milestone,
+        })
+      }
+    }
   }
 
   function updateFromAudioDuration(nextDurationSeconds: number) {
@@ -103,14 +123,18 @@ export const useAudioStore = defineStore('audio', () => {
   }
 
   function playTrack(trackId: string, source: AudioStartSource) {
+    // Reset milestones for every new play (same track re-played or different track).
+    reportedMilestones.value = new Set()
     setCurrentTrack(trackId)
     hasUserStartedPlayback.value = true
     isStopped.value = false
     isPlaying.value = true
     trackEvent('song-played', {
+      trackId,
       title: currentTrack.value?.title ?? trackId,
       album: currentTrack.value?.album ?? '',
       source,
+      language: typeof navigator !== 'undefined' ? navigator.language : '',
     })
   }
 
@@ -125,10 +149,21 @@ export const useAudioStore = defineStore('audio', () => {
   function togglePlayPause() {
     if (isStopped.value) return
 
-    // If toggling into play, treat it as a user start.
     if (!isPlaying.value) {
+      // Toggling into play – treat as user start.
       hasUserStartedPlayback.value = true
       isStopped.value = false
+    } else {
+      // Pausing – record how far the user got.
+      const pos = currentTime.value
+      const dur = duration.value
+      trackEvent('song-paused', {
+        trackId: currentTrackId.value,
+        title: currentTrack.value?.title ?? currentTrackId.value,
+        album: currentTrack.value?.album ?? '',
+        playedSeconds: Math.round(pos),
+        percentPlayed: dur > 0 ? Math.round((pos / dur) * 100) : 0,
+      })
     }
 
     isPlaying.value = !isPlaying.value
@@ -170,8 +205,10 @@ export const useAudioStore = defineStore('audio', () => {
     }
 
     trackEvent('song-completed', {
+      trackId: currentTrackId.value,
       title: currentTrack.value?.title ?? currentTrackId.value,
       album: currentTrack.value?.album ?? '',
+      durationSeconds: Math.round(duration.value),
     })
 
     if (repeatMode.value === 'off' && currentTrackIndex.value === allTracks.value.length - 1) {
@@ -185,6 +222,17 @@ export const useAudioStore = defineStore('audio', () => {
 
   function stopAndHide() {
     // Stop playback and hide the mini-player. Only allowed restart paths are: Music UI or About chip.
+    const pos = currentTime.value
+    const dur = duration.value
+    if (isPlaying.value || pos > 0) {
+      trackEvent('song-stopped', {
+        trackId: currentTrackId.value,
+        title: currentTrack.value?.title ?? currentTrackId.value,
+        album: currentTrack.value?.album ?? '',
+        playedSeconds: Math.round(pos),
+        percentPlayed: dur > 0 ? Math.round((pos / dur) * 100) : 0,
+      })
+    }
     isPlaying.value = false
     seek(0)
     hasUserStartedPlayback.value = false
