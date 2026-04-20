@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { getTrackById, tracks, type Track } from '@/data/tracks'
+import { trackEvent } from '@/analytics'
 
 export type AudioRepeatMode = 'off' | 'all' | 'one'
 export type AudioStartSource = 'music' | 'about'
@@ -106,8 +107,11 @@ export const useAudioStore = defineStore('audio', () => {
     hasUserStartedPlayback.value = true
     isStopped.value = false
     isPlaying.value = true
-    // Source is currently not stored; keep API for future analytics/debug if needed.
-    void source
+    trackEvent('song-played', {
+      title: currentTrack.value?.title ?? trackId,
+      album: currentTrack.value?.album ?? '',
+      source,
+    })
   }
 
   function startFromMusic(trackId?: string) {
@@ -164,6 +168,11 @@ export const useAudioStore = defineStore('audio', () => {
       isPlaying.value = true
       return
     }
+
+    trackEvent('song-completed', {
+      title: currentTrack.value?.title ?? currentTrackId.value,
+      album: currentTrack.value?.album ?? '',
+    })
 
     if (repeatMode.value === 'off' && currentTrackIndex.value === allTracks.value.length - 1) {
       // Stop at end of playlist.

@@ -12,12 +12,13 @@ export default defineConfig({
   plugins: [
     vue(templateCompilerOptions),
     vueJsx(),
-    vueDevTools(),
+    // Dev-tools add significant bundle overhead – exclude from production builds.
+    ...(process.env.NODE_ENV !== 'production' ? [vueDevTools()] : []),
     imagetools(),
   ],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
   build: {
@@ -36,8 +37,8 @@ export default defineConfig({
             if (id.includes('gsap')) return 'gsap'
             return 'vendor'
           }
-        }
-      }
-    }
-  }
+        },
+      },
+    },
+  },
 })

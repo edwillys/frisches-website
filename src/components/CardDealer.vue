@@ -45,6 +45,7 @@ import instagramSvg from '@/assets/icons/social-instagram.svg?raw'
 import spotifySvg from '@/assets/icons/social-spotify.svg?raw'
 import youtubeSvg from '@/assets/icons/social-youtube.svg?raw'
 import githubSvg from '@/assets/icons/social-github.svg?raw'
+import { trackEvent } from '@/analytics'
 import emailSvg from '@/assets/icons/email.svg?raw'
 import arrowLeftSvg from '@/assets/icons/arrow-left.svg?raw'
 
@@ -1634,6 +1635,9 @@ onBeforeUnmount(() => {
         aria-label="Instagram"
         target="_blank"
         rel="noopener noreferrer"
+        @click="
+          props.socialLinks?.instagram && trackEvent('social-click', { platform: 'instagram' })
+        "
       >
         <span aria-hidden="true" v-html="instagramSvg" />
       </a>
@@ -1646,6 +1650,7 @@ onBeforeUnmount(() => {
         aria-label="Spotify"
         target="_blank"
         rel="noopener noreferrer"
+        @click="props.socialLinks?.spotify && trackEvent('social-click', { platform: 'spotify' })"
       >
         <span aria-hidden="true" v-html="spotifySvg" />
       </a>
@@ -1658,6 +1663,7 @@ onBeforeUnmount(() => {
         aria-label="YouTube"
         target="_blank"
         rel="noopener noreferrer"
+        @click="props.socialLinks?.youtube && trackEvent('social-click', { platform: 'youtube' })"
       >
         <span aria-hidden="true" v-html="youtubeSvg" />
       </a>
@@ -1669,11 +1675,17 @@ onBeforeUnmount(() => {
         aria-label="GitHub"
         target="_blank"
         rel="noopener noreferrer"
+        @click="trackEvent('social-click', { platform: 'github' })"
       >
         <span aria-hidden="true" v-html="githubSvg" />
       </a>
 
-      <a href="mailto:frisches.band@gmail.com" class="card-dealer__social-link" aria-label="Email">
+      <a
+        href="mailto:frisches.band@gmail.com"
+        class="card-dealer__social-link"
+        aria-label="Email"
+        @click="trackEvent('social-click', { platform: 'email' })"
+      >
         <span aria-hidden="true" v-html="emailSvg" />
       </a>
     </div>
