@@ -1,4 +1,2 @@
-# Catch-all: serve index.html for all paths so the Vue SPA router handles routing.
-# Required on Cloudflare Pages (and Netlify) – without this, a hard refresh on any
-# path other than / returns a 404 from the CDN.
-/*    /index.html   200
+# SPA routing is handled by wrangler.jsonc (not_found_handling: single-page-application)
+# This file is kept for _headers compatibility but no redirect rules are needed.
