@@ -1,6 +1,6 @@
 import { readonly, ref } from 'vue'
 
-export const appLocales = ['en', 'de'] as const
+export const appLocales = ['en', 'de', 'fr', 'pt-BR'] as const
 
 export type AppLocale = (typeof appLocales)[number]
 

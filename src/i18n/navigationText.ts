@@ -55,6 +55,50 @@ export const navigationText: Record<
       matchTokens: ['galerie', 'gallery'],
     },
   },
+  fr: {
+    home: {
+      title: 'Accueil',
+      headerTitle: '_Accueil',
+      matchTokens: ['accueil', 'home'],
+    },
+    music: {
+      title: 'Musique',
+      headerTitle: '_Musique',
+      matchTokens: ['musique', 'music'],
+    },
+    about: {
+      title: 'À propos',
+      headerTitle: '_À propos',
+      matchTokens: ['about', 'à propos'],
+    },
+    gallery: {
+      title: 'Galerie',
+      headerTitle: '_Galerie',
+      matchTokens: ['galerie', 'gallery'],
+    },
+  },
+  'pt-BR': {
+    home: {
+      title: 'Início',
+      headerTitle: '_Início',
+      matchTokens: ['inicio', 'home'],
+    },
+    music: {
+      title: 'Música',
+      headerTitle: '_Música',
+      matchTokens: ['musica', 'music'],
+    },
+    about: {
+      title: 'Sobre',
+      headerTitle: '_Sobre',
+      matchTokens: ['sobre', 'about'],
+    },
+    gallery: {
+      title: 'Galeria',
+      headerTitle: '_Galeria',
+      matchTokens: ['galeria', 'gallery'],
+    },
+  },
 }
 
 export const getNavigationText = (locale: AppLocale) =>
