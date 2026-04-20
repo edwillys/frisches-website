@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useGSAP } from '../composables/useGSAP'
+import { useUiText } from '@/composables/useUiText'
 import gsap from 'gsap'
 
 const props = defineProps<{
@@ -16,6 +17,7 @@ const size = props.size ?? 280
 const mode = props.mode ?? 'animated'
 
 const logoHref = new URL('../assets/images/logo-white-cropped.png', import.meta.url).href
+const t = useUiText()
 
 const wrapperRef = ref<HTMLElement | null>(null)
 const imageRef = ref<SVGImageElement | null>(null)
@@ -54,7 +56,7 @@ function onClick() {
     :style="{ width: size + 'px', height: size * 0.25 + 'px' }"
     ref="wrapperRef"
     role="img"
-    aria-label="Frisches"
+    :aria-label="t.logo.logoAriaLabel"
     @click="onClick"
   >
     <svg

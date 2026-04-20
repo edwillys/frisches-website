@@ -33,6 +33,7 @@ import AboutMembersView from './AboutMembersView.vue'
 import GalleryManager from './GalleryManager.vue'
 import { useGSAP } from '../composables/useGSAP'
 import { useNavigationSections } from '../composables/useNavigationSections'
+import { useUiText } from '../composables/useUiText'
 import { readParticlesPaletteFromCss } from '../composables/useCardDealerPalette'
 import { getTargetXYToViewportCenter, getViewportCenter } from './cardDealer/viewportCenter'
 import { computeLeadStagger, distanceFromLead } from './cardDealer/leadStagger'
@@ -164,6 +165,7 @@ const stopAnimating = () => {
 
 const audioStore = useAudioStore()
 const navigationSections = useNavigationSections()
+const t = useUiText()
 const initialNavigationSections = navigationSections.value
 
 const selectedItemMatchesSection = (sectionKey: MenuSectionKey) =>
@@ -1625,7 +1627,7 @@ onBeforeUnmount(() => {
       v-if="currentView !== 'content'"
       class="card-dealer__social"
       role="navigation"
-      aria-label="Social links"
+      :aria-label="t.logo.socialLinks"
     >
       <a
         :href="props.socialLinks?.instagram || '#'"
@@ -1689,6 +1691,12 @@ onBeforeUnmount(() => {
         <span aria-hidden="true" v-html="emailSvg" />
       </a>
     </div>
+
+    <!-- Footer credits -->
+    <div v-if="currentView !== 'content'" class="card-dealer__credits" aria-label="Credits">
+      {{ t.credits.text }}
+    </div>
+
     <div ref="bgRef" class="card-dealer__background">
       <img
         ref="bgMainRef"

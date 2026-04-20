@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive } from 'vue'
 
+import { useUiText } from '@/composables/useUiText'
 import closeSvg from '@/assets/icons/close.svg?raw'
 import fadersSvg from '@/assets/icons/faders.svg?raw'
 
@@ -68,6 +69,8 @@ function iconFor(stem: StemName, gain: number) {
   return isHigh ? vocalsHighSvg : isMid ? vocalsMidSvg : vocalsLowSvg
 }
 
+const t = useUiText()
+
 const stems = computed(() => {
   const base = [
     { key: 'drums' as const, title: 'Drums' },
@@ -121,8 +124,8 @@ function toggleMute(stem: StemName) {
       class="mini-player__btn mini-player__btn--stems"
       :class="{ 'is-active': modelValue }"
       type="button"
-      title="Instrument faders"
-      aria-label="Instrument faders"
+      :title="t.faders.open"
+      :aria-label="t.faders.open"
       :aria-expanded="modelValue"
       data-testid="mini-stems"
       @click="toggle"
@@ -135,14 +138,14 @@ function toggleMute(stem: StemName) {
       class="stems__overlay"
       data-testid="stems-overlay"
       role="dialog"
-      aria-label="Instrument faders"
+      :aria-label="t.faders.groupLabel"
       @click.stop
     >
       <div class="stems__header">
         <button
           class="stems__close"
           type="button"
-          aria-label="Close instrument faders"
+          :aria-label="t.faders.close"
           data-testid="stems-close"
           @click="close"
         >
@@ -150,12 +153,12 @@ function toggleMute(stem: StemName) {
         </button>
       </div>
 
-      <div class="stems__grid" role="group" aria-label="Instrument faders">
+      <div class="stems__grid" role="group" :aria-label="t.faders.groupLabel">
         <div v-for="stem in stems" :key="stem.key" class="stem" :data-testid="`stem-${stem.key}`">
           <button
             class="stem__icon-btn"
             type="button"
-            :aria-label="`${stem.title} mute toggle`"
+            :aria-label="t.faders.muteToggle(stem.title)"
             :aria-pressed="stem.gain <= 0"
             :data-testid="`stem-${stem.key}-mute`"
             @click="toggleMute(stem.key)"
@@ -171,7 +174,7 @@ function toggleMute(stem: StemName) {
               max="1"
               step="0.01"
               :value="stem.gain"
-              :aria-label="`${stem.title} volume`"
+              :aria-label="t.faders.instrumentVolume(stem.title)"
               @input="onInput(stem.key, $event)"
             />
           </div>

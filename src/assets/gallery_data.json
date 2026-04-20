@@ -225,7 +225,7 @@
     "location": ["Munich"],
     "rating": 0,
     "creationDate": "2021-06-27T15:03:51.000",
-    "photoCredit": null
+    "photoCredit": "Frisches"
   },
   {
     "id": 20,
@@ -236,8 +236,8 @@
     "people": ["Edgar", "Steff"],
     "location": ["Sammerberg"],
     "rating": 0,
-    "creationDate": "2026-01-07T19:42:28.280",
-    "photoCredit": null
+    "creationDate": "2026-01-07T19:42:28.000",
+    "photoCredit": "Frisches"
   },
   {
     "id": 21,
@@ -248,8 +248,8 @@
     "people": ["Cami"],
     "location": ["Sammerberg"],
     "rating": 0,
-    "creationDate": "2026-01-07T19:44:19.369",
-    "photoCredit": null
+    "creationDate": "2026-01-07T19:44:19.000",
+    "photoCredit": "Frisches"
   },
   {
     "id": 22,
@@ -260,8 +260,8 @@
     "people": ["Steff"],
     "location": ["Sammerberg"],
     "rating": 0,
-    "creationDate": "2026-01-07T19:44:01.111",
-    "photoCredit": null
+    "creationDate": "2026-01-07T19:44:01.000",
+    "photoCredit": "Frisches"
   },
   {
     "id": 23,

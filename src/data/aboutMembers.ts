@@ -91,7 +91,7 @@ const { frames: tobiFlipFrames, avatarBack: tobiAvatarBack } = resolveFlipFrames
 )
 
 const edgarTrackId = 'tftc:02-tojd'
-const camiTrackId = 'tftc:05-witch-hunting'
+const camiTrackId = 'tftc:04-mr-red-jacket'
 const steffTrackId = 'tftc:03-etiquette'
 const tobiTrackId = 'tftc:01-misled'
 

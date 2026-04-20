@@ -149,6 +149,22 @@
   display: block;
 }
 
+/* Footer credits (bottom center, logo + cards views only) */
+.card-dealer__credits {
+  position: fixed;
+  bottom: var(--spacing-md, 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+  opacity: 0.45;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
 .card-dealer__header {
   position: fixed;
   top: 0;

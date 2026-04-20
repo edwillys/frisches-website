@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAudioStore } from '@/stores/audio'
+import { useUiText } from '@/composables/useUiText'
 import InstrumentFaders from './InstrumentFaders.vue'
 
 // Icon imports
@@ -31,6 +32,7 @@ let rafOverflowUpdateId = 0
 let windowResizeHandler: (() => void) | null = null
 
 const showStemFaders = ref(false)
+const t = useUiText()
 const isTitleOverflowing = ref(false)
 const isArtistOverflowing = ref(false)
 
@@ -447,7 +449,7 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
             class="mini-player__btn mini-player__btn--shuffle"
             :class="{ 'is-active': audioStore.isShuffle }"
             type="button"
-            :title="audioStore.isShuffle ? 'Disable shuffle' : 'Enable shuffle'"
+            :title="audioStore.isShuffle ? t.player.disableShuffle : t.player.enableShuffle"
             aria-label="Toggle shuffle"
             @click="audioStore.toggleShuffle()"
             data-testid="mini-shuffle"
@@ -458,8 +460,8 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
           <button
             class="mini-player__btn"
             type="button"
-            title="Previous track"
-            aria-label="Previous"
+            :title="t.player.prevTrack"
+            :aria-label="t.player.prevTrack"
             @click="audioStore.prev"
           >
             <span class="mini-player__icon" aria-hidden="true" v-html="previousSvg" />
@@ -468,8 +470,8 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
           <button
             class="mini-player__btn mini-player__btn--play"
             type="button"
-            :title="audioStore.isPlaying ? 'Pause' : 'Play'"
-            :aria-label="audioStore.isPlaying ? 'Pause' : 'Play'"
+            :title="audioStore.isPlaying ? t.player.pause : t.player.play"
+            :aria-label="audioStore.isPlaying ? t.player.pause : t.player.play"
             @click="audioStore.togglePlayPause"
             data-testid="mini-play-pause"
           >
@@ -483,8 +485,8 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
           <button
             class="mini-player__btn"
             type="button"
-            title="Next track"
-            aria-label="Next"
+            :title="t.player.nextTrack"
+            :aria-label="t.player.nextTrack"
             @click="audioStore.next"
           >
             <span class="mini-player__icon" aria-hidden="true" v-html="nextSvg" />
@@ -496,10 +498,10 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
             type="button"
             :title="
               audioStore.repeatMode === 'off'
-                ? 'Enable repeat'
+                ? t.player.enableRepeat
                 : audioStore.repeatMode === 'all'
-                  ? 'Repeat one'
-                  : 'Disable repeat'
+                  ? t.player.repeatOne
+                  : t.player.disableRepeat
             "
             aria-label="Toggle repeat"
             @click="audioStore.cycleRepeatMode()"
@@ -524,7 +526,7 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
           :value="audioStore.currentTime"
           :style="{ '--progress-percent': progressPercent }"
           @input="onSeek"
-          aria-label="Seek"
+          :aria-label="t.player.seek"
         />
         <span class="mini-player__time mini-player__time--duration">{{
           formatTime(audioStore.duration)
@@ -545,12 +547,12 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
           type="button"
           :title="
             !currentTrackHasLyrics
-              ? 'No lyrics available'
+              ? t.player.noLyrics
               : audioStore.showLyrics
-                ? 'Hide lyrics'
-                : 'Show lyrics'
+                ? t.player.hideLyrics
+                : t.player.showLyrics
           "
-          :aria-label="audioStore.showLyrics ? 'Hide lyrics' : 'Show lyrics'"
+          :aria-label="audioStore.showLyrics ? t.player.hideLyrics : t.player.showLyrics"
           :disabled="!currentTrackHasLyrics"
           data-testid="mini-lyrics"
           @click="audioStore.toggleLyrics"
@@ -562,8 +564,8 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
           <button
             class="mini-player__volume-icon-btn"
             type="button"
-            :title="audioStore.volume <= 0.001 ? 'Unmute' : 'Mute'"
-            :aria-label="audioStore.volume <= 0.001 ? 'Unmute' : 'Mute'"
+            :title="audioStore.volume <= 0.001 ? t.player.unmute : t.player.mute"
+            :aria-label="audioStore.volume <= 0.001 ? t.player.unmute : t.player.mute"
             data-testid="mini-volume-mute"
             @click="toggleVolumeMute"
           >
@@ -577,7 +579,7 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
             step="0.01"
             :value="audioStore.volume"
             :style="{ '--volume-percent': volumePercent }"
-            aria-label="Volume"
+            :aria-label="t.player.volume"
             @input="onVolumeInput"
           />
         </div>
@@ -585,8 +587,8 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
         <button
           class="mini-player__btn mini-player__close"
           type="button"
-          title="Close player"
-          aria-label="Close player"
+          :title="t.player.closePlayer"
+          :aria-label="t.player.closePlayer"
           data-testid="audio-mini-close"
           @click="audioStore.stopAndHide"
         >

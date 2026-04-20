@@ -14,6 +14,7 @@ import { getTrackById } from '@/data/tracks'
 import { getAlbumById } from '@/data/albums'
 import { useAudioStore } from '@/stores/audio'
 import { useCharacterPreloader } from '@/composables/useCharacterPreloader'
+import { useUiText } from '@/composables/useUiText'
 
 // Retained temporarily while AboutMembersView rollout settles.
 // Remove after the remaining references and tests are migrated.
@@ -61,7 +62,10 @@ const badgeMap: Record<string, string> = {
 const DEFAULT_SCALE = 2.5
 const DEFAULT_ROTATION_Y = 0
 
-const characters = ref<Character[]>([
+const { preloadComplete } = useCharacterPreloader()
+const t = useUiText()
+
+const characters = computed<Character[]>(() => [
   {
     id: 1,
     name: 'Edgar',
@@ -80,7 +84,7 @@ const characters = ref<Character[]>([
     //scale: DEFAULT_SCALE,
     instruments: ['Singer', 'Flute'],
     influences: ['Beatles', 'Joni Mitchell'],
-    favoriteTrackId: 'tftc:05-witch-hunting',
+    favoriteTrackId: 'tftc:04-mr-red-jacket',
   },
   {
     id: 0,
@@ -88,8 +92,7 @@ const characters = ref<Character[]>([
     isGroup: true,
     yearFormed: 2019,
     genre: 'Rock',
-    description:
-      'Powerful beats, punchy bass lines, gritty guitar riffs, touching solos and incisive lyrics. We embody rock in its purest form.',
+    description: t.value.character.groupDescription,
     albumIds: ['tftc'],
     socialLinks: {
       instagram: 'https://www.instagram.com/frisches.band/',
@@ -122,9 +125,6 @@ const characters = ref<Character[]>([
 
 const selectedIndex = ref<number>(2) // Default to Frisches (F)
 const isAnimating = ref<boolean>(false)
-
-// Get preloader state to check if models are already cached
-const { preloadComplete } = useCharacterPreloader()
 
 // Optimized WebGL settings for performance
 const gl = {

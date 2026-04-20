@@ -10,9 +10,9 @@
       <button
         class="gallery-rail__toggle"
         type="button"
-        :aria-label="isRailExpanded ? 'Collapse gallery sidebar' : 'Expand gallery sidebar'"
+        :aria-label="isRailExpanded ? t.gallery.collapseRail : t.gallery.expandRail"
         @click.stop="toggleRail"
-        :data-tooltip="isRailExpanded ? 'Collapse library' : 'Expand library'"
+        :data-tooltip="isRailExpanded ? t.gallery.collapseLibrary : t.gallery.expandLibrary"
         data-testid="gallery-rail-toggle"
       >
         <span aria-hidden="true" v-html="librarySplitSvg" />
@@ -26,7 +26,7 @@
           @click="setMode('Photos')"
         >
           <i class="gallery-rail__icon pi pi-images" aria-hidden="true" />
-          <span v-if="showRailLabels" class="gallery-rail__label">Photos</span>
+          <span v-if="showRailLabels" class="gallery-rail__label">{{ t.gallery.modePhotos }}</span>
         </button>
         <button
           class="gallery-rail__item"
@@ -35,7 +35,7 @@
           @click="handleAlbumsClick"
         >
           <i class="gallery-rail__icon pi pi-folder" aria-hidden="true" />
-          <span v-if="showRailLabels" class="gallery-rail__label">Albums</span>
+          <span v-if="showRailLabels" class="gallery-rail__label">{{ t.gallery.modeAlbums }}</span>
         </button>
       </div>
     </aside>
@@ -52,10 +52,10 @@
                 v-model="selectedTreeKeys"
                 :options="filterTreeNodes"
                 selectionMode="checkbox"
-                placeholder="Filter"
+                :placeholder="t.gallery.filterPlaceholder"
                 display="comma"
                 filter
-                filterPlaceholder="Search"
+                :filterPlaceholder="t.gallery.filterSearchPlaceholder"
                 appendTo="body"
                 class="filter-select"
                 @show="onFilterOverlayShow"
@@ -66,7 +66,7 @@
                     v-if="selectedLeafLabels.length === 0"
                     class="filter-value filter-value--placeholder"
                   >
-                    Filter
+                    {{ t.gallery.filterPlaceholder }}
                   </span>
                   <span v-else class="filter-value" :title="selectedLeafLabels.join(', ')">
                     {{ filterValueText }}
@@ -76,21 +76,21 @@
             </div>
 
             <button v-if="hasAnyFilters" class="btn-clear" type="button" @click="clearAll">
-              Clear
+              {{ t.gallery.clearFilters }}
             </button>
           </div>
 
           <nav
             v-if="mode === 'Albums' && currentAlbum"
             class="breadcrumb breadcrumb--center"
-            aria-label="Album navigation"
+            :aria-label="t.gallery.albumNavLabel"
           >
             <button
               class="breadcrumb__item breadcrumb__item--link"
               type="button"
               @click.stop="closeAlbum"
             >
-              Albums
+              {{ t.gallery.albums }}
             </button>
             <span class="breadcrumb__separator" aria-hidden="true">&gt;</span>
             <span class="breadcrumb__item breadcrumb__item--current" :title="currentAlbum">
@@ -102,7 +102,7 @@
             v-if="showUserConfigUi"
             class="btn-gear"
             type="button"
-            aria-label="Display options"
+            :aria-label="t.gallery.displayOptions"
             :data-carddealer-esc-block="isConfigOpen ? 'true' : undefined"
             @click.stop="toggleConfig"
           >
@@ -117,7 +117,7 @@
           v-if="showUserConfigUi && isConfigOpen"
           class="gallery-config-overlay"
           role="dialog"
-          aria-label="Display options"
+          :aria-label="t.gallery.displayOptions"
           :data-carddealer-esc-block="'true'"
           @click.self.stop="closeConfig"
           @pointerdown.stop
@@ -129,12 +129,12 @@
                 :checked="thumbnailLayoutSetting === 'square'"
                 @change="toggleSquareThumbnails"
               />
-              <span>Square (1:1)</span>
+              <span>{{ t.gallery.squareThumbnails }}</span>
             </label>
 
             <label class="gallery-config-row">
               <input type="checkbox" v-model="timelineEnabledSetting" />
-              <span>Show Timeline</span>
+              <span>{{ t.gallery.showTimeline }}</span>
             </label>
           </div>
         </div>
@@ -242,7 +242,9 @@
             </div>
             <div class="album-info">
               <h3>{{ album }}</h3>
-              <span class="album-count">{{ getAlbumImageCount(album) }} photos</span>
+              <span class="album-count">{{
+                t.gallery.photosCount(getAlbumImageCount(album))
+              }}</span>
             </div>
           </div>
         </div>
@@ -315,7 +317,7 @@
         <button
           class="lightbox-close"
           type="button"
-          aria-label="Close"
+          :aria-label="t.gallery.closeLightbox"
           data-testid="gallery-lightbox-close"
           @click.stop="closeLightbox"
         >
@@ -324,7 +326,7 @@
         <button
           class="lightbox-nav lightbox-prev"
           type="button"
-          aria-label="Previous"
+          :aria-label="t.gallery.prevImage"
           @click.stop="prevImage"
         >
           <span aria-hidden="true" class="lightbox-nav__icon" v-html="arrowLeftSvg" />
@@ -332,7 +334,7 @@
         <button
           class="lightbox-nav lightbox-next"
           type="button"
-          aria-label="Next"
+          :aria-label="t.gallery.nextImage"
           @click.stop="nextImage"
         >
           <span
@@ -370,18 +372,28 @@
           </div>
 
           <div class="lightbox-controls" aria-label="Zoom controls">
-            <button class="lightbox-ctrl" type="button" aria-label="Zoom out" @click.stop="zoomOut">
+            <button
+              class="lightbox-ctrl"
+              type="button"
+              :aria-label="t.gallery.zoomOut"
+              @click.stop="zoomOut"
+            >
               <i class="pi pi-minus" aria-hidden="true" />
             </button>
             <button
               class="lightbox-ctrl"
               type="button"
-              aria-label="Reset zoom"
+              :aria-label="t.gallery.resetZoom"
               @click.stop="resetZoom"
             >
               <i class="pi pi-refresh" aria-hidden="true" />
             </button>
-            <button class="lightbox-ctrl" type="button" aria-label="Zoom in" @click.stop="zoomIn">
+            <button
+              class="lightbox-ctrl"
+              type="button"
+              :aria-label="t.gallery.zoomIn"
+              @click.stop="zoomIn"
+            >
               <i class="pi pi-plus" aria-hidden="true" />
             </button>
             <div class="lightbox-zoom" aria-label="Zoom level">
@@ -398,6 +410,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import TreeSelect from 'primevue/treeselect'
 import { useGalleryData, type ImageOptions } from '@/composables/useGalleryData'
+import { useUiText } from '@/composables/useUiText'
 import librarySplitSvg from '@/assets/icons/library-split.svg?raw'
 import closeSvg from '@/assets/icons/close.svg?raw'
 import arrowLeftSvg from '@/assets/icons/arrow-left.svg?raw'
@@ -453,6 +466,8 @@ const {
   getImagesForAlbum,
   resolveImage,
 } = useGalleryData()
+
+const t = useUiText()
 
 const treeSelectRef = ref(null)
 const isFilterOverlayOpen = ref(false)
@@ -599,7 +614,7 @@ function insertPathKeyed(
 const filterTreeNodes = computed<FilterTreeNode[]>(() => {
   const peopleRoot: FilterTreeNode = {
     key: 'root:people',
-    label: 'People',
+    label: t.value.gallery.filterPeople,
     icon: 'pi pi-user',
     selectable: false,
     children: [],
@@ -607,7 +622,7 @@ const filterTreeNodes = computed<FilterTreeNode[]>(() => {
 
   const locationRoot: FilterTreeNode = {
     key: 'root:location',
-    label: 'Location',
+    label: t.value.gallery.filterLocation,
     icon: 'pi pi-map-marker',
     selectable: false,
     children: [],
@@ -615,7 +630,7 @@ const filterTreeNodes = computed<FilterTreeNode[]>(() => {
 
   const tagsRoot: FilterTreeNode = {
     key: 'root:tags',
-    label: 'Tags',
+    label: t.value.gallery.filterTags,
     icon: 'pi pi-tags',
     selectable: false,
     children: [],
@@ -623,7 +638,7 @@ const filterTreeNodes = computed<FilterTreeNode[]>(() => {
 
   const dateRoot: FilterTreeNode = {
     key: 'root:date',
-    label: 'Date',
+    label: t.value.gallery.filterDate,
     icon: 'pi pi-calendar',
     selectable: false,
     children: [],

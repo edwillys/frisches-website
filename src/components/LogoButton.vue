@@ -2,6 +2,7 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import gsap from 'gsap'
 import LogoEffect from './LogoEffect.vue'
+import { useUiText } from '@/composables/useUiText'
 
 const props = defineProps<{
   size?: number
@@ -54,6 +55,8 @@ onBeforeUnmount(() => {
 defineExpose({
   rootEl: wrapperRef,
 })
+
+const t = useUiText()
 </script>
 
 <template>
@@ -63,7 +66,7 @@ defineExpose({
     :style="{ width: size + 'px', height: size + 'px' }"
     role="button"
     tabindex="0"
-    aria-label="Frisches - Click to reveal menu"
+    :aria-label="t.logo.ariaLabel"
     data-testid="logo-button"
     @click="onClick"
     @keydown.enter="onClick"

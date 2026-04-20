@@ -33,6 +33,28 @@ export const navigationText: Record<
       matchTokens: ['gallery'],
     },
   },
+  de: {
+    home: {
+      title: 'Home',
+      headerTitle: '_Home',
+      matchTokens: ['home'],
+    },
+    music: {
+      title: 'Musik',
+      headerTitle: '_Musik',
+      matchTokens: ['musik', 'music'],
+    },
+    about: {
+      title: 'Über uns',
+      headerTitle: '_Über uns',
+      matchTokens: ['about', 'über'],
+    },
+    gallery: {
+      title: 'Galerie',
+      headerTitle: '_Galerie',
+      matchTokens: ['galerie', 'gallery'],
+    },
+  },
 }
 
 export const getNavigationText = (locale: AppLocale) =>
