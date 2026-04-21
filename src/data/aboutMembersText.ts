@@ -45,7 +45,7 @@ export const aboutMembersText: Record<
   de: {
     edgar: {
       name: 'Edgar',
-      badgeTitles: ['Gitarre', 'Backingvocals'],
+      badgeTitles: ['Gitarre', 'Begleitgesang'],
       descriptionLead:
         'Spielt die Gitarre – und manchmal den Spaßvogel. Als Komponist verschachtelter Taktarten ist seine Lieblingsnote stets eine Wendung entfernt. Seine Leidenschaft für klassischen Rock fließt in jedes Frisches-Riff und -Solo. Mit Intros und Wortspielen ohne Ende findet seine liebste Geschichte ihren Weg zu',
     },
@@ -91,7 +91,7 @@ export const aboutMembersText: Record<
       name: 'Steff',
       badgeTitles: ['Batterie'],
       descriptionLead:
-        "Steff a rejoint le groupe en 2021, a mis de l'ordre dans le chaos – puis l'a amélioré quand même. La patience de Pink Floyd et le punch de Zeppelin coexistent dans son jeu, et il insiste toujours que",
+        "Steff a rejoint le groupe en 2021, a mis de l'ordre dans le chaos – puis a quand même réussi à l'améliorer. La patience de Pink Floyd et le punch de Zeppelin coexistent dans son jeu, et il soutient toujours que",
       descriptionTail:
         "est le meilleur exemple d'un groove qui resserre sa cravate sans perdre son sourire.",
     },
@@ -99,7 +99,7 @@ export const aboutMembersText: Record<
       name: 'Tobi',
       badgeTitles: ['Basse'],
       descriptionLead:
-        "Tobi ne pense qu'aux basses et a perdu ses aigus depuis longtemps. Avec lui, on a l'impression que le boost de basses du JBL a été laissé activé : il apporte des lignes groovy qui rendent Frisches plus grave.",
+        "Tobi ne pense qu'aux basses et a perdu ses aigus depuis longtemps. Avec lui, on a l'impression que le boost de basses du JBL est resté enclenché : il apporte des lignes pleines de groove qui soutiennent les graves de Frisches.",
     },
   },
   'pt-BR': {
@@ -127,7 +127,7 @@ export const aboutMembersText: Record<
       name: 'Tobi',
       badgeTitles: ['Baixo'],
       descriptionLead:
-        'Tobi sabe tudo do baixo já que perdeu seus agudos faz tempo. Com ele, tem-se a sensação de que o bass boost do JBL foi deixado no máximo. Suas linhas groovy são a gravidade do Frisches.',
+        'Tobi sabe tudo do baixo e já deixou os agudos para trás faz tempo. Com ele, parece que o bass boost da JBL fica ligado o tempo todo: ele traz linhas cheias de groove que sustentam os graves do Frisches.',
     },
   },
 }

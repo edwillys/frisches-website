@@ -34,6 +34,8 @@ import GalleryManager from './GalleryManager.vue'
 import { useGSAP } from '../composables/useGSAP'
 import { useNavigationSections } from '../composables/useNavigationSections'
 import { useUiText } from '../composables/useUiText'
+import { currentAppLocale } from '@/i18n/locale'
+import { getLegalText } from '@/i18n/legalText'
 import { readParticlesPaletteFromCss } from '../composables/useCardDealerPalette'
 import { getTargetXYToViewportCenter, getViewportCenter } from './cardDealer/viewportCenter'
 import { computeLeadStagger, distanceFromLead } from './cardDealer/leadStagger'
@@ -166,6 +168,7 @@ const stopAnimating = () => {
 const audioStore = useAudioStore()
 const navigationSections = useNavigationSections()
 const t = useUiText()
+const legalT = computed(() => getLegalText(currentAppLocale.value))
 const initialNavigationSections = navigationSections.value
 
 const selectedItemMatchesSection = (sectionKey: MenuSectionKey) =>
@@ -1692,10 +1695,25 @@ onBeforeUnmount(() => {
       </a>
     </div>
 
-    <!-- Footer credits -->
+    <!-- Footer credits (bottom center) -->
     <div v-if="currentView !== 'content'" class="card-dealer__credits" aria-label="Credits">
       {{ t.credits.text }}
     </div>
+
+    <!-- Legal links (bottom right) -->
+    <nav
+      v-if="currentView !== 'content'"
+      class="card-dealer__legal-links"
+      :aria-label="legalT.impressum.title"
+    >
+      <RouterLink to="/impressum" class="card-dealer__legal-link">{{
+        legalT.impressum.title
+      }}</RouterLink>
+      <span aria-hidden="true"> · </span>
+      <RouterLink to="/datenschutz" class="card-dealer__legal-link">{{
+        legalT.privacy.title
+      }}</RouterLink>
+    </nav>
 
     <div ref="bgRef" class="card-dealer__background">
       <img

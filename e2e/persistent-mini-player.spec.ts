@@ -15,6 +15,7 @@ test.describe('Persistent mini-player (Phase 1)', () => {
     test.setTimeout(60000)
 
     // Skip this test on CI for webkit which is currently flaky
+    // eslint-disable-next-line playwright/no-skipped-test -- conditionally skipped only on CI/webkit
     test.skip(
       process.env.CI && testInfo.project.name === 'webkit',
       'Skipping persistent mini-player test on CI for webkit'

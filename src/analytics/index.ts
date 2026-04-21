@@ -20,3 +20,32 @@ export function trackEvent(event: string, data?: UmamiEventData): void {
   if (typeof window === 'undefined') return
   window.umami?.track(event, data)
 }
+
+// ─── Typed helpers ────────────────────────────────────────────────────────────
+
+export type SocialPlatform = 'spotify' | 'instagram' | 'youtube' | 'github' | 'bandcamp' | 'tiktok'
+
+/** User clicked a social-media / streaming link */
+export function trackSocialClick(platform: SocialPlatform): void {
+  trackEvent('social-click', { platform })
+}
+
+/** User switched the UI language */
+export function trackLanguageChanged(from: string, to: string): void {
+  trackEvent('language-changed', { from, to })
+}
+
+/** A major section became visible (intersection observer / manual call) */
+export function trackSectionViewed(section: 'music' | 'about' | 'gallery'): void {
+  trackEvent('section-viewed', { section })
+}
+
+/** User opened or expanded a gallery photo */
+export function trackGalleryPhotoViewed(photoId: string | number): void {
+  trackEvent('gallery-photo-viewed', { photoId: String(photoId) })
+}
+
+/** User toggled the lyrics panel */
+export function trackLyricsToggled(open: boolean): void {
+  trackEvent('lyrics-toggled', { state: open ? 'open' : 'close' })
+}

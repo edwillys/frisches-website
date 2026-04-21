@@ -39,7 +39,11 @@ export const getNavigationSections = (locale: AppLocale): NavigationSectionsMap 
 }
 
 export const normalizeSectionLabel = (value: string | null | undefined) =>
-  value?.toLowerCase().trim() ?? ''
+  value
+    ?.normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim() ?? ''
 
 export const titleContainsSection = (
   value: string | null | undefined,
@@ -49,5 +53,7 @@ export const titleContainsSection = (
   const normalizedValue = normalizeSectionLabel(value)
   if (!normalizedValue) return false
 
-  return sections[sectionKey].matchTokens.some((token) => normalizedValue.includes(token))
+  return sections[sectionKey].matchTokens.some((token) =>
+    normalizedValue.includes(normalizeSectionLabel(token))
+  )
 }

@@ -5,6 +5,7 @@ export interface UiText {
   gallery: {
     modePhotos: string
     modeAlbums: string
+    modeLabel: string
     collapseRail: string
     expandRail: string
     collapseLibrary: string
@@ -16,6 +17,7 @@ export interface UiText {
     squareThumbnails: string
     showTimeline: string
     photoCredit: string
+    currentMonthLabel: string
     photosCount: (n: number) => string
     // Lightbox
     closeLightbox: string
@@ -24,6 +26,8 @@ export interface UiText {
     zoomIn: string
     zoomOut: string
     resetZoom: string
+    zoomControls: string
+    zoomLevel: string
     // Filter tree roots
     filterPeople: string
     filterLocation: string
@@ -55,6 +59,26 @@ export interface UiText {
     volume: string
     closePlayer: string
   }
+  // Music view / full audio page
+  music: {
+    albumsNavLabel: string
+    albumLabel: string
+    songsCount: (n: number) => string
+    albumItemLabel: (title: string, count: number) => string
+    playAlbum: string
+    pauseAlbum: string
+    trackTitleHeader: string
+    playTrack: (title: string) => string
+    resumeTrack: (title: string) => string
+    closeLyrics: string
+    lyricsLoading: string
+    noLyricsForTrack: string
+  }
+  // Lyrics display controls
+  lyrics: {
+    syncToCurrent: string
+    sync: string
+  }
   // Instrument faders
   faders: {
     open: string
@@ -69,6 +93,9 @@ export interface UiText {
     logoAriaLabel: string
     socialLinks: string
   }
+  status: {
+    loading: string
+  }
   // Footer credits
   credits: {
     text: string
@@ -80,6 +107,7 @@ export const uiText: Record<AppLocale, UiText> = {
     gallery: {
       modePhotos: 'Photos',
       modeAlbums: 'Albums',
+      modeLabel: 'Gallery mode',
       collapseRail: 'Collapse gallery sidebar',
       expandRail: 'Expand gallery sidebar',
       collapseLibrary: 'Collapse library',
@@ -91,13 +119,16 @@ export const uiText: Record<AppLocale, UiText> = {
       squareThumbnails: 'Square (1:1)',
       showTimeline: 'Show Timeline',
       photoCredit: 'Photo credit',
+      currentMonthLabel: 'Current month',
       photosCount: (n) => `${n} ${n === 1 ? 'photo' : 'photos'}`,
       closeLightbox: 'Close',
-      prevImage: 'Previous',
-      nextImage: 'Next',
+      prevImage: 'Previous image',
+      nextImage: 'Next image',
       zoomIn: 'Zoom in',
       zoomOut: 'Zoom out',
       resetZoom: 'Reset zoom',
+      zoomControls: 'Zoom controls',
+      zoomLevel: 'Zoom level',
       filterPeople: 'People',
       filterLocation: 'Location',
       filterTags: 'Tags',
@@ -126,6 +157,24 @@ export const uiText: Record<AppLocale, UiText> = {
       volume: 'Volume',
       closePlayer: 'Close player',
     },
+    music: {
+      albumsNavLabel: 'Albums',
+      albumLabel: 'Album',
+      songsCount: (n) => `${n} ${n === 1 ? 'song' : 'songs'}`,
+      albumItemLabel: (title, count) => `${title} (${count} ${count === 1 ? 'song' : 'songs'})`,
+      playAlbum: 'Play album',
+      pauseAlbum: 'Pause album',
+      trackTitleHeader: 'Title',
+      playTrack: (title) => `Play ${title}`,
+      resumeTrack: (title) => `Resume ${title}`,
+      closeLyrics: 'Close lyrics',
+      lyricsLoading: 'Loading lyrics...',
+      noLyricsForTrack: 'No lyrics available for this track',
+    },
+    lyrics: {
+      syncToCurrent: 'Sync to current lyrics',
+      sync: 'Sync',
+    },
     faders: {
       open: 'Instrument faders',
       close: 'Close instrument faders',
@@ -138,6 +187,9 @@ export const uiText: Record<AppLocale, UiText> = {
       logoAriaLabel: 'Frisches',
       socialLinks: 'Social links',
     },
+    status: {
+      loading: 'Loading...',
+    },
     credits: {
       text: 'Web Design by Edgar Lubicz · Art Design by Laurent Carcelle',
     },
@@ -146,24 +198,28 @@ export const uiText: Record<AppLocale, UiText> = {
     gallery: {
       modePhotos: 'Fotos',
       modeAlbums: 'Alben',
+      modeLabel: 'Galeriemodus',
       collapseRail: 'Seitenleiste ausblenden',
       expandRail: 'Seitenleiste einblenden',
       collapseLibrary: 'Bibliothek ausblenden',
       expandLibrary: 'Bibliothek einblenden',
       filterPlaceholder: 'Filter',
       filterSearchPlaceholder: 'Suchen',
-      clearFilters: 'Löschen',
+      clearFilters: 'Zurücksetzen',
       displayOptions: 'Anzeigeoptionen',
       squareThumbnails: 'Quadratisch (1:1)',
       showTimeline: 'Zeitstrahl anzeigen',
-      photoCredit: 'Fotocredit',
+      photoCredit: 'Bildnachweis',
+      currentMonthLabel: 'Aktueller Monat',
       photosCount: (n) => `${n} ${n === 1 ? 'Foto' : 'Fotos'}`,
       closeLightbox: 'Schließen',
-      prevImage: 'Zurück',
-      nextImage: 'Weiter',
+      prevImage: 'Vorheriges Bild',
+      nextImage: 'Nächstes Bild',
       zoomIn: 'Vergrößern',
       zoomOut: 'Verkleinern',
       resetZoom: 'Zoom zurücksetzen',
+      zoomControls: 'Zoom-Steuerung',
+      zoomLevel: 'Zoomstufe',
       filterPeople: 'Personen',
       filterLocation: 'Ort',
       filterTags: 'Tags',
@@ -192,6 +248,24 @@ export const uiText: Record<AppLocale, UiText> = {
       volume: 'Lautstärke',
       closePlayer: 'Player schließen',
     },
+    music: {
+      albumsNavLabel: 'Alben',
+      albumLabel: 'Album',
+      songsCount: (n) => `${n} Titel`,
+      albumItemLabel: (title, count) => `${title} (${count} Titel)`,
+      playAlbum: 'Album abspielen',
+      pauseAlbum: 'Album pausieren',
+      trackTitleHeader: 'Titel',
+      playTrack: (title) => `${title} abspielen`,
+      resumeTrack: (title) => `${title} fortsetzen`,
+      closeLyrics: 'Liedtext schließen',
+      lyricsLoading: 'Liedtext wird geladen...',
+      noLyricsForTrack: 'Für diesen Titel ist kein Liedtext verfügbar',
+    },
+    lyrics: {
+      syncToCurrent: 'Mit aktuellem Liedtext synchronisieren',
+      sync: 'Synchronisieren',
+    },
     faders: {
       open: 'Instrumentregler',
       close: 'Instrumentregler schließen',
@@ -204,6 +278,9 @@ export const uiText: Record<AppLocale, UiText> = {
       logoAriaLabel: 'Frisches',
       socialLinks: 'Social-Links',
     },
+    status: {
+      loading: 'Lädt...',
+    },
     credits: {
       text: 'Webdesign von Edgar Lubicz · Grafikdesign von Laurent Carcelle',
     },
@@ -212,6 +289,7 @@ export const uiText: Record<AppLocale, UiText> = {
     gallery: {
       modePhotos: 'Photos',
       modeAlbums: 'Albums',
+      modeLabel: 'Mode galerie',
       collapseRail: 'Réduire la barre latérale',
       expandRail: 'Développer la barre latérale',
       collapseLibrary: 'Réduire la bibliothèque',
@@ -223,13 +301,16 @@ export const uiText: Record<AppLocale, UiText> = {
       squareThumbnails: 'Carré (1:1)',
       showTimeline: 'Afficher la chronologie',
       photoCredit: 'Crédit photo',
+      currentMonthLabel: 'Mois en cours',
       photosCount: (n) => `${n} ${n === 1 ? 'photo' : 'photos'}`,
       closeLightbox: 'Fermer',
-      prevImage: 'Précédent',
-      nextImage: 'Suivant',
+      prevImage: 'Image précédente',
+      nextImage: 'Image suivante',
       zoomIn: 'Zoom avant',
       zoomOut: 'Zoom arrière',
       resetZoom: 'Réinitialiser le zoom',
+      zoomControls: 'Commandes de zoom',
+      zoomLevel: 'Niveau de zoom',
       filterPeople: 'Personnes',
       filterLocation: 'Lieu',
       filterTags: 'Tags',
@@ -253,22 +334,44 @@ export const uiText: Record<AppLocale, UiText> = {
       showLyrics: 'Afficher les paroles',
       hideLyrics: 'Masquer les paroles',
       noLyrics: 'Pas de paroles disponibles',
-      mute: 'Muet',
-      unmute: 'Activer le son',
+      mute: 'Couper le son',
+      unmute: 'Rétablir le son',
       volume: 'Volume',
       closePlayer: 'Fermer le lecteur',
     },
+    music: {
+      albumsNavLabel: 'Albums',
+      albumLabel: 'Album',
+      songsCount: (n) => `${n} ${n === 1 ? 'morceau' : 'morceaux'}`,
+      albumItemLabel: (title, count) =>
+        `${title} (${count} ${count === 1 ? 'morceau' : 'morceaux'})`,
+      playAlbum: "Lire l'album",
+      pauseAlbum: "Mettre l'album en pause",
+      trackTitleHeader: 'Titre',
+      playTrack: (title) => `Lire ${title}`,
+      resumeTrack: (title) => `Reprendre ${title}`,
+      closeLyrics: 'Fermer les paroles',
+      lyricsLoading: 'Chargement des paroles...',
+      noLyricsForTrack: 'Aucune parole disponible pour ce titre',
+    },
+    lyrics: {
+      syncToCurrent: 'Se resynchroniser sur les paroles en cours',
+      sync: 'Synchroniser',
+    },
     faders: {
-      open: "Faders d'instruments",
+      open: "Afficher les faders d'instruments",
       close: "Fermer les faders d'instruments",
       groupLabel: "Faders d'instruments",
-      muteToggle: (instrument) => `${instrument} : muet`,
+      muteToggle: (instrument) => `Couper ${instrument}`,
       instrumentVolume: (instrument) => `Volume de ${instrument}`,
     },
     logo: {
-      ariaLabel: 'Frisches – Cliquer pour afficher le menu',
+      ariaLabel: 'Frisches – Cliquez pour afficher le menu',
       logoAriaLabel: 'Frisches',
       socialLinks: 'Réseaux sociaux',
+    },
+    status: {
+      loading: 'Chargement...',
     },
     credits: {
       text: 'Design web par Edgar Lubicz · Direction artistique par Laurent Carcelle',
@@ -278,6 +381,7 @@ export const uiText: Record<AppLocale, UiText> = {
     gallery: {
       modePhotos: 'Fotos',
       modeAlbums: 'Álbuns',
+      modeLabel: 'Modo da galeria',
       collapseRail: 'Recolher barra lateral',
       expandRail: 'Expandir barra lateral',
       collapseLibrary: 'Recolher biblioteca',
@@ -289,13 +393,16 @@ export const uiText: Record<AppLocale, UiText> = {
       squareThumbnails: 'Quadrado (1:1)',
       showTimeline: 'Mostrar linha do tempo',
       photoCredit: 'Crédito da foto',
+      currentMonthLabel: 'Mês atual',
       photosCount: (n) => `${n} ${n === 1 ? 'foto' : 'fotos'}`,
       closeLightbox: 'Fechar',
-      prevImage: 'Anterior',
-      nextImage: 'Próximo',
-      zoomIn: 'Aumentar zoom',
-      zoomOut: 'Diminuir zoom',
-      resetZoom: 'Redefinir zoom',
+      prevImage: 'Imagem anterior',
+      nextImage: 'Próxima imagem',
+      zoomIn: 'Aumentar o zoom',
+      zoomOut: 'Diminuir o zoom',
+      resetZoom: 'Redefinir o zoom',
+      zoomControls: 'Controles de zoom',
+      zoomLevel: 'Nível de zoom',
       filterPeople: 'Pessoas',
       filterLocation: 'Local',
       filterTags: 'Tags',
@@ -315,7 +422,7 @@ export const uiText: Record<AppLocale, UiText> = {
       repeatOne: 'Repetir uma faixa',
       disableRepeat: 'Desativar repetição',
       toggleRepeat: 'Alternar repetição',
-      seek: 'Avançar',
+      seek: 'Posição de reprodução',
       showLyrics: 'Mostrar letra',
       hideLyrics: 'Ocultar letra',
       noLyrics: 'Letra não disponível',
@@ -323,6 +430,24 @@ export const uiText: Record<AppLocale, UiText> = {
       unmute: 'Ativar som',
       volume: 'Volume',
       closePlayer: 'Fechar player',
+    },
+    music: {
+      albumsNavLabel: 'Álbuns',
+      albumLabel: 'Álbum',
+      songsCount: (n) => `${n} ${n === 1 ? 'faixa' : 'faixas'}`,
+      albumItemLabel: (title, count) => `${title} (${count} ${count === 1 ? 'faixa' : 'faixas'})`,
+      playAlbum: 'Reproduzir álbum',
+      pauseAlbum: 'Pausar álbum',
+      trackTitleHeader: 'Título',
+      playTrack: (title) => `Reproduzir ${title}`,
+      resumeTrack: (title) => `Retomar ${title}`,
+      closeLyrics: 'Fechar letra',
+      lyricsLoading: 'Carregando letra...',
+      noLyricsForTrack: 'Nenhuma letra disponível para esta faixa',
+    },
+    lyrics: {
+      syncToCurrent: 'Sincronizar com a letra atual',
+      sync: 'Sincronizar',
     },
     faders: {
       open: 'Faders de instrumentos',
@@ -335,6 +460,9 @@ export const uiText: Record<AppLocale, UiText> = {
       ariaLabel: 'Frisches – Clique para revelar o menu',
       logoAriaLabel: 'Frisches',
       socialLinks: 'Redes sociais',
+    },
+    status: {
+      loading: 'Carregando...',
     },
     credits: {
       text: 'Web Design por Edgar Lubicz · Design artístico por Laurent Carcelle',

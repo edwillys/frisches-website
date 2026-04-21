@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import type { LyricsData, Line, Word } from '@/types/lyrics'
+import { useUiText } from '@/composables/useUiText'
 import syncSvg from '@/assets/icons/sync.svg?raw'
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const t = useUiText()
 
 const emit = defineEmits<{
   (e: 'seek', time: number): void
@@ -270,10 +272,10 @@ onUnmounted(() => {
         v-if="!isSyncMode && isPlaying"
         class="sync-button"
         @click="syncToActiveLine"
-        title="Sync to current lyrics"
+        :title="t.lyrics.syncToCurrent"
       >
         <span aria-hidden="true" v-html="syncSvg" />
-        <span>Sync</span>
+        <span>{{ t.lyrics.sync }}</span>
       </button>
     </transition>
   </div>

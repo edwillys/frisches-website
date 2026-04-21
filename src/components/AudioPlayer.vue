@@ -10,6 +10,7 @@ import {
   getAlbumTotalDurationSeconds,
   formatSecondsAsAlbumDuration,
 } from '@/data/albums'
+import { useUiText } from '@/composables/useUiText'
 import LyricsDisplay from './LyricsDisplay.vue'
 import closeSvg from '@/assets/icons/close.svg?raw'
 import playSvg from '@/assets/icons/play.svg?raw'
@@ -19,6 +20,7 @@ import clockSvg from '@/assets/icons/clock.svg?raw'
 import playingBarsSvg from '@/assets/icons/playing-bars.svg?raw'
 
 const audioStore = useAudioStore()
+const t = useUiText()
 
 // Current selected album
 const selectedAlbumId = ref('tftc')
@@ -65,6 +67,17 @@ watch(
 const currentTrack = computed(() => audioStore.currentTrack)
 const isPlaying = computed(() => audioStore.isPlaying)
 const isShuffle = computed(() => audioStore.isShuffle)
+const albumSongCountText = computed(() => t.value.music.songsCount(albumSongCount.value))
+
+function getAlbumItemLabel(title: string, count: number) {
+  return t.value.music.albumItemLabel(title, count)
+}
+
+function getTrackActionLabel(track: Track) {
+  return isCurrentTrack(track) && !isPlaying.value
+    ? t.value.music.resumeTrack(track.title)
+    : t.value.music.playTrack(track.title)
+}
 
 function selectAlbum(albumId: string) {
   selectedAlbumId.value = albumId
@@ -279,15 +292,15 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 <template>
   <div class="spotify-layout" data-testid="audio-player">
     <!-- Top: Album Carousel -->
-    <nav class="album-carousel" aria-label="Albums" data-testid="album-carousel">
+    <nav class="album-carousel" :aria-label="t.music.albumsNavLabel" data-testid="album-carousel">
       <div class="album-carousel__list" role="list">
         <button
           v-for="album in albums"
           :key="album.albumId"
           class="album-carousel__item"
           :class="{ 'is-active': album.albumId === selectedAlbumId }"
-          :data-tooltip="`${album.title} • ${album.trackIds.length} songs`"
-          :aria-label="`${album.title} (${album.trackIds.length} songs)`"
+          :data-tooltip="getAlbumItemLabel(album.title, album.trackIds.length)"
+          :aria-label="getAlbumItemLabel(album.title, album.trackIds.length)"
           @click="selectAlbum(album.albumId)"
           data-testid="album-carousel-item"
           role="listitem"
@@ -304,7 +317,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 
           <div class="album-carousel__info">
             <div class="album-carousel__title">{{ album.title }}</div>
-            <div class="album-carousel__meta">{{ album.trackIds.length }} songs</div>
+            <div class="album-carousel__meta">{{ t.music.songsCount(album.trackIds.length) }}</div>
           </div>
         </button>
       </div>
@@ -327,7 +340,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
         </div>
 
         <div class="album-hero__info">
-          <div class="album-hero__label">Album</div>
+          <div class="album-hero__label">{{ t.music.albumLabel }}</div>
           <h1
             ref="heroTitleEl"
             class="album-hero__title"
@@ -344,7 +357,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
             <span class="album-hero__dot">•</span>
             <span>{{ selectedAlbum?.year }}</span>
             <span class="album-hero__dot">•</span>
-            <span>{{ albumSongCount }} songs</span>
+            <span>{{ albumSongCountText }}</span>
             <span class="album-hero__dot">•</span>
             <span>{{ albumDurationFormatted }}</span>
           </div>
@@ -356,8 +369,8 @@ watch(currentTrack, async (newTrack, oldTrack) => {
         <button
           class="btn-play-big"
           @click="playAlbum"
-          :data-tooltip="isPlaying ? 'Pause' : 'Play'"
-          :aria-label="isPlaying ? 'Pause' : 'Play album'"
+          :data-tooltip="isPlaying ? t.player.pause : t.player.play"
+          :aria-label="isPlaying ? t.music.pauseAlbum : t.music.playAlbum"
           data-testid="btn-play-album"
         >
           <span v-if="!isPlaying" aria-hidden="true" v-html="playSvg" />
@@ -368,8 +381,8 @@ watch(currentTrack, async (newTrack, oldTrack) => {
           class="btn-shuffle"
           :class="{ 'is-active': isShuffle }"
           @click="toggleShuffle"
-          :data-tooltip="isShuffle ? 'Disable shuffle' : 'Enable shuffle'"
-          :aria-label="isShuffle ? 'Disable shuffle' : 'Enable shuffle'"
+          :data-tooltip="isShuffle ? t.player.disableShuffle : t.player.enableShuffle"
+          :aria-label="isShuffle ? t.player.disableShuffle : t.player.enableShuffle"
           data-testid="btn-shuffle"
         >
           <span aria-hidden="true" v-html="shuffleSvg" />
@@ -380,7 +393,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
       <div v-show="!audioStore.showLyrics" class="track-table">
         <div class="track-table__header">
           <div class="track-table__col track-table__col--index">#</div>
-          <div class="track-table__col track-table__col--title">Title</div>
+          <div class="track-table__col track-table__col--title">{{ t.music.trackTitleHeader }}</div>
           <div class="track-table__col track-table__col--duration">
             <span aria-hidden="true" v-html="clockSvg" />
           </div>
@@ -404,8 +417,8 @@ watch(currentTrack, async (newTrack, oldTrack) => {
                 v-if="hoveredTrackId === track.trackId && isCurrentTrack(track) && isPlaying"
                 class="track-table__play-btn"
                 type="button"
-                data-tooltip="Pause"
-                aria-label="Pause"
+                :data-tooltip="t.player.pause"
+                :aria-label="t.player.pause"
                 :data-testid="`track-pause-${index}`"
                 @click.stop="audioStore.togglePlayPause()"
               >
@@ -416,12 +429,8 @@ watch(currentTrack, async (newTrack, oldTrack) => {
                 v-else-if="hoveredTrackId === track.trackId"
                 class="track-table__play-btn"
                 type="button"
-                :data-tooltip="
-                  (isCurrentTrack(track) && !isPlaying ? 'Resume ' : 'Play ') + track.title
-                "
-                :aria-label="
-                  (isCurrentTrack(track) && !isPlaying ? 'Resume ' : 'Play ') + track.title
-                "
+                :data-tooltip="getTrackActionLabel(track)"
+                :aria-label="getTrackActionLabel(track)"
                 :data-testid="`track-play-${index}`"
                 @click.stop="playOrToggle(track)"
               >
@@ -463,7 +472,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
           <button
             class="lyrics-view__close"
             type="button"
-            aria-label="Close lyrics"
+            :aria-label="t.music.closeLyrics"
             data-testid="lyrics-view-close"
             @click="audioStore.closeLyrics"
           >
@@ -478,8 +487,8 @@ watch(currentTrack, async (newTrack, oldTrack) => {
           :isPlaying="audioStore.isPlaying"
           @seek="handleLyricsSeek"
         />
-        <div v-else-if="isLoadingLyrics" class="lyrics-loading">Loading lyrics...</div>
-        <div v-else class="lyrics-empty">No lyrics available for this track</div>
+        <div v-else-if="isLoadingLyrics" class="lyrics-loading">{{ t.music.lyricsLoading }}</div>
+        <div v-else class="lyrics-empty">{{ t.music.noLyricsForTrack }}</div>
       </div>
     </main>
   </div>

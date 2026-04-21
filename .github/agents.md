@@ -281,36 +281,44 @@ frisches-website/
 - CI will run the same checks; ensure your branch is free of lint/type errors to avoid CI failures.
 - When adding new components or modifying existing ones, include a local run of these checks as part of your pre-commit routine.
 
-### Pre-commit hooks (Husky + lint-staged)
+### Pre-commit and Pre-push Hooks (Husky + lint-staged)
 
-We recommend using `husky` + `lint-staged` to automatically run linters and formatters on staged files.
+Husky and lint-staged are already installed and configured in this repository. Hooks activate automatically after `npm install`.
 
-1. Install the tools locally (one-time):
+#### Pre-commit gate (`.husky/pre-commit`)
+
+Runs on every `git commit` against **staged files only** (fast):
+
+- `eslint --fix` + `prettier --write` on staged `*.ts`, `*.js`, `*.vue` files
+- `prettier --write` on staged `*.css`, `*.scss`, `*.md`, `*.json` files
+
+#### Pre-push gate (`.husky/pre-push`)
+
+Runs on every `git push` against the **full project** (thorough):
+
+- `npm run type-check` — full `vue-tsc` type validation
+- `npm run test:unit -- --run` — all unit tests must pass (currently 112 tests / 23 files)
+
+#### Keeping hooks clean
+
+Before committing, the following commands must pass with **zero errors**:
 
 ```powershell
-npm install --save-dev husky lint-staged
-npx husky init
+npm run lint        # ESLint (auto-fixes where safe)
+npm run type-check  # TypeScript via vue-tsc
+npm run test:unit -- --run  # All unit tests
 ```
 
-The `.husky/pre-commit` hook is already included in the repository and configured to run `npx lint-staged`.
+When adding intentional deviations (e.g. `force: true` in Playwright fallback code, conditional `test.skip()`), suppress the specific rule inline with a comment explaining why:
 
-2. What the hook does:
-
-- Runs `eslint --fix` and `prettier --write` on staged JS/TS/Vue files.
-- Runs `prettier --write` on staged CSS/SCSS/Markdown/JSON files.
-
-3. Test the hook:
-
-```powershell
-git add src/somefile.ts
-git commit -m "test"
+```ts
+// eslint-disable-next-line playwright/no-force-option -- intentional fallback after normal click fails
+await locator.click({ timeout, force: true })
 ```
 
-The pre-commit hook should run automatically and auto-fix any lint/format issues.
+#### Note on editor settings
 
-4. Note about editor settings:
-
-- Do not enable `formatOnSave` in your editor for this project (we prefer hooking formatting via `pre-commit`), but you may enable ESLint auto-fix on save if desired. The repo already includes `prettier` and ESLint rules to maintain consistent style.
+Do not enable `formatOnSave` for this project — formatting is handled by the pre-commit hook. ESLint auto-fix on save is fine.
 
 ### Testing Guide
 
@@ -361,11 +369,11 @@ npx vitest --coverage
 
 **Current test files:**
 
-- `src/components/__tests__/CardDealer.test.ts` - Main component (8 tests)
-- `src/components/__tests__/MenuCard.test.ts` - Menu card component (7 tests)
-- `src/components/__tests__/LogoEffect.test.ts` - Logo animation (1 test)
-- `src/__tests__/App.spec.ts` - App integration (1 test)
-- **Total: 17 tests (all passing ✅)**
+- `src/components/__tests__/CardDealer.test.ts` - Main component
+- `src/components/__tests__/MenuCard.test.ts` - Menu card component
+- `src/components/__tests__/LogoEffect.test.ts` - Logo animation
+- `src/__tests__/App.spec.ts` - App integration
+- **Total: 112 tests across 23 files (all passing ✅)**
 
 #### Test Organization
 

@@ -14,6 +14,7 @@ test.describe('Lyrics Display Feature', () => {
   async function hoverRevealRow(row: Locator) {
     await scrollIntoViewQuick(row)
     try {
+      // eslint-disable-next-line playwright/no-force-option -- WebKit stable-check workaround for hover
       await row.hover({ force: true, timeout: 3000 })
     } catch {
       // Ignore hover failures; we'll still try to trigger pointerenter below.
@@ -74,10 +75,9 @@ test.describe('Lyrics Display Feature', () => {
     // Click the "Witch Hunting" track (has lyrics)
     const witchHuntingRow = page.locator('.track-table__row').filter({ hasText: 'Witch Hunting' })
     await expect(witchHuntingRow).toBeVisible({ timeout: 2000 })
-    
+
     // Click play button on the row (hover-rendered, so avoid Playwright auto-scroll click flakiness)
     await clickRowPlayButton(witchHuntingRow)
-
 
     // Wait for mini-player to appear
     const miniPlayer = page.locator('[data-testid="audio-mini-player"]')
@@ -87,10 +87,10 @@ test.describe('Lyrics Display Feature', () => {
   test('lyrics button is disabled for tracks without lyrics', async ({ page }) => {
     await navigateToMusicPlayer(page)
 
-    // Play a track without lyrics (e.g., "Intro")  
+    // Play a track without lyrics (e.g., "Intro")
     const introRow = page.locator('.track-table__row').filter({ hasText: 'Intro' })
     await expect(introRow).toBeVisible({ timeout: 2000 })
-    
+
     // Click play button on the row
     await clickRowPlayButton(introRow)
 
@@ -124,7 +124,6 @@ test.describe('Lyrics Display Feature', () => {
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
     await clickRobust(lyricsBtn)
 
-
     // Track table should be hidden
     await expect(trackTable).toBeHidden()
 
@@ -143,7 +142,6 @@ test.describe('Lyrics Display Feature', () => {
     // Open lyrics
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
     await clickRobust(lyricsBtn)
-
 
     // Lyrics lines should be visible
     const lyricsLines = page.locator('.lyrics-line')
@@ -168,14 +166,12 @@ test.describe('Lyrics Display Feature', () => {
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
     await clickRobust(lyricsBtn)
 
-
     // Verify lyrics are shown
     const lyricsView = page.locator('.lyrics-view')
     await expect(lyricsView).toBeVisible()
 
     // Click again to close
     await clickRobust(lyricsBtn)
-
 
     // Lyrics should be hidden
     await expect(lyricsView).toBeHidden()
@@ -196,7 +192,6 @@ test.describe('Lyrics Display Feature', () => {
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
     await clickRobust(lyricsBtn)
 
-
     // Verify lyrics are shown
     const lyricsView = page.locator('.lyrics-view')
     await expect(lyricsView).toBeVisible()
@@ -204,7 +199,6 @@ test.describe('Lyrics Display Feature', () => {
     // Close mini-player
     const closeBtn = page.locator('[data-testid="audio-mini-close"]')
     await clickRobust(closeBtn)
-
 
     // Mini-player should be hidden
     const miniPlayer = page.locator('.mini-player')
@@ -224,7 +218,6 @@ test.describe('Lyrics Display Feature', () => {
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
     await clickRobust(lyricsBtn)
 
-
     // Get a future line (not the first one)
     const lyricsLines = page.locator('.lyrics-line')
     const thirdLine = lyricsLines.nth(2)
@@ -232,7 +225,6 @@ test.describe('Lyrics Display Feature', () => {
 
     // Click the line
     await thirdLine.click()
-
 
     // The clicked line should become active (or past)
     // We can check if it has is-active or is-past class after a moment
@@ -250,7 +242,6 @@ test.describe('Lyrics Display Feature', () => {
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
     await clickRobust(lyricsBtn)
 
-
     // Initially sync button should not be visible
     const syncButton = page.locator('.sync-button')
     await expect(syncButton).toBeHidden()
@@ -259,7 +250,6 @@ test.describe('Lyrics Display Feature', () => {
     const lyricsContainer = page.locator('.lyrics-container')
     await lyricsContainer.hover()
     await page.mouse.wheel(0, 600)
-
 
     // Sync button should appear
     await expect(syncButton).toBeVisible({ timeout: 3000 })
@@ -273,12 +263,10 @@ test.describe('Lyrics Display Feature', () => {
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
     await clickRobust(lyricsBtn)
 
-
     // Manually scroll away (real user-like wheel scroll)
     const lyricsContainer = page.locator('.lyrics-container')
     await lyricsContainer.hover()
     await page.mouse.wheel(0, 600)
-
 
     // Sync button should appear
     const syncButton = page.locator('.sync-button')
@@ -286,7 +274,6 @@ test.describe('Lyrics Display Feature', () => {
 
     // Click sync button
     await syncButton.click()
-
 
     // Sync button should disappear
     await expect(syncButton).toBeHidden()
@@ -299,7 +286,6 @@ test.describe('Lyrics Display Feature', () => {
     // Open lyrics
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
     await clickRobust(lyricsBtn)
-
 
     // At least one line should have is-active class
     const activeLine = page.locator('.lyrics-line.is-active')
@@ -324,24 +310,30 @@ test.describe('Lyrics Display Feature', () => {
       const audio = document.querySelector('audio') as HTMLAudioElement | null
       if (!audio) return
       const target = 120
-      audio.currentTime = Math.min(target, Number.isFinite(audio.duration) ? Math.max(0, audio.duration - 0.1) : target)
+      audio.currentTime = Math.min(
+        target,
+        Number.isFinite(audio.duration) ? Math.max(0, audio.duration - 0.1) : target
+      )
       audio.dispatchEvent(new Event('timeupdate'))
     })
 
     // Check if any past lines exist
     const pastLines = page.locator('.lyrics-line.is-past')
-    
+
     // Past lines should now exist
     await expect(pastLines).not.toHaveCount(0, { timeout: 2000 })
-    
+
     // Past lines should be visible and styled
     await expect(pastLines.first()).toBeVisible()
-    
+
     // Check computed color (cyan should be applied)
-    const color = await pastLines.first().locator('.lyrics-line-content').evaluate((el) => {
-      return window.getComputedStyle(el).color
-    })
-    
+    const color = await pastLines
+      .first()
+      .locator('.lyrics-line-content')
+      .evaluate((el) => {
+        return window.getComputedStyle(el).color
+      })
+
     // Cyan color should be applied (not default text color)
     expect(color).not.toBe('rgb(255, 255, 255)')
   })
@@ -354,20 +346,17 @@ test.describe('Lyrics Display Feature', () => {
     const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
     await clickRobust(lyricsBtn)
 
-
     // Verify lyrics are shown
     const lyricsView = page.locator('.lyrics-view')
     await expect(lyricsView).toBeVisible()
 
     // Play a different track without lyrics
     const introRow = page.locator('.track-table__row').filter({ hasText: 'Intro' })
-    
+
     // We need to close lyrics first to see the track table
     await clickRobust(lyricsBtn)
 
-    
     await clickRowPlayButton(introRow)
-
 
     // Lyrics button should be disabled
     await expect(lyricsBtn).toBeDisabled()

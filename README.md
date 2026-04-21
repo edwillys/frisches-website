@@ -1,19 +1,15 @@
 # Frisches - Official Website
 
 [![CI](https://github.com/edwillys/frisches-website/actions/workflows/ci.yml/badge.svg)](https://github.com/edwillys/frisches-website/actions/workflows/ci.yml)
+[![Deploy to Cloudflare Pages](https://github.com/edwillys/frisches-website/actions/workflows/deploy-cloudflare.yml/badge.svg)](https://github.com/edwillys/frisches-website/actions/workflows/deploy-cloudflare.yml)
 [![Deploy to Netlify](https://github.com/edwillys/frisches-website/actions/workflows/deploy-netlify.yml/badge.svg)](https://github.com/edwillys/frisches-website/actions/workflows/deploy-netlify.yml)
+[![CodeQL](https://github.com/edwillys/frisches-website/actions/workflows/codeql.yml/badge.svg)](https://github.com/edwillys/frisches-website/actions/workflows/codeql.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Version](https://img.shields.io/badge/version-1.0.0-green.svg)](package.json)
 
 Official website for the rock band **Frisches**, featuring an immersive card dealer-themed home screen inspired by the animated clip from the song "Witch Hunting."
 
-## ✨ Features
-
-- 🎴 Interactive card dealer interface with GSAP animations
-- 📱 Fully responsive design (mobile, tablet, desktop)
-- 🎨 Custom design system inspired by the band's visual identity
-- ⚡ Built with Vue 3 + TypeScript + Vite
-- ✅ Comprehensive test coverage with Vitest
-- 🚀 CI/CD with GitHub Actions
+![Frisches – Banner](src/assets/banner.png)
 
 ## 🚀 Quick Start
 
@@ -163,3 +159,24 @@ For proper filter classification, organize your DigiKam tags as:
   └── beach
   └── concert
 ```
+
+## Credits
+
+### Web & Development
+
+- **Web Design**: Edgar Lubicz
+
+### Visual Identity
+
+- **Art Design**: Laurent Carcelle
+
+### Photography
+
+- Filippos Ineglis
+- Tobias Tschepe
+
+### Open Source Libraries
+
+- **[GSAP](https://gsap.com/)** (GreenSock Animation Platform) – Animation library used under the [GSAP Standard License](https://gsap.com/licensing/)
+- **[Draco](https://google.github.io/draco/)** – 3D mesh compression by Google, licensed under [Apache 2.0](https://github.com/google/draco/blob/master/LICENSE)
+- **[Vue 3](https://vuejs.org/)** + **[Vite](https://vite.dev/)** + **[PrimeVue](https://primevue.org/)** – UI framework, build tool, and component library

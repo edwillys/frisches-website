@@ -450,7 +450,7 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
             :class="{ 'is-active': audioStore.isShuffle }"
             type="button"
             :title="audioStore.isShuffle ? t.player.disableShuffle : t.player.enableShuffle"
-            aria-label="Toggle shuffle"
+            :aria-label="audioStore.isShuffle ? t.player.disableShuffle : t.player.enableShuffle"
             @click="audioStore.toggleShuffle()"
             data-testid="mini-shuffle"
           >
@@ -503,7 +503,13 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
                   ? t.player.repeatOne
                   : t.player.disableRepeat
             "
-            aria-label="Toggle repeat"
+            :aria-label="
+              audioStore.repeatMode === 'off'
+                ? t.player.enableRepeat
+                : audioStore.repeatMode === 'all'
+                  ? t.player.repeatOne
+                  : t.player.disableRepeat
+            "
             @click="audioStore.cycleRepeatMode()"
             data-testid="mini-repeat"
           >
