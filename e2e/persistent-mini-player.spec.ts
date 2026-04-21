@@ -104,9 +104,9 @@ test.describe('Persistent mini-player (Phase 1)', () => {
     // Next/Prev buttons work in mini-player
     const titleLocator = page.locator('[data-testid="audio-mini-player"] .mini-player__title')
     const titleBefore = await titleLocator.innerText()
-    await page.locator('[data-testid="audio-mini-player"] button[aria-label="Next"]').click()
+    await page.locator('[data-testid="audio-mini-player"] button[aria-label="Next track"]').click()
     await expect(titleLocator).not.toHaveText(titleBefore)
-    await page.locator('[data-testid="audio-mini-player"] button[aria-label="Previous"]').click()
+    await page.locator('[data-testid="audio-mini-player"] button[aria-label="Previous track"]').click()
     await expect(titleLocator).toHaveText(titleBefore)
   })
 })
