@@ -106,7 +106,9 @@ test.describe('Persistent mini-player (Phase 1)', () => {
     const titleBefore = await titleLocator.innerText()
     await page.locator('[data-testid="audio-mini-player"] button[aria-label="Next track"]').click()
     await expect(titleLocator).not.toHaveText(titleBefore)
-    await page.locator('[data-testid="audio-mini-player"] button[aria-label="Previous track"]').click()
+    await page
+      .locator('[data-testid="audio-mini-player"] button[aria-label="Previous track"]')
+      .click()
     await expect(titleLocator).toHaveText(titleBefore)
   })
 })
