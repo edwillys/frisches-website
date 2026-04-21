@@ -16,10 +16,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: 'recursive'
+          submodules: false
           lfs: true
           ssh-key: ${{ secrets.DEPLOY_KEY_ASSETS }}
           ssh-strict: false
+
+      - name: Fetch private submodule via SSH
+        run: |
+          git config --global url."git@github.com:".insteadOf "https://github.com/"
+          git submodule update --init --recursive
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
