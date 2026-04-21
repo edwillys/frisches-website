@@ -63,10 +63,6 @@ export interface UiText {
     muteToggle: (instrument: string) => string
     instrumentVolume: (instrument: string) => string
   }
-  // Character selection (CharacterSelection.vue inline data)
-  character: {
-    groupDescription: string
-  }
   // Logo / general
   logo: {
     ariaLabel: string
@@ -137,10 +133,6 @@ export const uiText: Record<AppLocale, UiText> = {
       muteToggle: (instrument) => `${instrument} mute toggle`,
       instrumentVolume: (instrument) => `${instrument} volume`,
     },
-    character: {
-      groupDescription:
-        'Powerful beats, punchy bass lines, gritty guitar riffs, touching solos and incisive lyrics. We embody rock in its purest form.',
-    },
     logo: {
       ariaLabel: 'Frisches - Click to reveal menu',
       logoAriaLabel: 'Frisches',
@@ -191,7 +183,7 @@ export const uiText: Record<AppLocale, UiText> = {
       repeatOne: 'Einen Titel wiederholen',
       disableRepeat: 'Wiederholen deaktivieren',
       toggleRepeat: 'Wiederholen umschalten',
-      seek: 'Suchen',
+      seek: 'Abspielposition',
       showLyrics: 'Liedtext anzeigen',
       hideLyrics: 'Liedtext ausblenden',
       noLyrics: 'Kein Liedtext verfügbar',
@@ -207,12 +199,8 @@ export const uiText: Record<AppLocale, UiText> = {
       muteToggle: (instrument) => `${instrument} stummschalten`,
       instrumentVolume: (instrument) => `${instrument} Lautstärke`,
     },
-    character: {
-      groupDescription:
-        'Kraftvolle Beats, prägnante Basslinien, raue Gitarrenriffs, berührende Soli und einprägsame Texte. Wir verkörpern Rock in seiner reinsten Form.',
-    },
     logo: {
-      ariaLabel: 'Frisches – Klicken um das Menü zu öffnen',
+      ariaLabel: 'Frisches – Klicken, um das Menü zu öffnen',
       logoAriaLabel: 'Frisches',
       socialLinks: 'Social-Links',
     },
@@ -261,7 +249,7 @@ export const uiText: Record<AppLocale, UiText> = {
       repeatOne: 'Répéter une piste',
       disableRepeat: 'Désactiver la répétition',
       toggleRepeat: 'Basculer la répétition',
-      seek: 'Avancer',
+      seek: 'Position de lecture',
       showLyrics: 'Afficher les paroles',
       hideLyrics: 'Masquer les paroles',
       noLyrics: 'Pas de paroles disponibles',
@@ -274,12 +262,8 @@ export const uiText: Record<AppLocale, UiText> = {
       open: "Faders d'instruments",
       close: "Fermer les faders d'instruments",
       groupLabel: "Faders d'instruments",
-      muteToggle: (instrument) => `Muet ${instrument}`,
-      instrumentVolume: (instrument) => `Volume ${instrument}`,
-    },
-    character: {
-      groupDescription:
-        'Des beats puissants, des lignes de basse percutantes, des riffs de guitare rugueux, des solos émouvants et des paroles incisives. Nous incarnons le rock dans sa forme la plus pure.',
+      muteToggle: (instrument) => `${instrument} : muet`,
+      instrumentVolume: (instrument) => `Volume de ${instrument}`,
     },
     logo: {
       ariaLabel: 'Frisches – Cliquer pour afficher le menu',
@@ -346,10 +330,6 @@ export const uiText: Record<AppLocale, UiText> = {
       groupLabel: 'Faders de instrumentos',
       muteToggle: (instrument) => `Silenciar ${instrument}`,
       instrumentVolume: (instrument) => `Volume de ${instrument}`,
-    },
-    character: {
-      groupDescription:
-        'Batidas poderosas, linhas de baixo marcantes, riffs de guitarra intensos, solos tocantes e letras incisivas. Encarnamos o rock em sua forma mais pura.',
     },
     logo: {
       ariaLabel: 'Frisches – Clique para revelar o menu',

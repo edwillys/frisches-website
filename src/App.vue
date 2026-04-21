@@ -1,20 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import CardDealer from './components/CardDealer.vue'
 import MouseParticles from './components/MouseParticles.vue'
 import GlobalAudioPlayer from './components/GlobalAudioPlayer.vue'
-import { preloadCharacterModels } from './composables/useCharacterPreloader'
-
-// Start preloading character models in the background
-// This ensures the main UI renders first, then models load in background
-// Skip preloading in test environment to avoid unhandled promise rejections
-onMounted(() => {
-  if (import.meta.env.MODE !== 'test') {
-    preloadCharacterModels().catch((err) => {
-      console.warn('Failed to preload character models:', err)
-    })
-  }
-})
 
 const mouseParticlesRef = ref<{
   setLogoButtonState: (hovered: boolean, x: number, y: number) => void
