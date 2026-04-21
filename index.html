@@ -56,18 +56,7 @@
       }
     </script>
 
-    <!-- Umami analytics – no-op when env var is missing or empty -->
-    <script>
-      ;(function () {
-        var id = '%VITE_UMAMI_WEBSITE_ID%'
-        if (!id || id === '%VITE_UMAMI_WEBSITE_ID%' || id.trim() === '') return
-        var s = document.createElement('script')
-        s.defer = true
-        s.src = 'https://cloud.umami.is/script.js'
-        s.setAttribute('data-website-id', id)
-        document.head.appendChild(s)
-      })()
-    </script>
+
   </head>
   <body>
     <div id="app"></div>

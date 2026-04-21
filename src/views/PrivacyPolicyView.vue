@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed } from 'vue'
 import LegalPageFrame from '@/components/LegalPageFrame.vue'
 import { useLegalPageClose } from '@/composables/useLegalPageClose'

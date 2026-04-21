@@ -27,6 +27,15 @@ if (import.meta.env.VITE_SENTRY_DSN) {
   })
 }
 
+const umamiId = import.meta.env.VITE_UMAMI_WEBSITE_ID
+if (umamiId) {
+  const s = document.createElement('script')
+  s.defer = true
+  s.src = 'https://cloud.umami.is/script.js'
+  s.setAttribute('data-website-id', umamiId)
+  document.head.appendChild(s)
+}
+
 app.use(createPinia())
 app.use(router)
 app.use(PrimeVue, {
