@@ -191,7 +191,7 @@ export const uiText: Record<AppLocale, UiText> = {
       loading: 'Loading...',
     },
     credits: {
-      text: 'Web Design by Edgar Lubicz · Art Design by Laurent Carcelle',
+      text: 'Web Design: Edgar Lubicz · Art: Laurent Carcelle',
     },
   },
   de: {
@@ -282,7 +282,7 @@ export const uiText: Record<AppLocale, UiText> = {
       loading: 'Lädt...',
     },
     credits: {
-      text: 'Webdesign von Edgar Lubicz · Grafikdesign von Laurent Carcelle',
+      text: 'Webdesign: Edgar Lubicz · Grafik: Laurent Carcelle',
     },
   },
   fr: {
@@ -374,7 +374,7 @@ export const uiText: Record<AppLocale, UiText> = {
       loading: 'Chargement...',
     },
     credits: {
-      text: 'Design web par Edgar Lubicz · Direction artistique par Laurent Carcelle',
+      text: 'Design web: Edgar Lubicz · Graphisme: Laurent Carcelle',
     },
   },
   'pt-BR': {
@@ -465,7 +465,7 @@ export const uiText: Record<AppLocale, UiText> = {
       loading: 'Carregando...',
     },
     credits: {
-      text: 'Web Design por Edgar Lubicz · Design artístico por Laurent Carcelle',
+      text: 'Web Design: Edgar Lubicz · Arte: Laurent Carcelle',
     },
   },
 }

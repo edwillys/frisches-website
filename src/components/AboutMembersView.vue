@@ -219,6 +219,7 @@ watch(
 .about-members__carousel {
   display: flex;
   align-items: center;
+  /* centred when all cards fit; falls back to flex-start via the media query below */
   justify-content: center;
   gap: var(--about-members-carousel-gap);
   width: 100%;
@@ -226,14 +227,21 @@ watch(
   min-height: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  scroll-snap-type: x proximity;
-  scroll-padding-inline: var(--about-members-carousel-scroll-padding);
-  padding-inline: var(--about-members-carousel-inline-padding);
+  scroll-snap-type: x mandatory;
+  /* Small edge padding so the first / last card is fully visible when scrolled to the edge */
+  padding-inline: var(--about-members-carousel-scroll-padding);
   scrollbar-width: none;
 }
 
 .about-members__carousel::-webkit-scrollbar {
   display: none;
+}
+
+/* When cards don't all fit, left-align so scrolling reveals each card fully */
+@media (max-width: 1050px) {
+  .about-members__carousel {
+    justify-content: flex-start;
+  }
 }
 
 .about-members__cell {
