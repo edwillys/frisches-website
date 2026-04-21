@@ -146,6 +146,28 @@ const clearAnimFallback = () => {
   }
 }
 
+const positionCardsViewportOnIndex = (cardIndex: number) => {
+  if (typeof window === 'undefined' || window.innerWidth > 768) return
+
+  const container = cardsContainerRef.value
+  const card = cardsRef.value[cardIndex]
+
+  if (!container || !card) return
+
+  const alignToRenderedCenter = () => {
+    const containerRect = container.getBoundingClientRect()
+    const cardRect = card.getBoundingClientRect()
+    const delta =
+      cardRect.left + cardRect.width / 2 - (containerRect.left + containerRect.width / 2)
+    const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth)
+
+    container.scrollLeft = Math.min(Math.max(0, container.scrollLeft + delta), maxScrollLeft)
+  }
+
+  alignToRenderedCenter()
+  window.requestAnimationFrame(alignToRenderedCenter)
+}
+
 // Small safety net: if a GSAP timeline never fires onComplete (rare in headless/FF),
 // make sure we don't get stuck in an animating state that blocks all navigation.
 const startAnimating = (fallbackMs = 4500) => {
@@ -181,6 +203,13 @@ const isGalleryActive = computed(
 const selectedItem = computed(() =>
   selectedCard.value !== null ? (menuItems[selectedCard.value] ?? null) : null
 )
+
+const LEGAL_RETURN_STATE_KEY = 'frisches:legal-return-state'
+
+type LegalReturnState = {
+  currentView: 'logo' | 'cards' | 'content'
+  selectedCard: number | null
+}
 
 // Keep content subviews mounted once visited.
 // This keeps content views warm between Music/About/Gallery and cards.
@@ -231,6 +260,53 @@ const miniCardStyle = computed(() => {
   }
   return {}
 })
+
+const rememberLegalReturnState = () => {
+  if (typeof window === 'undefined') return
+
+  const state: LegalReturnState = {
+    currentView: currentView.value,
+    selectedCard: selectedCard.value,
+  }
+
+  window.sessionStorage.setItem(LEGAL_RETURN_STATE_KEY, JSON.stringify(state))
+}
+
+const restoreLegalReturnState = () => {
+  if (typeof window === 'undefined') return
+
+  const rawState = window.sessionStorage.getItem(LEGAL_RETURN_STATE_KEY)
+  if (!rawState) return
+
+  window.sessionStorage.removeItem(LEGAL_RETURN_STATE_KEY)
+
+  let state: LegalReturnState | null = null
+  try {
+    state = JSON.parse(rawState) as LegalReturnState
+  } catch {
+    return
+  }
+
+  if (!state) return
+  if (!['logo', 'cards', 'content'].includes(state.currentView)) return
+
+  currentView.value = state.currentView
+  selectedCard.value =
+    typeof state.selectedCard === 'number' && menuItems[state.selectedCard]
+      ? state.selectedCard
+      : null
+
+  nextTick(() => {
+    if (currentView.value === 'cards') {
+      positionCardsViewportOnIndex(deckLeadIndex)
+      return
+    }
+
+    if (currentView.value === 'content' && selectedCard.value !== null) {
+      syncCoverForMenuIndex(selectedCard.value)
+    }
+  })
+}
 
 function openHeaderNav() {
   if (!isMobileNavMode.value) return
@@ -562,10 +638,9 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
     ) !== null
   if (clickedInsidePrimeOverlay) return
 
-  const isMobileNavMode =
-    typeof window !== 'undefined' &&
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(max-width: 768px)').matches
+  const clickedInsideSocial = targetEl?.closest('.card-dealer__social') !== null
+  const clickedInsideCredits = targetEl?.closest('.card-dealer__credits') !== null
+  const clickedInsideLegalLinks = targetEl?.closest('.card-dealer__legal-links') !== null
 
   const clickedMobileNavBtn = targetEl?.closest('.card-dealer__mobile-nav-btn') !== null
   const clickedInsideHeaderDrawer = targetEl?.closest('.card-dealer__header-drawer-panel') !== null
@@ -581,9 +656,6 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
   // Clicking the mobile nav button should not be treated as an outside-click back action.
   if (clickedMobileNavBtn) return
 
-  // On small screens we don't use outside-click as a back gesture (browser UI already provides back).
-  if (isMobileNavMode) return
-
   const clickedInsideCards = cardsContainerRef.value?.contains(target) ?? false
   const clickedInsideContent = contentPanelRef.value?.contains(target) ?? false
   const clickedBackButton = backButtonRef.value?.contains(target) ?? false
@@ -592,7 +664,13 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
   const clickedHeaderTitles = headerTitleRef.value?.contains(target) ?? false
 
   if (currentView.value === 'cards') {
-    if (clickedInsideCards) return
+    if (
+      clickedInsideCards ||
+      clickedInsideSocial ||
+      clickedInsideCredits ||
+      clickedInsideLegalLinks
+    )
+      return
     startAnimating()
     playCardCloseAndLogoReappear()
   } else if (currentView.value === 'content') {
@@ -672,6 +750,10 @@ const playCardOpen = () => {
     stopAnimating()
     return
   }
+
+  // Use the final mobile scroll position from the start so the spread animation
+  // lands in the correct viewport without a post-animation snap/flicker.
+  positionCardsViewportOnIndex(deckLeadIndex)
 
   const tl = gsap.timeline({
     onComplete: () => {
@@ -1606,6 +1688,8 @@ onMounted(() => {
     const img = new Image()
     img.src = src
   })
+
+  restoreLegalReturnState()
 })
 
 onBeforeUnmount(() => {
@@ -1700,19 +1784,25 @@ onBeforeUnmount(() => {
       {{ t.credits.text }}
     </div>
 
-    <!-- Legal links (bottom right) -->
+    <!-- Legal links (bottom right, desktop only — mobile gets them inside the drawer) -->
     <nav
-      v-if="currentView !== 'content'"
+      v-if="currentView !== 'content' && !isMobileNavMode"
       class="card-dealer__legal-links"
       :aria-label="legalT.impressum.title"
     >
-      <RouterLink to="/impressum" class="card-dealer__legal-link">{{
-        legalT.impressum.title
-      }}</RouterLink>
+      <RouterLink
+        to="/impressum"
+        class="card-dealer__legal-link"
+        @click="rememberLegalReturnState"
+        >{{ legalT.impressum.title }}</RouterLink
+      >
       <span aria-hidden="true"> · </span>
-      <RouterLink to="/datenschutz" class="card-dealer__legal-link">{{
-        legalT.privacy.title
-      }}</RouterLink>
+      <RouterLink
+        to="/datenschutz"
+        class="card-dealer__legal-link"
+        @click="rememberLegalReturnState"
+        >{{ legalT.privacy.title }}</RouterLink
+      >
     </nav>
 
     <div ref="bgRef" class="card-dealer__background">
@@ -1886,13 +1976,32 @@ onBeforeUnmount(() => {
           >
             {{ item.headerTitle }}
           </button>
-        </div>
-      </div>
-
-      <!-- Back button for cards view -->
-      <div v-if="currentView === 'cards'" class="card-dealer__cards-back-button-wrapper">
-        <div class="card-dealer__back-button" @click="handleBackClick">
-          <span aria-hidden="true" v-html="arrowLeftSvg" />
+          <nav class="card-dealer__header-drawer-legal" :aria-label="legalT.impressum.title">
+            <RouterLink
+              to="/impressum"
+              class="card-dealer__header-drawer-legal-link"
+              @click="
+                () => {
+                  rememberLegalReturnState()
+                  closeHeaderNav()
+                }
+              "
+            >
+              {{ legalT.impressum.title }}
+            </RouterLink>
+            <RouterLink
+              to="/datenschutz"
+              class="card-dealer__header-drawer-legal-link"
+              @click="
+                () => {
+                  rememberLegalReturnState()
+                  closeHeaderNav()
+                }
+              "
+            >
+              {{ legalT.privacy.title }}
+            </RouterLink>
+          </nav>
         </div>
       </div>
 

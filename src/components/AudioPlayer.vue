@@ -175,6 +175,14 @@ function playOrToggle(track: Track) {
 
 function selectTrack(track: Track) {
   selectedTrackId.value = track.trackId
+  // On touch devices there is no hover, so the play button never appears.
+  // Treat a tap on the row as a direct play intent.
+  if (
+    typeof window !== 'undefined' &&
+    window.matchMedia('(hover: none) and (pointer: coarse)').matches
+  ) {
+    playOrToggle(track)
+  }
 }
 
 async function loadLyrics(lyricsPath: string) {

@@ -165,7 +165,7 @@
   user-select: none;
 }
 
-/* Legal links (bottom right, logo + cards views only) */
+/* Legal links (bottom right, desktop/tablet — hidden on mobile via v-if) */
 .card-dealer__legal-links {
   position: fixed;
   bottom: var(--spacing-md, 12px);
@@ -194,6 +194,37 @@
 .card-dealer__legal-link:hover {
   text-decoration: underline;
   opacity: 1;
+}
+
+/* Legal links inside the mobile drawer (bottom of drawer panel) */
+.card-dealer__header-drawer-legal {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card-dealer__header-drawer-legal-link {
+  display: block;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  padding: 10px 12px;
+  border-radius: 8px;
+  opacity: 0.6;
+  transition:
+    background var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+.card-dealer__header-drawer-legal-link:hover,
+.card-dealer__header-drawer-legal-link:focus-visible {
+  background: rgba(255, 255, 255, 0.07);
+  opacity: 1;
+  outline: none;
 }
 
 .card-dealer__header {
@@ -637,9 +668,21 @@
   }
 }
 
-/* Small mobile devices */
-@media (max-width: 480px) {
+/* Mobile and tablet cards view: horizontal scroll carousel */
+@media (max-width: 768px) {
   .card-dealer__cards {
-    flex-direction: column;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    justify-content: flex-start;
+    padding-inline: 16px;
+    scrollbar-width: none;
+    gap: 16px;
+    box-sizing: border-box;
+  }
+
+  .card-dealer__cards::-webkit-scrollbar {
+    display: none;
   }
 }
