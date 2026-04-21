@@ -197,20 +197,28 @@ test.describe('Frisches Website - Critical Flows', () => {
     const cards = page.locator('.menu-card')
     const cardCount = await cards.count()
 
-    // Click each card and return - with generous timeouts for sequential animations
+    // Testids of the first meaningful element rendered inside each card's content, in card order:
+    // 0=Music, 1=About, 2=Gallery
+    const contentReadySelectors = [
+      '[data-testid="audio-player"]',
+      '[data-testid="about-members-view"]',
+      '[data-testid="gallery-manager"]',
+    ]
+
+    // Click each card and return
     for (let i = 0; i < cardCount; i++) {
       const card = cards.nth(i)
 
-      // Navigate to content
+      // Navigate to content and wait for the card's own content to be visible,
+      // which is more deterministic than the generic content-view wrapper.
       await card.click()
-      await waitForAnimations(page, 15000) // Increased timeout for complex animations
-      const contentView = page.locator('.card-dealer__content-view')
-      await expect(contentView).toBeVisible({ timeout: 5000 })
+      await waitForAnimations(page, 15000)
+      await expect(page.locator(contentReadySelectors[i])).toBeVisible({ timeout: 10000 })
 
       // Navigate back
       const backButton = page.locator('.card-dealer__back-button').first()
       await backButton.click()
-      await waitForAnimations(page, 15000) // Increased timeout
+      await waitForAnimations(page, 15000)
       await expect(page.locator('.card-dealer__cards')).toBeVisible({ timeout: 5000 })
     }
   })

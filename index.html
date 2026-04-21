@@ -4,11 +4,13 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1a0a0a" />
     <title>Frisches - Official Website</title>
     <meta
       name="description"
       content="Frisches – Rock band from Munich. Powerful beats, punchy bass lines, gritty guitar riffs and incisive lyrics."
     />
+    <link rel="canonical" href="https://frisches.band/" />
 
     <!-- Open Graph / Social sharing -->
     <meta property="og:type" content="website" />
@@ -18,18 +20,41 @@
       content="Frisches – Rock band from Munich. Powerful beats, punchy bass lines, gritty guitar riffs and incisive lyrics."
     />
     <meta property="og:url" content="https://frisches.band/" />
+    <meta property="og:image" content="https://frisches.band/banner.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="2640" />
+    <meta property="og:image:height" content="1386" />
+    <meta property="og:image:alt" content="Frisches – Rock band from Munich" />
 
     <!-- Twitter / X card -->
-    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Frisches – Official Website" />
     <meta name="twitter:description" content="Frisches – Rock band from Munich." />
+    <meta name="twitter:image" content="https://frisches.band/banner.png" />
 
-    <!-- Umami analytics (no-op when VITE_UMAMI_WEBSITE_ID is not set) -->
-    <script
-      defer
-      src="https://cloud.umami.is/script.js"
-      data-website-id="%VITE_UMAMI_WEBSITE_ID%"
-    ></script>
+    <!-- DNS prefetch for analytics -->
+    <link rel="preconnect" href="https://cloud.umami.is" crossorigin />
+
+    <!-- JSON-LD structured data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "MusicGroup",
+        "name": "Frisches",
+        "url": "https://frisches.band/",
+        "description": "Rock band from Munich. Powerful beats, punchy bass lines, gritty guitar riffs, touching solos and incisive lyrics.",
+        "genre": ["Rock"],
+        "foundingLocation": {
+          "@type": "Place",
+          "name": "Munich, Germany"
+        },
+        "sameAs": [
+          "https://www.instagram.com/frischestheband/",
+          "https://open.spotify.com/artist/3GkLzwg7QBN5fRoCDcI1pW",
+          "https://www.youtube.com/@frischestheband"
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>

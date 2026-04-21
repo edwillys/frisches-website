@@ -15,6 +15,7 @@ test.describe('Persistent mini-player (Phase 1)', () => {
     test.setTimeout(60000)
 
     // Skip this test on CI for webkit which is currently flaky
+    // eslint-disable-next-line playwright/no-skipped-test -- conditionally skipped only on CI/webkit
     test.skip(
       process.env.CI && testInfo.project.name === 'webkit',
       'Skipping persistent mini-player test on CI for webkit'
@@ -103,9 +104,11 @@ test.describe('Persistent mini-player (Phase 1)', () => {
     // Next/Prev buttons work in mini-player
     const titleLocator = page.locator('[data-testid="audio-mini-player"] .mini-player__title')
     const titleBefore = await titleLocator.innerText()
-    await page.locator('[data-testid="audio-mini-player"] button[aria-label="Next"]').click()
+    await page.locator('[data-testid="audio-mini-player"] button[aria-label="Next track"]').click()
     await expect(titleLocator).not.toHaveText(titleBefore)
-    await page.locator('[data-testid="audio-mini-player"] button[aria-label="Previous"]').click()
+    await page
+      .locator('[data-testid="audio-mini-player"] button[aria-label="Previous track"]')
+      .click()
     await expect(titleLocator).toHaveText(titleBefore)
   })
 })

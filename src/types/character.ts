@@ -1,9 +1,6 @@
 export interface Character {
   id: number
   name: string
-  modelPath?: string
-  rotationY?: number
-  scale?: number
   instruments?: string[]
   influences?: string[]
   favoriteTrackId?: string

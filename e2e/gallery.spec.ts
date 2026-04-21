@@ -11,6 +11,7 @@ async function clickRobust(locator: Locator, timeout = 5000) {
     await locator.click({ timeout })
   } catch {
     try {
+      // eslint-disable-next-line playwright/no-force-option -- intentional fallback after normal click fails
       await locator.click({ timeout, force: true })
     } catch {
       await locator.evaluate((el) => (el as HTMLElement).click())

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { useUiText } from '@/composables/useUiText'
 
 const props = withDefaults(defineProps<{ startAt?: number }>(), { startAt: 0 })
+const t = useUiText()
 
 const LOADING_SEGMENT_INTERVAL_MS = 170
 
@@ -31,7 +33,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="animated-loading-glyph" aria-hidden="true">
     <div class="animated-loading-glyph__hud">
-      <div class="animated-loading-glyph__label">Loading...</div>
+      <div class="animated-loading-glyph__label">{{ t.status.loading }}</div>
 
       <div class="animated-loading-glyph__bar-frame">
         <div class="animated-loading-glyph__bar-grid">

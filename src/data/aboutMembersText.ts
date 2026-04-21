@@ -31,9 +31,8 @@ export const aboutMembersText: Record<
       name: 'Steff',
       badgeTitles: ['Drums'],
       descriptionLead:
-        'Steff joined in 2021, brought order to the chaos, and then quietly improved the chaos anyway. Pink Floyd patience and Zeppelin punch sit side by side in his playing, and he still swears',
-      descriptionTail:
-        'is the best example of a groove tightening its tie without losing its grin.',
+        "Steff keeps the rhythm of Frisches tightly locked — anything that wanders off the beat doesn't stand a chance. Non-negotiable on the Tuesday night rehearsals: Pizza Funghi, no pesto. Rain on the way, play away. Double bass is next on the agenda, coming to fill up the heart and soul of our songs. For her, nothing grooves harder than",
+      descriptionTail: '!',
     },
     tobi: {
       name: 'Tobi',
@@ -45,7 +44,7 @@ export const aboutMembersText: Record<
   de: {
     edgar: {
       name: 'Edgar',
-      badgeTitles: ['Gitarre', 'Backingvocals'],
+      badgeTitles: ['Gitarre', 'Begleitgesang'],
       descriptionLead:
         'Spielt die Gitarre – und manchmal den Spaßvogel. Als Komponist verschachtelter Taktarten ist seine Lieblingsnote stets eine Wendung entfernt. Seine Leidenschaft für klassischen Rock fließt in jedes Frisches-Riff und -Solo. Mit Intros und Wortspielen ohne Ende findet seine liebste Geschichte ihren Weg zu',
     },
@@ -61,9 +60,8 @@ export const aboutMembersText: Record<
       name: 'Steff',
       badgeTitles: ['Schlagzeug'],
       descriptionLead:
-        'Steff kam 2021 dazu, brachte Ordnung ins Chaos – und verbesserte das Chaos dann trotzdem. Pink-Floyd-Geduld und Zeppelin-Punch stehen in seinem Spiel Seite an Seite, und er besteht noch immer darauf, dass',
-      descriptionTail:
-        'das beste Beispiel ist, wie ein Groove seine Krawatte strafft, ohne sein Grinsen zu verlieren.',
+        'Steff hält den Rhythmus von Frisches fest im Griff – was auch immer vom Beat abweicht, hat keine Chance. Unverhandelbar bei den Dienstagabend-Proben: Pizza Funghi, kein Pesto. Regen auf dem Weg? Wird trotzdem gespielt. Das Double Bass steht als Nächstes auf dem Programm und soll das Herzstück unserer Songs füllen. Für sie groovt nichts härter als',
+      descriptionTail: '!',
     },
     tobi: {
       name: 'Tobi',
@@ -91,15 +89,14 @@ export const aboutMembersText: Record<
       name: 'Steff',
       badgeTitles: ['Batterie'],
       descriptionLead:
-        "Steff a rejoint le groupe en 2021, a mis de l'ordre dans le chaos – puis l'a amélioré quand même. La patience de Pink Floyd et le punch de Zeppelin coexistent dans son jeu, et il insiste toujours que",
-      descriptionTail:
-        "est le meilleur exemple d'un groove qui resserre sa cravate sans perdre son sourire.",
+        "Steff tient le rythme de Frisches solidement en place — tout ce qui s'écarte du tempo n'a aucune chance. Incontournable lors des répétitions du mardi soir : Pizza Funghi, sans pesto. La pluie en chemin ? On joue quand même. La contrebasse est sur l'agenda, prête à combler le cœur et l'âme de nos chansons. Pour elle, rien ne groove plus fort que",
+      descriptionTail: '\u00a0!',
     },
     tobi: {
       name: 'Tobi',
       badgeTitles: ['Basse'],
       descriptionLead:
-        "Tobi ne pense qu'aux basses et a perdu ses aigus depuis longtemps. Avec lui, on a l'impression que le boost de basses du JBL a été laissé activé : il apporte des lignes groovy qui rendent Frisches plus grave.",
+        "Tobi ne pense qu'aux basses et a perdu ses aigus depuis longtemps. Avec lui, on a l'impression que le boost de basses du JBL est resté enclenché : il apporte des lignes pleines de groove qui soutiennent les graves de Frisches.",
     },
   },
   'pt-BR': {
@@ -120,14 +117,14 @@ export const aboutMembersText: Record<
       name: 'Steff',
       badgeTitles: ['Bateria'],
       descriptionLead:
-        'Steff entrou em 2021, trouxe ordem ao caos – e então melhorou o caos de qualquer forma. A paciência do Pink Floyd e o punch do Zeppelin coexistem em seu toque, e ele ainda insiste que',
-      descriptionTail: 'é o melhor exemplo de um groove ajustando a gravata sem perder o sorriso.',
+        'Steff mantém o ritmo do Frisches firme no lugar — qualquer coisa que saia do beat não tem a menor chance. Inegociável nos ensaios de terça à noite: Pizza Funghi, sem pesto. Chuva no caminho? A gente toca assim mesmo. O contrabaixo está na pauta, pronto para preencher o coração e a alma das nossas músicas. Para ela, nada groova mais forte do que',
+      descriptionTail: '!',
     },
     tobi: {
       name: 'Tobi',
       badgeTitles: ['Baixo'],
       descriptionLead:
-        'Tobi sabe tudo do baixo já que perdeu seus agudos faz tempo. Com ele, tem-se a sensação de que o bass boost do JBL foi deixado no máximo. Suas linhas groovy são a gravidade do Frisches.',
+        'Tobi sabe tudo do baixo e já deixou os agudos para trás faz tempo. Com ele, parece que o bass boost da JBL fica ligado o tempo todo: ele traz linhas cheias de groove que sustentam os graves do Frisches.',
     },
   },
 }

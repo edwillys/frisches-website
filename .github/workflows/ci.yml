@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   test:
@@ -16,10 +16,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: 'recursive'
+          submodules: false
           lfs: true
-          ssh-key: ${{ secrets.DEPLOY_KEY_ASSETS }}
-          ssh-strict: false
+
+      - name: Load SSH deploy key for private submodule
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_KEY_ASSETS }}
+
+      - name: Fetch private submodule via SSH
+        run: |
+          git config --global url."git@github.com:".insteadOf "https://github.com/"
+          git submodule update --init --recursive
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
@@ -32,6 +40,9 @@ jobs:
 
       - name: Install Playwright browsers and system dependencies
         run: npx playwright install --with-deps
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
 
       - name: Run linter
         run: npm run lint

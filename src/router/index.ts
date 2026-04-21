@@ -15,6 +15,14 @@ const router = createRouter({
       path: '/gallery',
       component: () => import('../views/GalleryView.vue'),
     },
+    {
+      path: '/impressum',
+      component: () => import('../views/ImpressumView.vue'),
+    },
+    {
+      path: '/datenschutz',
+      component: () => import('../views/PrivacyPolicyView.vue'),
+    },
   ],
 })
 

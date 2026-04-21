@@ -131,10 +131,16 @@ describe('CardDealer', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     config.global.plugins = [pinia]
+    config.global.stubs = {
+      RouterLink: {
+        template: '<a href="#"><slot /></a>',
+      },
+    }
   })
 
   afterEach(() => {
     vi.useRealTimers()
+    config.global.stubs = {}
   })
 
   it('renders properly', () => {

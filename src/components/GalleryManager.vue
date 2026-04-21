@@ -5,7 +5,7 @@
       ref="railRef"
       class="gallery-rail"
       :class="{ 'is-expanded': isRailExpanded }"
-      aria-label="Gallery mode"
+      :aria-label="t.gallery.modeLabel"
     >
       <button
         class="gallery-rail__toggle"
@@ -150,7 +150,7 @@
         <div
           v-if="isTimelineEnabled && showFloatingMonthYear && floatingMonthYear && isScrolled"
           class="gallery-floating-date"
-          aria-label="Current month"
+          :aria-label="t.gallery.currentMonthLabel"
         >
           {{ floatingMonthYear }}
         </div>
@@ -188,7 +188,11 @@
                 @load="onImageLoad(image.id)"
                 @error="onImageError(image.id)"
               />
-              <span v-if="image.photoCredit" class="gallery-credit" aria-label="Photo credit">
+              <span
+                v-if="image.photoCredit"
+                class="gallery-credit"
+                :aria-label="t.gallery.photoCredit"
+              >
                 &#169; {{ image.photoCredit }}
               </span>
             </div>
@@ -217,7 +221,11 @@
                 @load="onImageLoad(image.id)"
                 @error="onImageError(image.id)"
               />
-              <span v-if="image.photoCredit" class="gallery-credit" aria-label="Photo credit">
+              <span
+                v-if="image.photoCredit"
+                class="gallery-credit"
+                :aria-label="t.gallery.photoCredit"
+              >
                 &#169; {{ image.photoCredit }}
               </span>
             </div>
@@ -274,7 +282,11 @@
                 @load="onImageLoad(image.id)"
                 @error="onImageError(image.id)"
               />
-              <span v-if="image.photoCredit" class="gallery-credit" aria-label="Photo credit">
+              <span
+                v-if="image.photoCredit"
+                class="gallery-credit"
+                :aria-label="t.gallery.photoCredit"
+              >
                 &#169; {{ image.photoCredit }}
               </span>
             </div>
@@ -303,7 +315,11 @@
                 @load="onImageLoad(image.id)"
                 @error="onImageError(image.id)"
               />
-              <span v-if="image.photoCredit" class="gallery-credit" aria-label="Photo credit">
+              <span
+                v-if="image.photoCredit"
+                class="gallery-credit"
+                :aria-label="t.gallery.photoCredit"
+              >
                 &#169; {{ image.photoCredit }}
               </span>
             </div>
@@ -365,13 +381,13 @@
             <span
               v-if="lightboxImage.photoCredit"
               class="lightbox-credit"
-              aria-label="Photo credit"
+              :aria-label="t.gallery.photoCredit"
             >
               &#169; {{ lightboxImage.photoCredit }}
             </span>
           </div>
 
-          <div class="lightbox-controls" aria-label="Zoom controls">
+          <div class="lightbox-controls" :aria-label="t.gallery.zoomControls">
             <button
               class="lightbox-ctrl"
               type="button"
@@ -396,7 +412,7 @@
             >
               <i class="pi pi-plus" aria-hidden="true" />
             </button>
-            <div class="lightbox-zoom" aria-label="Zoom level">
+            <div class="lightbox-zoom" :aria-label="t.gallery.zoomLevel">
               {{ Math.round(zoomScale * 100) }}%
             </div>
           </div>

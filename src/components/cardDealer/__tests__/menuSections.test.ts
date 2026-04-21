@@ -23,4 +23,17 @@ describe('menuSections', () => {
     expect(titleContainsSection('_Gallery', 'gallery', sections)).toBe(true)
     expect(titleContainsSection('About', 'music', sections)).toBe(false)
   })
+
+  it('matches accented localized titles without depending on exact diacritics', () => {
+    const frenchSections = getNavigationSections('fr')
+    const portugueseSections = getNavigationSections('pt-BR')
+    const germanSections = getNavigationSections('de')
+
+    expect(titleContainsSection('_À propos', 'about', frenchSections)).toBe(true)
+    expect(titleContainsSection('_A propos', 'about', frenchSections)).toBe(true)
+    expect(titleContainsSection('_Música', 'music', portugueseSections)).toBe(true)
+    expect(titleContainsSection('_Musica', 'music', portugueseSections)).toBe(true)
+    expect(titleContainsSection('_Über uns', 'about', germanSections)).toBe(true)
+    expect(titleContainsSection('_Uber uns', 'about', germanSections)).toBe(true)
+  })
 })

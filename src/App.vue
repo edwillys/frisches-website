@@ -1,20 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import CardDealer from './components/CardDealer.vue'
 import MouseParticles from './components/MouseParticles.vue'
 import GlobalAudioPlayer from './components/GlobalAudioPlayer.vue'
-import { preloadCharacterModels } from './composables/useCharacterPreloader'
 
-// Start preloading character models in the background
-// This ensures the main UI renders first, then models load in background
-// Skip preloading in test environment to avoid unhandled promise rejections
-onMounted(() => {
-  if (import.meta.env.MODE !== 'test') {
-    preloadCharacterModels().catch((err) => {
-      console.warn('Failed to preload character models:', err)
-    })
-  }
-})
+const route = useRoute()
+const STANDALONE_ROUTES = ['/gallery', '/impressum', '/datenschutz']
+const usesStandaloneRoute = computed(() => STANDALONE_ROUTES.includes(route.path))
 
 const mouseParticlesRef = ref<{
   setLogoButtonState: (hovered: boolean, x: number, y: number) => void
@@ -58,19 +51,26 @@ function handlePaletteChange(payload: number[] | null) {
 
 <template>
   <div id="app">
-    <CardDealer
-      :socialLinks="{
-        instagram: 'https://www.instagram.com/frischestheband/',
-        spotify: 'https://open.spotify.com/artist/3GkLzwg7QBN5fRoCDcI1pW?si=YoFaY--kTPWO-G1bRsnLdA',
-        youtube: 'https://www.youtube.com/@frischestheband',
-        github: 'https://github.com/edwillys/frisches-website',
-      }"
-      @logo-hover="handleLogoHover"
-      @logo-hide="handleLogoHide"
-      @palette-change="handlePaletteChange"
-    />
-    <GlobalAudioPlayer />
-    <MouseParticles ref="mouseParticlesRef" />
+    <!-- Standalone routed pages -->
+    <RouterView v-if="usesStandaloneRoute" />
+
+    <!-- Main site UI -->
+    <template v-else>
+      <CardDealer
+        :socialLinks="{
+          instagram: 'https://www.instagram.com/frischestheband/',
+          spotify:
+            'https://open.spotify.com/artist/3GkLzwg7QBN5fRoCDcI1pW?si=YoFaY--kTPWO-G1bRsnLdA',
+          youtube: 'https://www.youtube.com/@frischestheband',
+          github: 'https://github.com/edwillys/frisches-website',
+        }"
+        @logo-hover="handleLogoHover"
+        @logo-hide="handleLogoHide"
+        @palette-change="handlePaletteChange"
+      />
+      <GlobalAudioPlayer />
+      <MouseParticles ref="mouseParticlesRef" />
+    </template>
   </div>
 </template>
 
