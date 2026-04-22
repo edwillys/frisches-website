@@ -241,20 +241,26 @@ test.describe('Frisches Website - Critical Flows', () => {
     for (const viewport of viewports) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height })
 
+      // Each viewport case should start from a clean page state so a failed dismiss
+      // or in-flight animation from the prior iteration cannot leak into the next one.
+      await page.goto('/')
+      await page.waitForLoadState('load')
+      await waitForAnimations(page)
+
       // Verify card dealer is visible at this viewport
       const cardDealer = page.locator('[data-testid="card-dealer"]')
       await expect(cardDealer).toBeVisible({ timeout: 10000 })
 
       // Test basic interaction at this viewport
       await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
-      const cardsContainer = page.locator('[data-testid="card-dealer-cards-container"]')
+      const cardsContainer = page.locator('.card-dealer__cards')
       await expect(cardsContainer).toBeVisible({ timeout: 10000 })
+      await expect(page.locator('.menu-card')).toHaveCount(3, { timeout: 10000 })
 
-      // Cards view returns to logo via outside click — force-click the background directly.
-      // The background is perpetually animated by GSAP (image crossfades), so Playwright's
-      // stability check never passes. force:true bypasses stability + pointer-intercept checks
-      // and dispatches pointerdown directly on the node, which bubbles to the window listener.
-      await page.locator('[data-testid="card-dealer"] .card-dealer__background').click({ force: true })
+      // Use a real pointer event in a safe corner of the viewport. The cards/content layer sits
+      // above the animated background, so force-clicking the background element does not reliably
+      // produce an outside target for the global pointerdown handler.
+      await page.mouse.click(16, 16)
       await waitForAnimations(page)
       await expect(page.locator('[data-testid="logo-button"]')).toBeVisible({ timeout: 10000 })
     }
