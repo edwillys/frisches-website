@@ -250,8 +250,11 @@ test.describe('Frisches Website - Critical Flows', () => {
       const cardsContainer = page.locator('[data-testid="card-dealer-cards-container"]')
       await expect(cardsContainer).toBeVisible({ timeout: 10000 })
 
-      // Cards view returns to logo via outside click — click the background element directly.
-      await page.locator('[data-testid="card-dealer"] .card-dealer__background').click()
+      // Cards view returns to logo via outside click — force-click the background directly.
+      // The background is perpetually animated by GSAP (image crossfades), so Playwright's
+      // stability check never passes. force:true bypasses stability + pointer-intercept checks
+      // and dispatches pointerdown directly on the node, which bubbles to the window listener.
+      await page.locator('[data-testid="card-dealer"] .card-dealer__background').click({ force: true })
       await waitForAnimations(page)
       await expect(page.locator('[data-testid="logo-button"]')).toBeVisible({ timeout: 10000 })
     }
