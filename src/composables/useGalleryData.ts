@@ -7,6 +7,7 @@
 
 import { ref, computed } from 'vue'
 import galleryDataJson from '@/assets/gallery_data.json'
+import { trackGalleryPhotoViewed } from '@/analytics'
 
 export interface GalleryImage {
   id: number
@@ -327,6 +328,7 @@ export function useGalleryData() {
 
   function openLightbox(imageId: number) {
     lightboxImageId.value = imageId
+    trackGalleryPhotoViewed(imageId)
   }
 
   function closeLightbox() {

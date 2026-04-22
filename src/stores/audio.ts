@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { getTrackById, tracks, type Track } from '@/data/tracks'
-import { trackEvent } from '@/analytics'
+import { trackEvent, trackLyricsToggled } from '@/analytics'
 
 export type AudioRepeatMode = 'off' | 'all' | 'one'
 export type AudioStartSource = 'music' | 'about'
@@ -242,6 +242,7 @@ export const useAudioStore = defineStore('audio', () => {
 
   function toggleLyrics() {
     showLyrics.value = !showLyrics.value
+    trackLyricsToggled(showLyrics.value)
   }
 
   function closeLyrics() {

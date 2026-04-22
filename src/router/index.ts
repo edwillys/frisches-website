@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { trackSectionViewed } from '@/analytics'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -27,3 +28,13 @@ const router = createRouter({
 })
 
 export default router
+
+const SECTION_ROUTES: Record<string, 'music' | 'about' | 'gallery'> = {
+  '/home': 'music',
+  '/gallery': 'gallery',
+}
+
+router.afterEach((to) => {
+  const section = SECTION_ROUTES[to.path]
+  if (section) trackSectionViewed(section)
+})
