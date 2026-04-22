@@ -1684,42 +1684,55 @@ onBeforeUnmount(() => {
       :aria-label="t.logo.socialLinks"
     >
       <a
-        :href="props.socialLinks?.instagram || '#'"
+        :href="props.socialLinks?.instagram || undefined"
         class="card-dealer__social-link"
         :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.instagram }"
-        :aria-disabled="!props.socialLinks?.instagram"
+        :aria-disabled="!props.socialLinks?.instagram || undefined"
+        :tabindex="props.socialLinks?.instagram ? undefined : -1"
         aria-label="Instagram"
         target="_blank"
         rel="noopener noreferrer"
         @click="
-          props.socialLinks?.instagram && trackEvent('social-click', { platform: 'instagram' })
+          props.socialLinks?.instagram
+            ? trackEvent('social-click', { platform: 'instagram' })
+            : $event.preventDefault()
         "
       >
         <span aria-hidden="true" v-html="instagramSvg" />
       </a>
 
       <a
-        :href="props.socialLinks?.spotify || '#'"
+        :href="props.socialLinks?.spotify || undefined"
         class="card-dealer__social-link"
         :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.spotify }"
-        :aria-disabled="!props.socialLinks?.spotify"
+        :aria-disabled="!props.socialLinks?.spotify || undefined"
+        :tabindex="props.socialLinks?.spotify ? undefined : -1"
         aria-label="Spotify"
         target="_blank"
         rel="noopener noreferrer"
-        @click="props.socialLinks?.spotify && trackEvent('social-click', { platform: 'spotify' })"
+        @click="
+          props.socialLinks?.spotify
+            ? trackEvent('social-click', { platform: 'spotify' })
+            : $event.preventDefault()
+        "
       >
         <span aria-hidden="true" v-html="spotifySvg" />
       </a>
 
       <a
-        :href="props.socialLinks?.youtube || '#'"
+        :href="props.socialLinks?.youtube || undefined"
         class="card-dealer__social-link"
         :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.youtube }"
-        :aria-disabled="!props.socialLinks?.youtube"
+        :aria-disabled="!props.socialLinks?.youtube || undefined"
+        :tabindex="props.socialLinks?.youtube ? undefined : -1"
         aria-label="YouTube"
         target="_blank"
         rel="noopener noreferrer"
-        @click="props.socialLinks?.youtube && trackEvent('social-click', { platform: 'youtube' })"
+        @click="
+          props.socialLinks?.youtube
+            ? trackEvent('social-click', { platform: 'youtube' })
+            : $event.preventDefault()
+        "
       >
         <span aria-hidden="true" v-html="youtubeSvg" />
       </a>
@@ -1874,44 +1887,52 @@ onBeforeUnmount(() => {
             :aria-label="t.logo.socialLinks"
           >
             <a
-              :href="props.socialLinks?.instagram || '#'"
+              :href="props.socialLinks?.instagram || undefined"
               class="card-dealer__social-link"
               :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.instagram }"
-              :aria-disabled="!props.socialLinks?.instagram"
+              :aria-disabled="!props.socialLinks?.instagram || undefined"
+              :tabindex="props.socialLinks?.instagram ? undefined : -1"
               aria-label="Instagram"
               target="_blank"
               rel="noopener noreferrer"
               @click="
-                props.socialLinks?.instagram &&
-                trackEvent('social-click', { platform: 'instagram' })
+                props.socialLinks?.instagram
+                  ? trackEvent('social-click', { platform: 'instagram' })
+                  : $event.preventDefault()
               "
             >
               <span aria-hidden="true" v-html="instagramSvg" />
             </a>
             <a
-              :href="props.socialLinks?.spotify || '#'"
+              :href="props.socialLinks?.spotify || undefined"
               class="card-dealer__social-link"
               :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.spotify }"
-              :aria-disabled="!props.socialLinks?.spotify"
+              :aria-disabled="!props.socialLinks?.spotify || undefined"
+              :tabindex="props.socialLinks?.spotify ? undefined : -1"
               aria-label="Spotify"
               target="_blank"
               rel="noopener noreferrer"
               @click="
-                props.socialLinks?.spotify && trackEvent('social-click', { platform: 'spotify' })
+                props.socialLinks?.spotify
+                  ? trackEvent('social-click', { platform: 'spotify' })
+                  : $event.preventDefault()
               "
             >
               <span aria-hidden="true" v-html="spotifySvg" />
             </a>
             <a
-              :href="props.socialLinks?.youtube || '#'"
+              :href="props.socialLinks?.youtube || undefined"
               class="card-dealer__social-link"
               :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.youtube }"
-              :aria-disabled="!props.socialLinks?.youtube"
+              :aria-disabled="!props.socialLinks?.youtube || undefined"
+              :tabindex="props.socialLinks?.youtube ? undefined : -1"
               aria-label="YouTube"
               target="_blank"
               rel="noopener noreferrer"
               @click="
-                props.socialLinks?.youtube && trackEvent('social-click', { platform: 'youtube' })
+                props.socialLinks?.youtube
+                  ? trackEvent('social-click', { platform: 'youtube' })
+                  : $event.preventDefault()
               "
             >
               <span aria-hidden="true" v-html="youtubeSvg" />

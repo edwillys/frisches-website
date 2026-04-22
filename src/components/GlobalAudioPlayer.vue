@@ -888,6 +888,7 @@ audio {
 .mini-player__progress::-moz-range-thumb {
   width: 12px;
   height: 12px;
+  border-radius: 50%;
   background: white;
   border: none;
   cursor: pointer;

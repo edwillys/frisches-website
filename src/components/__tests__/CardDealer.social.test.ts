@@ -52,9 +52,10 @@ describe('CardDealer social links', () => {
     expect(anchors[1]!.attributes('href')).toBe(socialLinks.spotify)
     expect(anchors[1]!.attributes('aria-label')).toBe('Spotify')
 
-    // YouTube - empty URL should render '#' and have disabled state
-    expect(anchors[2]!.attributes('href')).toBe('#')
+    // YouTube - empty URL: no href, has disabled state and tabindex="-1"
+    expect(anchors[2]!.attributes('href')).toBeUndefined()
     expect(anchors[2]!.attributes('aria-disabled')).toBe('true')
+    expect(anchors[2]!.attributes('tabindex')).toBe('-1')
 
     // Email
     expect(anchors[3]!.attributes('href')).toBe('mailto:frisches.band@gmail.com')
