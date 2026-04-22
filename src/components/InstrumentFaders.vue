@@ -124,7 +124,7 @@ function toggleMute(stem: StemName) {
       class="mini-player__btn mini-player__btn--stems"
       :class="{ 'is-active': modelValue }"
       type="button"
-      :title="t.faders.open"
+      :data-tooltip="t.faders.open"
       :aria-label="t.faders.open"
       :aria-expanded="modelValue"
       data-testid="mini-stems"

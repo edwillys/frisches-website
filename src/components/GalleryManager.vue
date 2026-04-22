@@ -15,7 +15,7 @@
         :data-tooltip="isRailExpanded ? t.gallery.collapseLibrary : t.gallery.expandLibrary"
         data-testid="gallery-rail-toggle"
       >
-        <span aria-hidden="true" v-html="librarySplitSvg" />
+        <span class="gallery-rail__toggle-icon" aria-hidden="true"></span>
       </button>
 
       <div class="gallery-rail__list">
@@ -427,11 +427,10 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import TreeSelect from 'primevue/treeselect'
 import { useGalleryData, type ImageOptions } from '@/composables/useGalleryData'
 import { useUiText } from '@/composables/useUiText'
-import librarySplitSvg from '@/assets/icons/library-split.svg?raw'
 import closeSvg from '@/assets/icons/close.svg?raw'
 import arrowLeftSvg from '@/assets/icons/arrow-left.svg?raw'
 
-type ThumbnailLayout = 'square' | 'masonry'
+type ThumbnailLayout = 'masonry' | 'square'
 
 const props = withDefaults(
   defineProps<{
@@ -1272,10 +1271,32 @@ watch(
   color: var(--color-text);
 }
 
-.gallery-rail__toggle :deep(svg) {
-  width: 24px;
-  height: 24px;
-  display: block;
+.gallery-rail__toggle-icon {
+  position: relative;
+  display: inline-block;
+  width: 20px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.gallery-rail__toggle-icon::before,
+.gallery-rail__toggle-icon::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 20px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.gallery-rail__toggle-icon::before {
+  top: -6px;
+}
+
+.gallery-rail__toggle-icon::after {
+  top: 6px;
 }
 
 .gallery-rail__list {
@@ -1313,7 +1334,7 @@ watch(
 }
 
 .gallery-rail__icon {
-  font-size: 18px;
+  font-size: 20px;
   line-height: 1;
 }
 
@@ -1508,6 +1529,46 @@ watch(
 @media (max-width: 600px) {
   .gallery-masonry {
     column-count: 1;
+  }
+
+  /* Gallery rail becomes an absolute overlay so main takes full width */
+  .gallery-rail {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 20;
+    width: 44px;
+  }
+
+  .gallery-rail.is-expanded {
+    width: 220px;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.7);
+  }
+
+  /* Main content: offset by collapsed rail width only */
+  .gallery-main {
+    margin-left: 44px;
+    width: calc(100% - 44px);
+  }
+
+  /* Lightbox on mobile: hide X button, show drag handle instead */
+  .lightbox-close {
+    display: none;
+  }
+
+  .lightbox::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.25);
+    z-index: 10002;
+    pointer-events: none;
   }
 }
 

@@ -60,4 +60,30 @@ describe('CardDealer social links', () => {
     expect(anchors[3]!.attributes('href')).toBe('mailto:frisches.band@gmail.com')
     expect(anchors[3]!.attributes('aria-label')).toBe('Email')
   })
+
+  it('shows header social actions in content view without the removed mini avatar wrapper', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const wrapper = mount(CardDealer, {
+      props: {
+        socialLinks: {
+          instagram: 'https://instagram.com/frisches',
+          spotify: 'https://open.spotify.com/artist/example',
+          youtube: 'https://youtube.com/@frisches',
+        },
+      },
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    const musicCard = wrapper.findAll('.menu-card').find((card) => card.text().includes('Music'))
+    expect(musicCard).toBeTruthy()
+
+    await musicCard!.trigger('click')
+
+    expect(wrapper.find('.card-dealer__header-social').exists()).toBe(true)
+    expect(wrapper.find('.card-dealer__mini-card-wrapper').exists()).toBe(false)
+  })
 })

@@ -104,7 +104,7 @@
   transform: translateX(-50%);
   z-index: 12;
   display: flex;
-  gap: 14px;
+  gap: 0px;
   align-items: center;
 }
 
@@ -256,6 +256,24 @@
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+/* Social links in the content-view header (smaller than the top-center ones) */
+.card-dealer__header-social {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.card-dealer__header-social .card-dealer__social-link {
+  padding: 6px;
+  min-width: 50px;
+  min-height: 50px;
+}
+
+.card-dealer__header-social .card-dealer__social-link :is(svg) {
+  width: 24px;
+  height: 24px;
 }
 
 .card-dealer__header-menu-btn {

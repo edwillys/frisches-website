@@ -299,16 +299,16 @@ onUnmounted(() => {
 }
 
 .lyrics-content {
-  padding: 80px 24px 320px;
+  padding: 48px 12px 160px;
   max-width: 800px;
   margin: 0 auto;
 }
 
 .lyrics-line {
-  margin: 24px 0;
+  margin: 12px 0;
   cursor: pointer;
   transition: all 0.3s ease;
-  padding: 12px 16px;
+  padding: 6px 12px;
   border-radius: 8px;
 }
 
@@ -321,7 +321,7 @@ onUnmounted(() => {
 }
 
 .lyrics-line.is-past .lyrics-line-content {
-  color: var(--color-neon-cyan);
+  color: var(--album-theme-color, var(--color-neon-cyan));
 }
 
 .lyrics-line.is-future {
@@ -354,10 +354,10 @@ onUnmounted(() => {
   color: rgba(255, 255, 255, 0.5);
 }
 
-/* Past + current word are cyan (no gradient/progress effects). */
+/* Past + current word are orange (album theme, falls back to cyan). */
 .lyrics-word.is-past,
 .lyrics-word.is-active {
-  color: var(--color-neon-cyan) !important;
+  color: var(--album-theme-color, var(--color-neon-cyan)) !important;
 }
 
 .lyrics-spacer {
@@ -414,7 +414,7 @@ onUnmounted(() => {
 /* Responsive */
 @media (max-width: 768px) {
   .lyrics-content {
-    padding: 40px 16px 280px;
+    padding: 28px 10px 120px;
   }
 
   .lyrics-line-content {
@@ -422,8 +422,8 @@ onUnmounted(() => {
   }
 
   .lyrics-line {
-    margin: 16px 0;
-    padding: 8px 12px;
+    margin: 8px 0;
+    padding: 4px 8px;
   }
 }
 </style>

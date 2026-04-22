@@ -10,6 +10,7 @@ import router from './router'
 // Import global styles
 import './assets/styles/variables.css'
 import './assets/styles/base.css'
+import './assets/styles/tooltip.css'
 import 'primeicons/primeicons.css'
 import './assets/styles/primevue-unstyled.css'
 

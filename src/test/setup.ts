@@ -6,6 +6,22 @@ beforeAll(() => {
   window.HTMLMediaElement.prototype.play = vi.fn(() => Promise.resolve())
   window.HTMLMediaElement.prototype.pause = vi.fn()
 
+  if (!window.matchMedia) {
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    })
+  }
+
   // Suppress GLTF model loading errors (expected in test environment)
   const originalError = console.error
   console.error = (...args: unknown[]) => {

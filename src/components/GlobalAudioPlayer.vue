@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAudioStore } from '@/stores/audio'
+import { getAlbumById } from '@/data/albums'
 import { useUiText } from '@/composables/useUiText'
+import { usePlayerThemeStyle } from '@/composables/usePlayerThemeStyle'
+import { useTooltipSuppression } from '@/composables/useTooltipSuppression'
 import InstrumentFaders from './InstrumentFaders.vue'
 
 // Icon imports
@@ -35,6 +38,7 @@ const showStemFaders = ref(false)
 const t = useUiText()
 const isTitleOverflowing = ref(false)
 const isArtistOverflowing = ref(false)
+const isCompactMiniPlayerUi = ref(false)
 
 const shouldShowMiniPlayer = computed(
   () => audioStore.persistAcrossPages && audioStore.hasUserStartedPlayback && !audioStore.isStopped
@@ -51,6 +55,13 @@ const currentCover = computed(() => {
 const currentTrackHasLyrics = computed(() => {
   return !!audioStore.currentTrack?.lyricsPath
 })
+
+const currentAlbumId = computed(() => audioStore.currentTrackId?.split(':')[0] ?? null)
+const currentAlbum = computed(() =>
+  currentAlbumId.value ? getAlbumById(currentAlbumId.value) : undefined
+)
+const playerThemeStyle = usePlayerThemeStyle(() => currentAlbum.value, 'player-accent')
+const { onTooltipAreaClick } = useTooltipSuppression()
 
 const volumeIconSvg = computed(() => {
   const v = audioStore.volume
@@ -77,6 +88,19 @@ const progressPercent = computed(() => {
   const p = Math.min(1, Math.max(0, audioStore.currentTime / d))
   return `${Math.round(p * 100)}%`
 })
+
+function getRepeatLabel() {
+  return audioStore.repeatMode === 'off'
+    ? t.value.player.enableRepeat
+    : audioStore.repeatMode === 'all'
+      ? t.value.player.repeatOne
+      : t.value.player.disableRepeat
+}
+
+function updateCompactMiniPlayerUi() {
+  if (typeof window === 'undefined') return
+  isCompactMiniPlayerUi.value = window.innerWidth <= 900
+}
 
 function onVolumeInput(e: Event) {
   const target = e.target as HTMLInputElement
@@ -284,6 +308,7 @@ watch(
       return
     }
 
+    updateCompactMiniPlayerUi()
     setMiniPlayerOffset(el.getBoundingClientRect().height)
 
     await nextTick()
@@ -311,6 +336,8 @@ watch(
 )
 
 onMounted(() => {
+  updateCompactMiniPlayerUi()
+
   const el = audioEl.value
   if (!el) return
   el.preload = 'metadata'
@@ -329,6 +356,7 @@ onMounted(() => {
   window.addEventListener('keydown', handleGlobalKeydown)
 
   windowResizeHandler = () => {
+    updateCompactMiniPlayerUi()
     // Layout can change without affecting mini-player height, so recompute overflow on resize.
     scheduleOverflowUpdate()
   }
@@ -407,10 +435,12 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
     <div
       v-if="shouldShowMiniPlayer"
       class="mini-player"
+      :style="playerThemeStyle"
       data-testid="audio-mini-player"
       ref="miniPlayerEl"
       @pointerdown.stop
       @click.stop
+      @click.capture="onTooltipAreaClick"
     >
       <!-- Left: Track Info -->
       <div class="mini-player__left">
@@ -443,13 +473,17 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
       </div>
 
       <!-- Center: Controls + Progress -->
-      <div class="mini-player__center">
+      <div
+        class="mini-player__center"
+        :class="{ 'mini-player__center--mobile': isCompactMiniPlayerUi }"
+      >
         <div class="mini-player__controls">
           <button
+            v-if="!isCompactMiniPlayerUi"
             class="mini-player__btn mini-player__btn--shuffle"
             :class="{ 'is-active': audioStore.isShuffle }"
             type="button"
-            :title="audioStore.isShuffle ? t.player.disableShuffle : t.player.enableShuffle"
+            :data-tooltip="audioStore.isShuffle ? t.player.disableShuffle : t.player.enableShuffle"
             :aria-label="audioStore.isShuffle ? t.player.disableShuffle : t.player.enableShuffle"
             @click="audioStore.toggleShuffle()"
             data-testid="mini-shuffle"
@@ -460,7 +494,7 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
           <button
             class="mini-player__btn"
             type="button"
-            :title="t.player.prevTrack"
+            :data-tooltip="t.player.prevTrack"
             :aria-label="t.player.prevTrack"
             @click="audioStore.prev"
           >
@@ -470,7 +504,7 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
           <button
             class="mini-player__btn mini-player__btn--play"
             type="button"
-            :title="audioStore.isPlaying ? t.player.pause : t.player.play"
+            :data-tooltip="audioStore.isPlaying ? t.player.pause : t.player.play"
             :aria-label="audioStore.isPlaying ? t.player.pause : t.player.play"
             @click="audioStore.togglePlayPause"
             data-testid="mini-play-pause"
@@ -485,7 +519,7 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
           <button
             class="mini-player__btn"
             type="button"
-            :title="t.player.nextTrack"
+            :data-tooltip="t.player.nextTrack"
             :aria-label="t.player.nextTrack"
             @click="audioStore.next"
           >
@@ -493,23 +527,12 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
           </button>
 
           <button
+            v-if="!isCompactMiniPlayerUi"
             class="mini-player__btn mini-player__btn--repeat"
             :class="{ 'is-active': audioStore.repeatMode !== 'off' }"
             type="button"
-            :title="
-              audioStore.repeatMode === 'off'
-                ? t.player.enableRepeat
-                : audioStore.repeatMode === 'all'
-                  ? t.player.repeatOne
-                  : t.player.disableRepeat
-            "
-            :aria-label="
-              audioStore.repeatMode === 'off'
-                ? t.player.enableRepeat
-                : audioStore.repeatMode === 'all'
-                  ? t.player.repeatOne
-                  : t.player.disableRepeat
-            "
+            :data-tooltip="getRepeatLabel()"
+            :aria-label="getRepeatLabel()"
             @click="audioStore.cycleRepeatMode()"
             data-testid="mini-repeat"
           >
@@ -521,7 +544,7 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
           </button>
         </div>
 
-        <span class="mini-player__time mini-player__time--current">{{
+        <span v-if="!isCompactMiniPlayerUi" class="mini-player__time mini-player__time--current">{{
           formatTime(audioStore.currentTime)
         }}</span>
         <input
@@ -534,73 +557,79 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
           @input="onSeek"
           :aria-label="t.player.seek"
         />
-        <span class="mini-player__time mini-player__time--duration">{{
+        <span v-if="!isCompactMiniPlayerUi" class="mini-player__time mini-player__time--duration">{{
           formatTime(audioStore.duration)
         }}</span>
       </div>
 
-      <!-- Right: Lyrics + Close -->
+      <!-- Right: Utility actions -->
       <div class="mini-player__right">
-        <InstrumentFaders
-          v-model="showStemFaders"
-          :gains="audioStore.stemGains"
-          @setGain="onStemGain"
-        />
-
-        <button
-          class="mini-player__btn mini-player__btn--lyrics"
-          :class="{ 'is-active': audioStore.showLyrics, 'is-disabled': !currentTrackHasLyrics }"
-          type="button"
-          :title="
-            !currentTrackHasLyrics
-              ? t.player.noLyrics
-              : audioStore.showLyrics
-                ? t.player.hideLyrics
-                : t.player.showLyrics
-          "
-          :aria-label="audioStore.showLyrics ? t.player.hideLyrics : t.player.showLyrics"
-          :disabled="!currentTrackHasLyrics"
-          data-testid="mini-lyrics"
-          @click="audioStore.toggleLyrics"
-        >
-          <span class="mini-player__icon" aria-hidden="true" v-html="lyricsSvg" />
-        </button>
-
-        <div class="mini-player__volume-wrap" data-testid="mini-volume">
-          <button
-            class="mini-player__volume-icon-btn"
-            type="button"
-            :title="audioStore.volume <= 0.001 ? t.player.unmute : t.player.mute"
-            :aria-label="audioStore.volume <= 0.001 ? t.player.unmute : t.player.mute"
-            data-testid="mini-volume-mute"
-            @click="toggleVolumeMute"
-          >
-            <span class="mini-player__volume-icon" aria-hidden="true" v-html="volumeIconSvg" />
-          </button>
-          <input
-            class="mini-player__volume"
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            :value="audioStore.volume"
-            :style="{ '--volume-percent': volumePercent }"
-            :aria-label="t.player.volume"
-            @input="onVolumeInput"
+        <div class="mini-player__actions">
+          <InstrumentFaders
+            v-model="showStemFaders"
+            :gains="audioStore.stemGains"
+            @setGain="onStemGain"
           />
-        </div>
 
-        <button
-          class="mini-player__btn mini-player__close"
-          type="button"
-          :title="t.player.closePlayer"
-          :aria-label="t.player.closePlayer"
-          data-testid="audio-mini-close"
-          @click="audioStore.stopAndHide"
-        >
-          <span class="mini-player__icon" aria-hidden="true" v-html="closeSvg" />
-        </button>
+          <button
+            class="mini-player__btn mini-player__btn--lyrics"
+            :class="{ 'is-active': audioStore.showLyrics, 'is-disabled': !currentTrackHasLyrics }"
+            type="button"
+            :data-tooltip="
+              !currentTrackHasLyrics
+                ? t.player.noLyrics
+                : audioStore.showLyrics
+                  ? t.player.hideLyrics
+                  : t.player.showLyrics
+            "
+            :aria-label="audioStore.showLyrics ? t.player.hideLyrics : t.player.showLyrics"
+            :disabled="!currentTrackHasLyrics"
+            data-testid="mini-lyrics"
+            @click="audioStore.toggleLyrics"
+          >
+            <span class="mini-player__icon" aria-hidden="true" v-html="lyricsSvg" />
+          </button>
+
+          <div
+            v-if="!isCompactMiniPlayerUi"
+            class="mini-player__volume-wrap"
+            data-testid="mini-volume"
+          >
+            <button
+              class="mini-player__volume-icon-btn"
+              type="button"
+              :data-tooltip="audioStore.volume <= 0.001 ? t.player.unmute : t.player.mute"
+              :aria-label="audioStore.volume <= 0.001 ? t.player.unmute : t.player.mute"
+              data-testid="mini-volume-mute"
+              @click="toggleVolumeMute"
+            >
+              <span class="mini-player__volume-icon" aria-hidden="true" v-html="volumeIconSvg" />
+            </button>
+            <input
+              class="mini-player__volume"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              :value="audioStore.volume"
+              :style="{ '--volume-percent': volumePercent }"
+              :aria-label="t.player.volume"
+              @input="onVolumeInput"
+            />
+          </div>
+        </div>
       </div>
+
+      <button
+        class="mini-player__btn mini-player__close"
+        type="button"
+        :data-tooltip="t.player.closePlayer"
+        :aria-label="t.player.closePlayer"
+        data-testid="audio-mini-close"
+        @click="audioStore.stopAndHide"
+      >
+        <span class="mini-player__icon" aria-hidden="true" v-html="closeSvg" />
+      </button>
     </div>
   </div>
 </template>
@@ -624,11 +653,13 @@ audio {
 }
 
 .mini-player {
+  --tooltip-font-size: 12px;
+  position: relative;
   pointer-events: auto;
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: stretch;
   gap: 16px;
   padding: 12px 16px;
   background: rgba(0, 0, 0, 0.92);
@@ -651,6 +682,7 @@ audio {
 
 /* Left: Track Info */
 .mini-player__left {
+  grid-column: 1;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -729,6 +761,10 @@ audio {
 .mini-player__center {
   --mini-time-width: 40px;
   --mini-time-gap: 8px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   display: grid;
   grid-template-columns: var(--mini-time-width) minmax(0, 1fr) var(--mini-time-width);
   grid-template-rows: auto auto;
@@ -736,8 +772,10 @@ audio {
   row-gap: 8px;
   align-items: center;
   justify-items: center;
-  max-width: 722px;
+  width: clamp(320px, 42vw, 722px);
+  max-width: min(722px, calc(100% - 440px));
   min-width: 0;
+  z-index: 1;
 }
 
 .mini-player__controls {
@@ -745,10 +783,44 @@ audio {
   align-items: center;
   gap: 16px;
   justify-content: center;
-  grid-column: 2;
+  grid-column: 1 / -1;
   grid-row: 1;
   width: 100%;
   min-width: 0;
+}
+
+.mini-player__time {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  align-self: center;
+}
+
+.mini-player__time--current {
+  grid-column: 1;
+  grid-row: 2;
+  justify-self: start;
+}
+
+.mini-player__time--duration {
+  grid-column: 3;
+  grid-row: 2;
+  justify-self: end;
+}
+
+.mini-player__progress {
+  grid-column: 2;
+  grid-row: 2;
+  width: 100%;
+  height: 20px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  align-self: center;
 }
 
 :deep(.mini-player__btn) {
@@ -781,6 +853,7 @@ audio {
   height: var(--mini-btn-size);
   background: white;
   color: black;
+  box-shadow: 0 8px 24px rgba(255, 255, 255, 0.15);
 }
 
 :deep(.mini-player__btn--play:hover) {
@@ -792,68 +865,12 @@ audio {
 :deep(.mini-player__btn--repeat.is-active),
 :deep(.mini-player__btn--lyrics.is-active),
 :deep(.mini-player__btn--stems.is-active) {
-  color: var(--color-neon-cyan);
-}
-
-:deep(.mini-player__btn--shuffle.is-active::after),
-:deep(.mini-player__btn--repeat.is-active::after),
-:deep(.mini-player__btn--lyrics.is-active::after),
-:deep(.mini-player__btn--stems.is-active::after) {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--color-neon-cyan);
-}
-
-:deep(.mini-player__btn--lyrics.is-disabled) {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-:deep(.mini-player__btn--lyrics.is-disabled:hover) {
-  color: var(--color-text-secondary);
-  transform: none;
-}
-
-.mini-player__time {
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  font-variant-numeric: tabular-nums;
-  min-width: 40px;
-  text-align: center;
-}
-
-.mini-player__time--current {
-  grid-column: 1;
-  grid-row: 2;
-  justify-self: end;
-}
-
-.mini-player__time--duration {
-  grid-column: 3;
-  grid-row: 2;
-  justify-self: start;
-}
-
-.mini-player__progress {
-  flex: 1;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.3);
-  appearance: none;
-  cursor: pointer;
-  grid-column: 2;
-  grid-row: 2;
-  width: 100%;
+  color: var(--player-accent-color);
 }
 
 .mini-player__progress::-webkit-slider-thumb {
   appearance: none;
+  -webkit-appearance: none;
   width: 12px;
   height: 12px;
   border-radius: 50%;
@@ -861,6 +878,7 @@ audio {
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.2s ease;
+  margin-top: -4px;
 }
 
 .mini-player__progress:hover::-webkit-slider-thumb {
@@ -870,7 +888,6 @@ audio {
 .mini-player__progress::-moz-range-thumb {
   width: 12px;
   height: 12px;
-  border-radius: 50%;
   background: white;
   border: none;
   cursor: pointer;
@@ -897,8 +914,8 @@ audio {
 .mini-player__progress:hover::-webkit-slider-runnable-track {
   background: linear-gradient(
     to right,
-    var(--color-neon-cyan) 0%,
-    var(--color-neon-cyan) var(--progress-percent, 0%),
+    var(--player-accent-color) 0%,
+    var(--player-accent-color) var(--progress-percent, 0%),
     rgba(255, 255, 255, 0.3) var(--progress-percent, 0%),
     rgba(255, 255, 255, 0.3) 100%
   );
@@ -917,16 +934,24 @@ audio {
 }
 
 .mini-player__progress:hover::-moz-range-progress {
-  background: var(--color-neon-cyan);
+  background: var(--player-accent-color);
 }
 
 /* Right: Close */
 .mini-player__right {
+  grid-column: 2;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
-  align-self: center;
+  position: relative;
+  z-index: 2;
+}
+
+.mini-player__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .mini-player__volume-wrap {
@@ -1019,15 +1044,15 @@ audio {
 .mini-player__volume-wrap:hover .mini-player__volume::-webkit-slider-runnable-track {
   background: linear-gradient(
     to right,
-    var(--color-neon-cyan) 0%,
-    var(--color-neon-cyan) var(--volume-percent, 0%),
+    var(--player-accent-color) 0%,
+    var(--player-accent-color) var(--volume-percent, 0%),
     rgba(255, 255, 255, 0.22) var(--volume-percent, 0%),
     rgba(255, 255, 255, 0.22) 100%
   );
 }
 
 .mini-player__volume-wrap:hover .mini-player__volume::-moz-range-progress {
-  background: var(--color-neon-cyan);
+  background: var(--player-accent-color);
 }
 
 .mini-player__volume-wrap:hover .mini-player__volume::-webkit-slider-thumb,
@@ -1036,8 +1061,13 @@ audio {
 }
 
 .mini-player__close {
+  grid-column: 3;
+  align-self: center;
   width: 32px;
   height: 32px;
+  justify-self: end;
+  position: relative;
+  z-index: 2;
 }
 
 @keyframes mini-player-marquee {
@@ -1071,20 +1101,37 @@ audio {
 /* Responsive */
 @media (max-width: 900px) {
   .mini-player {
-    display: flex;
+    display: grid;
+    /*
+     * 1fr auto 1fr: outer columns are equal, so column-2 (controls) is
+     * naturally centered regardless of how much info is in the left rail.
+     */
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-rows: auto auto;
     align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
+    gap: 6px 8px;
+    padding: 6px 8px 6px;
+    --mini-btn-size: 28px;
+    --mini-row-height: 40px;
   }
 
   .mini-player__left {
-    flex: 1 1 28%;
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+    min-height: var(--mini-row-height);
     min-width: 0;
+    gap: 8px;
+    align-items: center;
+    overflow: hidden;
   }
 
   .mini-player__info {
     width: 100%;
     min-width: 0;
+    gap: 2px;
+    min-height: var(--mini-row-height);
+    justify-content: center;
   }
 
   .mini-player__title,
@@ -1092,44 +1139,96 @@ audio {
     max-width: 100%;
   }
 
-  .mini-player__center {
-    flex: 1 1 44%;
+  .mini-player__center,
+  .mini-player__center--mobile {
     min-width: 0;
-    row-gap: 6px;
-    --mini-time-width: 32px;
-    --mini-time-gap: 6px;
+    max-width: none;
   }
 
-  .mini-player__controls {
-    gap: 10px;
+  .mini-player__center--mobile {
+    display: contents;
+  }
+
+  /* Controls become a direct grid item via display:contents on the parent. */
+  .mini-player__center--mobile .mini-player__controls {
+    grid-column: 2;
+    grid-row: 1;
+    position: static;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    gap: 8px;
+    width: max-content;
+    min-height: var(--mini-row-height);
   }
 
   .mini-player__right {
-    flex: 0 0 auto;
+    grid-column: 3;
+    grid-row: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
     gap: 6px;
+    min-height: var(--mini-row-height);
+    /* leave room at the right edge for the close button (18px + 4px gap) */
+    padding-right: 22px;
+    justify-self: end;
     align-self: center;
   }
 
+  .mini-player__actions {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    min-height: var(--mini-row-height);
+  }
+
+  /* Close button shares column 3 with right-actions; justify-self:end pins it
+     to the far right while padding-right on .mini-player__right keeps actions
+     clear of it. */
+  .mini-player__close {
+    grid-column: 3;
+    grid-row: 1;
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    min-height: 16px !important;
+    align-self: start;
+    margin-top: 2px;
+    justify-self: end;
+    flex-shrink: 0;
+    z-index: 2;
+  }
+
   .mini-player__artwork {
-    width: 44px;
-    height: 44px;
+    width: 38px;
+    height: 38px;
   }
 
   .mini-player__title {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .mini-player__artist {
-    font-size: 11px;
-  }
-
-  .mini-player__time {
     font-size: 10px;
-    min-width: 32px;
   }
 
-  .mini-player__volume {
-    width: 72px;
+  .mini-player__center--mobile .mini-player__progress {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    margin-top: 2px;
+  }
+
+  :deep(.mini-player__btn) {
+    width: var(--mini-btn-size);
+    height: var(--mini-btn-size);
+    min-width: var(--mini-btn-size);
+    min-height: var(--mini-btn-size);
   }
 }
 </style>

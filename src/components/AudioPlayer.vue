@@ -11,11 +11,15 @@ import {
   formatSecondsAsAlbumDuration,
 } from '@/data/albums'
 import { useUiText } from '@/composables/useUiText'
+import { usePlayerThemeStyle } from '@/composables/usePlayerThemeStyle'
+import { useTooltipSuppression } from '@/composables/useTooltipSuppression'
 import LyricsDisplay from './LyricsDisplay.vue'
 import closeSvg from '@/assets/icons/close.svg?raw'
 import playSvg from '@/assets/icons/play.svg?raw'
 import pauseSvg from '@/assets/icons/pause.svg?raw'
 import shuffleSvg from '@/assets/icons/shuffle.svg?raw'
+import repeatSvg from '@/assets/icons/repeat.svg?raw'
+import repeatOneSvg from '@/assets/icons/repeat-one.svg?raw'
 import clockSvg from '@/assets/icons/clock.svg?raw'
 import playingBarsSvg from '@/assets/icons/playing-bars.svg?raw'
 
@@ -37,7 +41,6 @@ const albumDurationFormatted = computed(() =>
   formatSecondsAsAlbumDuration(getAlbumTotalDurationSeconds(selectedAlbumId.value))
 )
 const albumSongCount = computed(() => albumTracks.value.length)
-const selectedArtist = computed(() => selectedAlbum.value?.artist ?? 'Frisches')
 
 const heroTitleEl = ref<HTMLElement | null>(null)
 const heroTitleTextEl = ref<HTMLElement | null>(null)
@@ -46,13 +49,12 @@ let rafHeroTitleFitId = 0
 let heroTitleResizeObserver: ResizeObserver | null = null
 let windowResizeHandler: (() => void) | null = null
 
-const HERO_TITLE_MAX_PX = 72
-const HERO_TITLE_MIN_PX = 48
+const HERO_TITLE_MAX_PX = 62
+const HERO_TITLE_MIN_PX = 40
 
-const bandLogoUrl = new URL(
-  '../assets/private/images/Frisches_Logo-Mood-3-Round.png',
-  import.meta.url
-).href
+const albumImageLoaded = ref<Record<string, boolean>>({})
+const albumImageFailed = ref<Record<string, boolean>>({})
+const tappedTrackId = ref<string | null>(null)
 
 // Sync store playlist when album changes
 watch(
@@ -67,7 +69,10 @@ watch(
 const currentTrack = computed(() => audioStore.currentTrack)
 const isPlaying = computed(() => audioStore.isPlaying)
 const isShuffle = computed(() => audioStore.isShuffle)
+const repeatMode = computed(() => audioStore.repeatMode)
 const albumSongCountText = computed(() => t.value.music.songsCount(albumSongCount.value))
+const playerThemeStyle = usePlayerThemeStyle(() => selectedAlbum.value, 'album-theme')
+const { onTooltipAreaClick } = useTooltipSuppression()
 
 function getAlbumItemLabel(title: string, count: number) {
   return t.value.music.albumItemLabel(title, count)
@@ -77,6 +82,34 @@ function getTrackActionLabel(track: Track) {
   return isCurrentTrack(track) && !isPlaying.value
     ? t.value.music.resumeTrack(track.title)
     : t.value.music.playTrack(track.title)
+}
+
+function getRepeatActionLabel() {
+  return repeatMode.value === 'off'
+    ? t.value.player.enableRepeat
+    : repeatMode.value === 'all'
+      ? t.value.player.repeatOne
+      : t.value.player.disableRepeat
+}
+
+function markAlbumImageLoaded(albumId: string) {
+  albumImageLoaded.value = { ...albumImageLoaded.value, [albumId]: true }
+  albumImageFailed.value = { ...albumImageFailed.value, [albumId]: false }
+}
+
+function markAlbumImageFailed(albumId: string) {
+  albumImageFailed.value = { ...albumImageFailed.value, [albumId]: true }
+  albumImageLoaded.value = { ...albumImageLoaded.value, [albumId]: false }
+}
+
+function hasAlbumImageLoaded(albumId: string) {
+  return albumImageLoaded.value[albumId] === true
+}
+
+function shouldShowAlbumImageSkeleton(albumId: string, imageUrl?: string) {
+  if (!imageUrl) return true
+  if (albumImageFailed.value[albumId]) return true
+  return !hasAlbumImageLoaded(albumId)
 }
 
 function selectAlbum(albumId: string) {
@@ -94,12 +127,11 @@ function scheduleHeroTitleFit() {
 async function updateHeroTitleFit() {
   await nextTick()
   const el = heroTitleEl.value
-  const textEl = heroTitleTextEl.value
-  if (!el || !textEl) return
+  if (!el) return
 
   // If hidden (e.g., stacked mobile mode), do nothing.
-  const available = Math.floor(el.getBoundingClientRect().width)
-  if (available <= 1) return
+  const rect = el.getBoundingClientRect()
+  if (rect.width <= 1) return
 
   isHeroTitleMarquee.value = false
 
@@ -109,38 +141,30 @@ async function updateHeroTitleFit() {
     void el.offsetWidth
   }
 
-  // Fast path: max size fits.
-  setSize(HERO_TITLE_MAX_PX)
-  if (textEl.scrollWidth <= available + 1) {
-    el.style.setProperty('--hero-marquee-distance', `0px`)
-    return
+  // Check if text fits within two lines.
+  const fitsInTwoLines = (): boolean => {
+    const lh = parseFloat(getComputedStyle(el).lineHeight)
+    return el.scrollHeight <= Math.ceil(lh * 2) + 4
   }
 
-  // Binary search for best fit.
+  // Fast path: max size fits in two lines.
+  setSize(HERO_TITLE_MAX_PX)
+  if (fitsInTwoLines()) return
+
+  // Binary search for the largest size that fits in two lines.
   let low = HERO_TITLE_MIN_PX
   let high = HERO_TITLE_MAX_PX
   for (let i = 0; i < 10; i++) {
     const mid = Math.floor((low + high) / 2)
     setSize(mid)
-    if (textEl.scrollWidth <= available + 1) {
+    if (fitsInTwoLines()) {
       low = mid
     } else {
       high = mid - 1
     }
   }
   setSize(low)
-
-  // If we still overflow at min size, enable marquee.
-  if (textEl.scrollWidth > available + 1) {
-    setSize(HERO_TITLE_MIN_PX)
-    isHeroTitleMarquee.value = true
-    // After toggling marquee, text width can change slightly due to subpixel rounding.
-    void el.offsetWidth
-    const distance = Math.max(0, textEl.scrollWidth - available)
-    el.style.setProperty('--hero-marquee-distance', `${distance}px`)
-  } else {
-    el.style.setProperty('--hero-marquee-distance', `0px`)
-  }
+  // If text still overflows at min size, CSS line-clamp shows ellipsis at line 2.
 }
 
 function playAlbum() {
@@ -156,6 +180,10 @@ function playAlbum() {
 
 function toggleShuffle() {
   audioStore.toggleShuffle()
+}
+
+function toggleRepeat() {
+  audioStore.cycleRepeatMode()
 }
 
 function playOrToggle(track: Track) {
@@ -175,14 +203,18 @@ function playOrToggle(track: Track) {
 
 function selectTrack(track: Track) {
   selectedTrackId.value = track.trackId
-  // On touch devices there is no hover, so the play button never appears.
-  // Treat a tap on the row as a direct play intent.
-  if (
-    typeof window !== 'undefined' &&
-    window.matchMedia('(hover: none) and (pointer: coarse)').matches
-  ) {
+  if (shouldPlayTrackFromRowTap(track.trackId)) {
+    tappedTrackId.value = null
     playOrToggle(track)
   }
+}
+
+function onTrackPointerDown(track: Track, event: PointerEvent) {
+  tappedTrackId.value = event.pointerType === 'touch' ? track.trackId : null
+}
+
+function shouldPlayTrackFromRowTap(trackId: string) {
+  return tappedTrackId.value === trackId
 }
 
 async function loadLyrics(lyricsPath: string) {
@@ -298,7 +330,12 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 </script>
 
 <template>
-  <div class="spotify-layout" data-testid="audio-player">
+  <div
+    class="spotify-layout"
+    :style="playerThemeStyle"
+    data-testid="audio-player"
+    @click.capture="onTooltipAreaClick"
+  >
     <!-- Top: Album Carousel -->
     <nav class="album-carousel" :aria-label="t.music.albumsNavLabel" data-testid="album-carousel">
       <div class="album-carousel__list" role="list">
@@ -313,15 +350,28 @@ watch(currentTrack, async (newTrack, oldTrack) => {
           data-testid="album-carousel-item"
           role="listitem"
         >
-          <img
-            :src="album.coverUrl"
-            :srcset="album.coverSrcset"
-            sizes="48px"
-            class="album-carousel__cover"
-            width="48"
-            height="48"
-            :alt="album.title"
-          />
+          <div class="album-carousel__cover-shell">
+            <div
+              v-if="shouldShowAlbumImageSkeleton(album.albumId, album.coverUrl)"
+              class="skeleton-loader"
+              aria-hidden="true"
+            >
+              <div class="skeleton-pulse"></div>
+            </div>
+            <img
+              v-if="album.coverUrl && !albumImageFailed[album.albumId]"
+              :src="album.coverUrl"
+              :srcset="album.coverSrcset"
+              sizes="48px"
+              class="album-carousel__cover"
+              :class="{ 'is-loaded': hasAlbumImageLoaded(album.albumId) }"
+              width="48"
+              height="48"
+              alt=""
+              @load="markAlbumImageLoaded(album.albumId)"
+              @error="markAlbumImageFailed(album.albumId)"
+            />
+          </div>
 
           <div class="album-carousel__info">
             <div class="album-carousel__title">{{ album.title }}</div>
@@ -336,14 +386,24 @@ watch(currentTrack, async (newTrack, oldTrack) => {
       <!-- Hero Header with Album Info -->
       <header v-show="!audioStore.showLyrics" class="album-hero">
         <div class="album-hero__cover-wrapper">
+          <div
+            v-if="shouldShowAlbumImageSkeleton(selectedAlbumId, selectedAlbum?.coverUrl)"
+            class="skeleton-loader"
+            aria-hidden="true"
+          >
+            <div class="skeleton-pulse"></div>
+          </div>
           <img
-            v-if="selectedAlbum?.coverUrl"
+            v-if="selectedAlbum?.coverUrl && !albumImageFailed[selectedAlbumId]"
             :src="selectedAlbum.coverUrl"
             :srcset="selectedAlbum.coverSrcset"
             sizes="(max-width: 520px) 192px, 232px"
-            :alt="selectedAlbum.title"
+            alt=""
             class="album-hero__cover"
+            :class="{ 'is-loaded': hasAlbumImageLoaded(selectedAlbumId) }"
             data-testid="album-hero-cover"
+            @load="markAlbumImageLoaded(selectedAlbumId)"
+            @error="markAlbumImageFailed(selectedAlbumId)"
           />
         </div>
 
@@ -360,9 +420,6 @@ watch(currentTrack, async (newTrack, oldTrack) => {
             }}</span>
           </h1>
           <div class="album-hero__meta">
-            <img :src="bandLogoUrl" :alt="selectedArtist" class="album-hero__artist-avatar" />
-            <span class="album-hero__artist">{{ selectedAlbum?.artist }}</span>
-            <span class="album-hero__dot">•</span>
             <span>{{ selectedAlbum?.year }}</span>
             <span class="album-hero__dot">•</span>
             <span>{{ albumSongCountText }}</span>
@@ -395,6 +452,17 @@ watch(currentTrack, async (newTrack, oldTrack) => {
         >
           <span aria-hidden="true" v-html="shuffleSvg" />
         </button>
+
+        <button
+          class="btn-repeat"
+          :class="{ 'is-active': repeatMode !== 'off' }"
+          @click="toggleRepeat"
+          :data-tooltip="getRepeatActionLabel()"
+          :aria-label="getRepeatActionLabel()"
+          data-testid="btn-repeat"
+        >
+          <span aria-hidden="true" v-html="repeatMode === 'one' ? repeatOneSvg : repeatSvg" />
+        </button>
       </div>
 
       <!-- Track Table -->
@@ -417,6 +485,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
               'is-selected': selectedTrackId === track.trackId,
             }"
             :data-testid="`track-row-${index}`"
+            @pointerdown="onTrackPointerDown(track, $event)"
             @click="selectTrack(track)"
             @pointerenter="hoveredTrackId = track.trackId"
           >
@@ -476,17 +545,15 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 
       <!-- Lyrics View -->
       <div v-if="audioStore.showLyrics" class="lyrics-view">
-        <div class="lyrics-view__header">
-          <button
-            class="lyrics-view__close"
-            type="button"
-            :aria-label="t.music.closeLyrics"
-            data-testid="lyrics-view-close"
-            @click="audioStore.closeLyrics"
-          >
-            <span class="lyrics-view__close-icon" aria-hidden="true" v-html="closeSvg" />
-          </button>
-        </div>
+        <button
+          class="lyrics-view__close"
+          type="button"
+          :aria-label="t.music.closeLyrics"
+          data-testid="lyrics-view-close"
+          @click="audioStore.closeLyrics"
+        >
+          <span class="lyrics-view__close-icon" aria-hidden="true" v-html="closeSvg" />
+        </button>
 
         <LyricsDisplay
           v-if="lyricsData && !isLoadingLyrics"
@@ -504,6 +571,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 
 <style scoped>
 .spotify-layout {
+  --tooltip-font-size: 13px;
   position: absolute;
   inset: 0;
   display: flex;
@@ -540,8 +608,8 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   display: grid;
   grid-template-columns: 48px 1fr;
   gap: 5px;
-  align-items: center;
-  padding: 2px 2px;
+  align-items: stretch;
+  padding: 5px 8px;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 10px;
@@ -573,25 +641,54 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   object-fit: cover;
   flex-shrink: 0;
   aspect-ratio: 1 / 1;
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.album-carousel__cover.is-loaded {
+  opacity: 1;
+}
+
+.album-carousel__cover-shell {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  aspect-ratio: 1 / 1;
+  background: rgba(255, 255, 255, 0.04);
+  align-self: center;
 }
 
 .album-carousel__info {
   min-width: 0;
   max-width: 150px;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-self: stretch;
 }
 
 .album-carousel__title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 650;
-  line-height: 1.2;
-  white-space: nowrap;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .album-carousel__meta {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--color-text-secondary);
+  margin-top: auto;
+  flex-shrink: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -608,7 +705,12 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 
 /* Album Hero Header */
 .album-hero {
-  background: linear-gradient(180deg, #d4711c 0%, #8b4f1a 40%, var(--color-background) 100%);
+  background: linear-gradient(
+    180deg,
+    var(--album-theme-color) 0%,
+    var(--album-theme-dark) 40%,
+    var(--color-background) 100%
+  );
   padding: 4px 24px 8px;
   display: flex;
   gap: 24px;
@@ -617,9 +719,12 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 }
 
 .album-hero__cover-wrapper {
+  position: relative;
   width: 232px;
   height: 232px;
   flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 4px;
   box-shadow: 0 4px 60px rgba(0, 0, 0, 0.5);
 }
 
@@ -628,6 +733,12 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   height: 100%;
   object-fit: cover;
   border-radius: 4px;
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.album-hero__cover.is-loaded {
+  opacity: 1;
 }
 
 .album-hero__info {
@@ -649,25 +760,26 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 }
 
 .album-hero__title {
-  --hero-title-min: 48px;
-  --hero-title-max: 72px;
-  font-size: clamp(var(--hero-title-min), var(--hero-title-size, 72px), var(--hero-title-max));
+  --hero-title-min: 40px;
+  --hero-title-max: 62px;
+  font-size: clamp(var(--hero-title-min), var(--hero-title-size, 62px), var(--hero-title-max));
   font-weight: 900;
-  line-height: 1;
+  line-height: 1.15;
   margin: 0;
   text-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: clip;
   max-width: 100%;
   width: 100%;
   text-align: left;
 }
 
 .album-hero__title-text {
-  display: inline-block;
-  transform: translateX(0);
-  will-change: transform;
+  display: inline;
+  white-space: normal;
 }
 
 .album-hero__title.is-marquee {
@@ -679,23 +791,13 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 }
 
 .album-hero__meta {
+  margin-top: auto;
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 14px;
   font-weight: 500;
   flex-wrap: wrap;
-}
-
-.album-hero__artist-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.album-hero__artist {
-  font-weight: 700;
 }
 
 .album-hero__dot {
@@ -705,28 +807,17 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 /* Actions Row */
 .actions-row {
   padding: 0 40px 8px;
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) 80px;
-  column-gap: 16px;
+  display: flex;
   align-items: center;
+  gap: 16px;
   background: var(--color-background);
-}
-
-.actions-row .btn-play-big {
-  grid-column: 1;
-  justify-self: center;
-}
-
-.actions-row .btn-shuffle {
-  grid-column: 2;
-  justify-self: start;
 }
 
 .btn-play-big {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-secondary-dark) 100%);
+  background: linear-gradient(135deg, var(--album-theme-color) 0%, var(--album-theme-dark) 100%);
   border: none;
   color: white;
   display: flex;
@@ -734,7 +825,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 8px 24px rgba(139, 79, 125, 0.4);
+  box-shadow: 0 8px 24px var(--album-theme-shadow);
 }
 
 .btn-play-big :deep(svg) {
@@ -745,14 +836,15 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 
 .btn-play-big:hover {
   transform: scale(1.06);
-  box-shadow: 0 8px 32px rgba(139, 79, 125, 0.6);
+  box-shadow: 0 8px 32px var(--album-theme-shadow);
 }
 
 .btn-play-big:active {
   transform: scale(0.98);
 }
 
-.btn-shuffle {
+.btn-shuffle,
+.btn-repeat {
   width: 48px;
   height: 48px;
   border-radius: 50%;
@@ -766,22 +858,25 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   transition: all 0.2s ease;
 }
 
-.btn-shuffle :deep(svg) {
+.btn-shuffle :deep(svg),
+.btn-repeat :deep(svg) {
   width: 20px;
   height: 20px;
   display: block;
 }
 
-.btn-shuffle:hover {
+.btn-shuffle:hover,
+.btn-repeat:hover {
   border-color: var(--color-text);
   color: var(--color-text);
   transform: scale(1.04);
 }
 
-.btn-shuffle.is-active {
-  background: var(--color-neon-cyan);
-  border-color: var(--color-neon-cyan);
-  color: var(--color-background);
+.btn-shuffle.is-active,
+.btn-repeat.is-active {
+  background: var(--album-theme-color);
+  border-color: var(--album-theme-color);
+  color: white;
 }
 
 /* Track Table */
@@ -832,7 +927,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 }
 
 .track-table__row.is-playing .track-table__col--index {
-  color: var(--color-neon-cyan);
+  color: var(--album-theme-color);
 }
 
 .track-table__row.is-playing .track-table__number {
@@ -887,7 +982,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 
 .track-table__row.is-playing .track-table__animated-bars,
 .track-table__row.is-playing .track-table__play-btn {
-  color: var(--color-neon-cyan);
+  color: var(--album-theme-color);
 }
 
 .track-table__icon {
@@ -912,7 +1007,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 }
 
 .track-table__title-text.is-active {
-  color: var(--color-neon-cyan);
+  color: var(--album-theme-color);
 }
 
 .track-table__artist {
@@ -936,31 +1031,31 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 @media (max-width: 768px) {
   .actions-row {
     padding: 0 40px 8px;
-    grid-template-columns: 40px minmax(0, 1fr) 60px;
-    column-gap: 12px;
+    gap: 12px;
   }
 
   .actions-row .btn-play-big,
-  .actions-row .btn-shuffle {
+  .actions-row .btn-shuffle,
+  .actions-row .btn-repeat {
     width: 40px;
     height: 40px;
   }
 
   .album-carousel {
-    padding: 8px 24px;
+    padding: 8px 12px;
   }
 
   .album-carousel__item {
-    width: 190px;
-    max-width: 190px;
+    width: 188px;
+    max-width: 188px;
   }
 
   .album-carousel__info {
-    max-width: 120px;
+    max-width: 122px;
   }
 
   .track-table {
-    padding: 0 24px 16px;
+    padding: 0 4px 16px;
   }
 
   .track-table__header {
@@ -968,9 +1063,9 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   }
 
   .track-table__row {
-    grid-template-columns: 40px 1fr 60px;
-    gap: 12px;
-    padding: 12px 16px;
+    grid-template-columns: 32px 1fr 48px;
+    gap: 6px;
+    padding: 10px 8px;
   }
 }
 
@@ -1020,53 +1115,31 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   }
 }
 
-/* Tooltip styling */
-[data-tooltip]:not([data-tooltip='']) {
-  position: relative;
-}
-
-[data-tooltip]:not([data-tooltip='']):hover::after {
-  content: attr(data-tooltip);
+.skeleton-loader {
   position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 8px 12px;
-  background: rgba(18, 18, 18, 0.95);
-  color: var(--color-text);
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  border-radius: 8px;
-  pointer-events: none;
-  z-index: 10000;
-  font-family: var(--font-family-base);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  animation: tooltip-fade-in 0.15s ease-out;
-  backdrop-filter: blur(8px);
+  inset: 0;
+  background: rgba(255, 255, 255, 0.03);
 }
 
-[data-tooltip]:not([data-tooltip='']):hover::before {
-  content: '';
-  position: absolute;
-  bottom: calc(100% + 4px);
-  left: 50%;
-  transform: translateX(-50%);
-  border: 4px solid transparent;
-  border-top-color: rgba(18, 18, 18, 0.95);
-  pointer-events: none;
-  z-index: 10000;
-  animation: tooltip-fade-in 0.15s ease-out;
+.skeleton-pulse {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.09) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.4s ease-in-out infinite;
 }
 
-@keyframes tooltip-fade-in {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(4px);
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
   }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
+  100% {
+    background-position: -200% 0;
   }
 }
 
@@ -1074,20 +1147,18 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 .lyrics-view {
   flex: 1;
   overflow-y: auto;
-  padding: 32px;
+  padding: 5px;
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-.lyrics-view__header {
-  width: 100%;
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 12px;
+  position: relative;
 }
 
 .lyrics-view__close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
   width: 40px;
   height: 40px;
   border-radius: 50%;

@@ -1,12 +1,34 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import GlobalAudioPlayer from '../GlobalAudioPlayer.vue'
 import { useAudioStore } from '@/stores/audio'
 
 describe('GlobalAudioPlayer', () => {
+  const originalMatchMedia = window.matchMedia
+  const originalInnerWidth = window.innerWidth
+
   beforeEach(() => {
     setActivePinia(createPinia())
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as typeof window.matchMedia
+  })
+
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: originalInnerWidth,
+    })
   })
 
   it('mounts a single audio element', () => {
@@ -128,6 +150,63 @@ describe('GlobalAudioPlayer', () => {
     await volumeInput.setValue('0.5')
 
     expect(audio.volume).toBeCloseTo(0.5)
+  })
+
+  it('hides compact mini-player controls on narrow screens without overriding the stored volume', async () => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 768,
+    })
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.setVolume(0.2)
+    audio.startFromMusic('tftc:01-misled')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="mini-shuffle"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="mini-repeat"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="mini-volume"]').exists()).toBe(false)
+    expect(wrapper.findAll('.mini-player__time')).toHaveLength(0)
+
+    const audioEl = wrapper.find('audio').element as HTMLAudioElement
+    expect(audioEl.volume).toBeCloseTo(0.2)
+  })
+
+  it('uses the default full volume when no stored volume was changed yet', async () => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 768,
+    })
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:01-misled')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+
+    const audioEl = wrapper.find('audio').element as HTMLAudioElement
+    expect(audio.volume).toBe(1)
+    expect(audioEl.volume).toBe(1)
   })
 
   it('toggles instrument faders overlay and updates stem gain', async () => {
