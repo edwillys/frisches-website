@@ -1,8 +1,6 @@
 # Frisches - Official Website
 
 [![CI](https://github.com/edwillys/frisches-website/actions/workflows/ci.yml/badge.svg)](https://github.com/edwillys/frisches-website/actions/workflows/ci.yml)
-[![Deploy to Cloudflare Pages](https://github.com/edwillys/frisches-website/actions/workflows/deploy-cloudflare.yml/badge.svg)](https://github.com/edwillys/frisches-website/actions/workflows/deploy-cloudflare.yml)
-[![Deploy to Netlify](https://github.com/edwillys/frisches-website/actions/workflows/deploy-netlify.yml/badge.svg)](https://github.com/edwillys/frisches-website/actions/workflows/deploy-netlify.yml)
 [![CodeQL](https://github.com/edwillys/frisches-website/actions/workflows/codeql.yml/badge.svg)](https://github.com/edwillys/frisches-website/actions/workflows/codeql.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Version](https://img.shields.io/badge/version-1.0.0-green.svg)](package.json)

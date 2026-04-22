@@ -250,9 +250,8 @@ test.describe('Frisches Website - Critical Flows', () => {
       const cardsContainer = page.locator('[data-testid="card-dealer-cards-container"]')
       await expect(cardsContainer).toBeVisible({ timeout: 10000 })
 
-      // Return to logo for next iteration using the explicit back control.
-      const backButton = page.locator('.card-dealer__back-button').first()
-      await backButton.click()
+      // Cards view now returns to the logo via outside click rather than a back button.
+      await page.mouse.click(16, 16)
       await waitForAnimations(page)
       await expect(page.locator('[data-testid="logo-button"]')).toBeVisible({ timeout: 10000 })
     }
