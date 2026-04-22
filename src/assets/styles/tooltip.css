@@ -1,50 +1,40 @@
-[data-tooltip]:not([data-tooltip='']) {
-  position: relative;
+/* Viewport-clamped tooltip – positioning is handled by useViewportTooltip composable. */
+
+.vp-tooltip {
+  position: fixed;
+  padding: 8px 12px;
+  background: rgba(18, 18, 18, 0.95);
+  color: var(--color-text);
+  font-size: var(--tooltip-font-size, 12px);
+  font-weight: 500;
+  white-space: nowrap;
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: var(--z-tooltip, 600);
+  font-family: var(--font-family-base);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  animation: vp-tooltip-fade-in 0.15s ease-out both;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  [data-tooltip]:not([data-tooltip='']):not(.tooltip-suppressed):hover::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 8px 12px;
-    background: rgba(18, 18, 18, 0.95);
-    color: var(--color-text);
-    font-size: var(--tooltip-font-size, 12px);
-    font-weight: 500;
-    white-space: nowrap;
-    border-radius: 8px;
-    pointer-events: none;
-    z-index: 10000;
-    font-family: var(--font-family-base);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    animation: app-tooltip-fade-in 0.15s ease-out;
-    backdrop-filter: blur(8px);
-  }
-
-  [data-tooltip]:not([data-tooltip='']):not(.tooltip-suppressed):hover::before {
-    content: '';
-    position: absolute;
-    bottom: calc(100% + 4px);
-    left: 50%;
-    transform: translateX(-50%);
-    border: 4px solid transparent;
-    border-top-color: rgba(18, 18, 18, 0.95);
-    pointer-events: none;
-    z-index: 10000;
-    animation: app-tooltip-fade-in 0.15s ease-out;
-  }
+.vp-tooltip-arrow {
+  position: fixed;
+  width: 0;
+  height: 0;
+  /* 8px must equal ARROW_SIZE in useViewportTooltip.ts */
+  border: 8px solid transparent;
+  pointer-events: none;
+  z-index: var(--z-tooltip, 600);
+  animation: vp-tooltip-fade-in 0.15s ease-out both;
 }
 
-@keyframes app-tooltip-fade-in {
+@keyframes vp-tooltip-fade-in {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(4px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
   }
 }

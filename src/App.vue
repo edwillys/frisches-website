@@ -4,6 +4,9 @@ import { useRoute } from 'vue-router'
 import CardDealer from './components/CardDealer.vue'
 import MouseParticles from './components/MouseParticles.vue'
 import GlobalAudioPlayer from './components/GlobalAudioPlayer.vue'
+import { useViewportTooltip } from './composables/useViewportTooltip'
+
+useViewportTooltip()
 
 const route = useRoute()
 const STANDALONE_ROUTES = ['/gallery', '/impressum', '/datenschutz']
