@@ -5,6 +5,8 @@ export interface Album {
   title: string
   artist: string
   year: number
+  themeColor?: string
+  themeColorDark?: string
   coverUrl: string
   coverSrcset?: string
   trackIds: string[]
@@ -61,6 +63,8 @@ export const albums: Album[] = [
     title: 'Tales From The Cellar',
     artist: 'Frisches',
     year: 2024,
+    themeColor: '#d4711c',
+    themeColorDark: '#8b4f1a',
     coverUrl:
       tracks.find((t) => t.album === 'Tales From The Cellar')?.fallbackCover ??
       tracks[0]?.fallbackCover ??

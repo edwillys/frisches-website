@@ -748,7 +748,7 @@ onBeforeUnmount(() => {
 .about-flip-card {
   --about-card-width: var(--about-members-card-width, 15.75rem);
   --about-card-width-mobile: var(--about-members-card-width-mobile, 16rem);
-  --about-card-height-mobile: clamp(17.4rem, 45vh, 20.6rem);
+  --about-card-height-mobile: clamp(17.4rem, 60vh, 20.6rem);
   --about-card-aspect-ratio: 5 / 7.2;
   --about-card-face-radius: 1rem;
   --about-card-frame-radius: 0.9rem;

@@ -32,5 +32,10 @@ const { closeLegalPage } = useLegalPageClose()
       <h3>{{ t.impressum.copyrightTitle }}</h3>
       <p>{{ t.impressum.copyrightText }}</p>
     </section>
+
+    <section>
+      <h2>{{ t.impressum.musicTitle }}</h2>
+      <p>{{ t.impressum.musicText }}</p>
+    </section>
   </LegalPageFrame>
 </template>

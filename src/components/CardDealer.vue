@@ -104,7 +104,7 @@ const cardsContainerRef = ref<HTMLElement | null>(null)
 const contentPanelRef = ref<HTMLElement | null>(null)
 const logoButtonRef = ref<HTMLElement | Record<string, unknown> | null>(null)
 const backButtonRef = ref<HTMLElement | null>(null)
-const miniCardRef = ref<HTMLElement | null>(null)
+const headerActionsRef = ref<HTMLElement | null>(null)
 const headerRef = ref<HTMLElement | null>(null)
 const headerTitleRef = ref<HTMLElement | null>(null)
 import { useAudioStore } from '@/stores/audio'
@@ -249,18 +249,6 @@ watch(isHeaderNavOpen, (open) => {
   }
 })
 
-const miniCardStyle = computed(() => {
-  if (selectedItem.value) {
-    const item = selectedItem.value
-    return {
-      backgroundImage: `url(${item.image})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-    }
-  }
-  return {}
-})
-
 const rememberLegalReturnState = () => {
   if (typeof window === 'undefined') return
 
@@ -330,11 +318,10 @@ function onHeaderNavItemClick(index: number) {
 function handleMobileNavButtonClick() {
   if (!isMobileNavMode.value && !isGalleryActive.value) return
 
-  // On mobile the header (and its back button) is hidden. When Gallery is open,
-  // use the top-right button as a close affordance instead of a hamburger.
-  if (isGalleryActive.value) {
+  // When gallery is open, the button opens the nav drawer (gallery has its own
+  // rail navigation). When nav is already open, clicking again closes it.
+  if (isHeaderNavOpen.value) {
     closeHeaderNav()
-    handleBackClick()
     return
   }
 
@@ -659,7 +646,7 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
   const clickedInsideCards = cardsContainerRef.value?.contains(target) ?? false
   const clickedInsideContent = contentPanelRef.value?.contains(target) ?? false
   const clickedBackButton = backButtonRef.value?.contains(target) ?? false
-  const clickedMiniCard = miniCardRef.value?.contains(target) ?? false
+  const clickedHeaderActions = headerActionsRef.value?.contains(target) ?? false
   const clickedHeader = headerRef.value?.contains(target) ?? false
   const clickedHeaderTitles = headerTitleRef.value?.contains(target) ?? false
 
@@ -677,7 +664,7 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
     if (
       clickedInsideContent ||
       clickedBackButton ||
-      clickedMiniCard ||
+      clickedHeaderActions ||
       clickedHeader ||
       clickedHeaderTitles
     )
@@ -962,7 +949,7 @@ const playContentCloseAndCardsReturn = (opts?: { thenToLogo?: boolean }) => {
   const cards = getCardElements()
   const panel = contentPanelRef.value
   const backButton = backButtonRef.value
-  const miniCard = miniCardRef.value
+  const headerActions = headerActionsRef.value
   const headerTitle = headerTitleRef.value
   const container = cardsContainerRef.value
 
@@ -1029,7 +1016,7 @@ const playContentCloseAndCardsReturn = (opts?: { thenToLogo?: boolean }) => {
     )
   }
 
-  // Phase 2: Fade out header elements (back button, avatar, title) in sync
+  // Phase 2: Fade out header elements in sync
   if (backButton) {
     tl.to(
       backButton,
@@ -1042,9 +1029,9 @@ const playContentCloseAndCardsReturn = (opts?: { thenToLogo?: boolean }) => {
     )
   }
 
-  if (miniCard) {
+  if (headerActions) {
     tl.to(
-      miniCard,
+      headerActions,
       {
         opacity: 0,
         scale: 0.8,
@@ -1066,11 +1053,7 @@ const playContentCloseAndCardsReturn = (opts?: { thenToLogo?: boolean }) => {
     )
   }
 
-  // Phase 3: Make selected card visible and animate to center
-  // Important: do NOT clear transforms here.
-  // In the content-open animation the selected card is left transformed at the avatar position.
-  // Clearing transform before using the precomputed offsets causes the card to animate from the
-  // wrong baseline and shoot off-screen (often bottom-right).
+  // Phase 3: Make selected card visible and animate to center.
   if (selectedIdx !== null && cards[selectedIdx]) {
     const selectedCardEl = cards[selectedIdx]
 
@@ -1183,13 +1166,11 @@ const playCardSelection = (cardIndex: number) => {
   const selectedCardEl = cards[cardIndex]
   if (!selectedCardEl) return
 
-  const selectedCardRect = selectedCardEl.getBoundingClientRect()
-
   currentView.value = 'content'
 
   nextTick(() => {
     const panel = contentPanelRef.value
-    const miniCard = miniCardRef.value
+    const headerActions = headerActionsRef.value
     const backButton = backButtonRef.value
     const headerTitle = headerTitleRef.value
 
@@ -1227,23 +1208,16 @@ const playCardSelection = (cardIndex: number) => {
       0
     )
 
-    // Calculate avatar target position (in header)
-    const targetX = 24 + 48 + 16 + 24 - selectedCardRect.left - selectedCardRect.width / 2
-    const targetY = 50 - selectedCardRect.top - selectedCardRect.height / 2
-
-    // Phase 1: Animate selected card to avatar position, hide others
+    // Phase 1: Fade the selected card out in place while the other cards recede.
     cards.forEach((card, index) => {
       if (index === cardIndex) {
-        // Selected card: animate to avatar position
         tl.to(
           card,
           {
-            x: targetX,
-            y: targetY,
-            scale: 0.18,
+            scale: 1,
             rotation: 0,
-            opacity: 1,
-            duration: 0.6,
+            opacity: 0,
+            duration: 0.45,
           },
           0
         )
@@ -1261,26 +1235,19 @@ const playCardSelection = (cardIndex: number) => {
       }
     })
 
-    // Phase 2: Fade out selected card (now at avatar position) and fade in header elements in sync
-    if (cards[cardIndex]) {
-      tl.to(
-        cards[cardIndex]!,
-        {
-          opacity: 0,
-          duration: 0.3,
-        },
-        0.5
-      )
-    }
-
-    // Animate in back button, avatar, and title immediately at animation start
+    // Animate in back button, header actions, and title immediately at animation start.
     // This allows users to click back or hit escape without waiting
     if (backButton) {
       tl.fromTo(backButton, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.4 }, 0)
     }
 
-    if (miniCard) {
-      tl.fromTo(miniCard, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.4 }, 0)
+    if (headerActions) {
+      tl.fromTo(
+        headerActions,
+        { opacity: 0, scale: 0.8 },
+        { opacity: 1, scale: 1, duration: 0.4 },
+        0
+      )
     }
 
     if (headerTitle) {
@@ -1717,42 +1684,55 @@ onBeforeUnmount(() => {
       :aria-label="t.logo.socialLinks"
     >
       <a
-        :href="props.socialLinks?.instagram || '#'"
+        :href="props.socialLinks?.instagram || undefined"
         class="card-dealer__social-link"
         :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.instagram }"
-        :aria-disabled="!props.socialLinks?.instagram"
+        :aria-disabled="!props.socialLinks?.instagram || undefined"
+        :tabindex="props.socialLinks?.instagram ? undefined : -1"
         aria-label="Instagram"
         target="_blank"
         rel="noopener noreferrer"
         @click="
-          props.socialLinks?.instagram && trackEvent('social-click', { platform: 'instagram' })
+          props.socialLinks?.instagram
+            ? trackEvent('social-click', { platform: 'instagram' })
+            : $event.preventDefault()
         "
       >
         <span aria-hidden="true" v-html="instagramSvg" />
       </a>
 
       <a
-        :href="props.socialLinks?.spotify || '#'"
+        :href="props.socialLinks?.spotify || undefined"
         class="card-dealer__social-link"
         :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.spotify }"
-        :aria-disabled="!props.socialLinks?.spotify"
+        :aria-disabled="!props.socialLinks?.spotify || undefined"
+        :tabindex="props.socialLinks?.spotify ? undefined : -1"
         aria-label="Spotify"
         target="_blank"
         rel="noopener noreferrer"
-        @click="props.socialLinks?.spotify && trackEvent('social-click', { platform: 'spotify' })"
+        @click="
+          props.socialLinks?.spotify
+            ? trackEvent('social-click', { platform: 'spotify' })
+            : $event.preventDefault()
+        "
       >
         <span aria-hidden="true" v-html="spotifySvg" />
       </a>
 
       <a
-        :href="props.socialLinks?.youtube || '#'"
+        :href="props.socialLinks?.youtube || undefined"
         class="card-dealer__social-link"
         :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.youtube }"
-        :aria-disabled="!props.socialLinks?.youtube"
+        :aria-disabled="!props.socialLinks?.youtube || undefined"
+        :tabindex="props.socialLinks?.youtube ? undefined : -1"
         aria-label="YouTube"
         target="_blank"
         rel="noopener noreferrer"
-        @click="props.socialLinks?.youtube && trackEvent('social-click', { platform: 'youtube' })"
+        @click="
+          props.socialLinks?.youtube
+            ? trackEvent('social-click', { platform: 'youtube' })
+            : $event.preventDefault()
+        "
       >
         <span aria-hidden="true" v-html="youtubeSvg" />
       </a>
@@ -1864,7 +1844,7 @@ onBeforeUnmount(() => {
         />
       </div>
 
-      <!-- Header with back button and miniature card (shown in content view) -->
+      <!-- Header with back button and header actions (shown in content view) -->
       <div v-if="currentView === 'content'" ref="headerRef" class="card-dealer__header">
         <div class="card-dealer__header-left">
           <div ref="backButtonRef" class="card-dealer__back-button" @click="handleBackClick">
@@ -1901,9 +1881,82 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="card-dealer__header-right">
-          <div ref="miniCardRef" class="card-dealer__mini-card-wrapper" :style="miniCardStyle">
-            <!-- Circular avatar shows selected card image as background -->
-          </div>
+          <nav
+            ref="headerActionsRef"
+            class="card-dealer__header-social"
+            :aria-label="t.logo.socialLinks"
+          >
+            <a
+              :href="props.socialLinks?.instagram || undefined"
+              class="card-dealer__social-link"
+              :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.instagram }"
+              :aria-disabled="!props.socialLinks?.instagram || undefined"
+              :tabindex="props.socialLinks?.instagram ? undefined : -1"
+              aria-label="Instagram"
+              target="_blank"
+              rel="noopener noreferrer"
+              @click="
+                props.socialLinks?.instagram
+                  ? trackEvent('social-click', { platform: 'instagram' })
+                  : $event.preventDefault()
+              "
+            >
+              <span aria-hidden="true" v-html="instagramSvg" />
+            </a>
+            <a
+              :href="props.socialLinks?.spotify || undefined"
+              class="card-dealer__social-link"
+              :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.spotify }"
+              :aria-disabled="!props.socialLinks?.spotify || undefined"
+              :tabindex="props.socialLinks?.spotify ? undefined : -1"
+              aria-label="Spotify"
+              target="_blank"
+              rel="noopener noreferrer"
+              @click="
+                props.socialLinks?.spotify
+                  ? trackEvent('social-click', { platform: 'spotify' })
+                  : $event.preventDefault()
+              "
+            >
+              <span aria-hidden="true" v-html="spotifySvg" />
+            </a>
+            <a
+              :href="props.socialLinks?.youtube || undefined"
+              class="card-dealer__social-link"
+              :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.youtube }"
+              :aria-disabled="!props.socialLinks?.youtube || undefined"
+              :tabindex="props.socialLinks?.youtube ? undefined : -1"
+              aria-label="YouTube"
+              target="_blank"
+              rel="noopener noreferrer"
+              @click="
+                props.socialLinks?.youtube
+                  ? trackEvent('social-click', { platform: 'youtube' })
+                  : $event.preventDefault()
+              "
+            >
+              <span aria-hidden="true" v-html="youtubeSvg" />
+            </a>
+            <a
+              v-if="props.socialLinks?.github"
+              :href="props.socialLinks.github"
+              class="card-dealer__social-link"
+              aria-label="GitHub"
+              target="_blank"
+              rel="noopener noreferrer"
+              @click="trackEvent('social-click', { platform: 'github' })"
+            >
+              <span aria-hidden="true" v-html="githubSvg" />
+            </a>
+            <a
+              href="mailto:frisches.band@gmail.com"
+              class="card-dealer__social-link"
+              aria-label="Email"
+              @click="trackEvent('social-click', { platform: 'email' })"
+            >
+              <span aria-hidden="true" v-html="emailSvg" />
+            </a>
+          </nav>
 
           <button
             type="button"
@@ -1932,20 +1985,14 @@ onBeforeUnmount(() => {
         v-if="currentView === 'content' && isMobileNavMode"
         type="button"
         class="card-dealer__mobile-nav-btn"
-        :class="{ 'is-close': isGalleryActive || isHeaderNavOpen }"
-        :aria-label="
-          isGalleryActive
-            ? 'Close gallery'
-            : isHeaderNavOpen
-              ? 'Close navigation'
-              : 'Open navigation'
-        "
+        :class="{ 'is-close': isHeaderNavOpen }"
+        :aria-label="isHeaderNavOpen ? 'Close navigation' : 'Open navigation'"
         @pointerdown.stop
         @click.stop="handleMobileNavButtonClick"
       >
         <span
           class="card-dealer__header-menu-icon"
-          :class="{ 'card-dealer__header-menu-icon--close': isGalleryActive || isHeaderNavOpen }"
+          :class="{ 'card-dealer__header-menu-icon--close': isHeaderNavOpen }"
           aria-hidden="true"
         ></span>
       </button>

@@ -52,12 +52,39 @@ describe('CardDealer social links', () => {
     expect(anchors[1]!.attributes('href')).toBe(socialLinks.spotify)
     expect(anchors[1]!.attributes('aria-label')).toBe('Spotify')
 
-    // YouTube - empty URL should render '#' and have disabled state
-    expect(anchors[2]!.attributes('href')).toBe('#')
+    // YouTube - empty URL: no href, has disabled state and tabindex="-1"
+    expect(anchors[2]!.attributes('href')).toBeUndefined()
     expect(anchors[2]!.attributes('aria-disabled')).toBe('true')
+    expect(anchors[2]!.attributes('tabindex')).toBe('-1')
 
     // Email
     expect(anchors[3]!.attributes('href')).toBe('mailto:frisches.band@gmail.com')
     expect(anchors[3]!.attributes('aria-label')).toBe('Email')
+  })
+
+  it('shows header social actions in content view without the removed mini avatar wrapper', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const wrapper = mount(CardDealer, {
+      props: {
+        socialLinks: {
+          instagram: 'https://instagram.com/frisches',
+          spotify: 'https://open.spotify.com/artist/example',
+          youtube: 'https://youtube.com/@frisches',
+        },
+      },
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    const musicCard = wrapper.findAll('.menu-card').find((card) => card.text().includes('Music'))
+    expect(musicCard).toBeTruthy()
+
+    await musicCard!.trigger('click')
+
+    expect(wrapper.find('.card-dealer__header-social').exists()).toBe(true)
+    expect(wrapper.find('.card-dealer__mini-card-wrapper').exists()).toBe(false)
   })
 })

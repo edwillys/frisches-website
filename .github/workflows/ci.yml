@@ -11,16 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [22.x]
+        node-version: [24.x]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: false
           lfs: true
 
       - name: Load SSH deploy key for private submodule
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: ${{ secrets.DEPLOY_KEY_ASSETS }}
 
@@ -62,7 +62,7 @@ jobs:
           CI: true
 
       - name: Upload Playwright E2E artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: playwright-e2e-artifacts
@@ -73,7 +73,7 @@ jobs:
             playwright-report/**
 
       - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         if: always()
         with:
           files: ./coverage/coverage-final.json,./coverage/lcov.info

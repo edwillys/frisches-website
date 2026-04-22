@@ -80,6 +80,7 @@ describe('GalleryManager', () => {
     })
 
     const toggle = wrapper.get('[data-testid="gallery-rail-toggle"]')
+    expect(toggle.find('.gallery-rail__toggle-icon').exists()).toBe(true)
 
     // Expand
     await toggle.trigger('click')

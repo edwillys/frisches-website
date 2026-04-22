@@ -13,6 +13,8 @@ export interface LegalText {
     linksLiabilityText: string
     copyrightTitle: string
     copyrightText: string
+    musicTitle: string
+    musicText: string
   }
   privacy: {
     title: string
@@ -67,6 +69,9 @@ const legalText: Record<AppLocale, LegalText> = {
       copyrightTitle: 'Copyright',
       copyrightText:
         'The content and works published on this website are subject to German copyright law. Third-party contributions are identified as such.',
+      musicTitle: 'Music',
+      musicText:
+        'All music tracks on this website are original compositions by the members of Frisches and are protected by copyright. No samples or cover versions are used.',
     },
     privacy: {
       title: 'Privacy Policy',
@@ -129,6 +134,9 @@ const legalText: Record<AppLocale, LegalText> = {
       copyrightTitle: 'Urheberrecht',
       copyrightText:
         'Die durch die Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen dem deutschen Urheberrecht. Beiträge Dritter sind als solche gekennzeichnet.',
+      musicTitle: 'Musik',
+      musicText:
+        'Alle auf dieser Website zugänglichen Musikstücke sind Originalwerke der Mitglieder der Band Frisches und urheberrechtlich geschützt. Es werden weder Samples noch Coverversionen verwendet.',
     },
     privacy: {
       title: 'Datenschutzerklärung',
@@ -191,6 +199,9 @@ const legalText: Record<AppLocale, LegalText> = {
       copyrightTitle: "Droit d'auteur",
       copyrightText:
         "Les contenus et œuvres publiés sur ce site sont soumis au droit d'auteur allemand. Les contributions de tiers sont clairement identifiées.",
+      musicTitle: 'Musique',
+      musicText:
+        "Tous les morceaux de musique présents sur ce site sont des compositions originales des membres du groupe Frisches et sont protégés par le droit d'auteur. Aucun sample ni reprise n'est utilisé.",
     },
     privacy: {
       title: 'Politique de confidentialité',
@@ -253,6 +264,9 @@ const legalText: Record<AppLocale, LegalText> = {
       copyrightTitle: 'Direitos Autorais',
       copyrightText:
         'Os conteúdos e obras publicados neste site estão sujeitos à lei alemã de direitos autorais. Contribuições de terceiros são identificadas como tal.',
+      musicTitle: 'Música',
+      musicText:
+        'Todas as faixas musicais presentes neste site são composições originais dos membros da banda Frisches e estão protegidas por direitos autorais. Não são utilizados samples nem versões cover.',
     },
     privacy: {
       title: 'Política de Privacidade',

@@ -1,4 +1,5 @@
 import { readonly, ref } from 'vue'
+import { trackLanguageChanged } from '@/analytics'
 
 export const appLocales = ['en', 'de', 'fr', 'pt-BR'] as const
 
@@ -13,5 +14,7 @@ export const currentAppLocale = readonly(appLocale)
 export const getCurrentAppLocale = () => appLocale.value
 
 export const setCurrentAppLocale = (nextLocale: AppLocale) => {
+  const prev = appLocale.value
   appLocale.value = nextLocale
+  trackLanguageChanged(prev, nextLocale)
 }

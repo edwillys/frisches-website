@@ -241,18 +241,26 @@ test.describe('Frisches Website - Critical Flows', () => {
     for (const viewport of viewports) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height })
 
+      // Each viewport case should start from a clean page state so a failed dismiss
+      // or in-flight animation from the prior iteration cannot leak into the next one.
+      await page.goto('/')
+      await page.waitForLoadState('load')
+      await waitForAnimations(page)
+
       // Verify card dealer is visible at this viewport
       const cardDealer = page.locator('[data-testid="card-dealer"]')
       await expect(cardDealer).toBeVisible({ timeout: 10000 })
 
       // Test basic interaction at this viewport
       await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
-      const cardsContainer = page.locator('[data-testid="card-dealer-cards-container"]')
+      const cardsContainer = page.locator('.card-dealer__cards')
       await expect(cardsContainer).toBeVisible({ timeout: 10000 })
+      await expect(page.locator('.menu-card')).toHaveCount(3, { timeout: 10000 })
 
-      // Return to logo for next iteration using the explicit back control.
-      const backButton = page.locator('.card-dealer__back-button').first()
-      await backButton.click()
+      // Use a real pointer event in a safe corner of the viewport. The cards/content layer sits
+      // above the animated background, so force-clicking the background element does not reliably
+      // produce an outside target for the global pointerdown handler.
+      await page.mouse.click(16, 16)
       await waitForAnimations(page)
       await expect(page.locator('[data-testid="logo-button"]')).toBeVisible({ timeout: 10000 })
     }
