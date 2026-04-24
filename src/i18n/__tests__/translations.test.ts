@@ -82,6 +82,9 @@ describe('translation coverage', () => {
           "music.title",
         ],
         "uiText": [
+          "credits.roles.art",
+          "credits.roles.logoDesign",
+          "credits.roles.webDesign",
           "credits.text",
           "faders.close",
           "faders.groupLabel",

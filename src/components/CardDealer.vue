@@ -111,6 +111,7 @@ import { useAudioStore } from '@/stores/audio'
 const currentView = ref<'logo' | 'cards' | 'content'>('logo')
 const selectedCard = ref<number | null>(null)
 const isAnimating = ref(false)
+const isCreditsOverlayOpen = ref(false)
 
 const isHeaderNavOpen = ref(false)
 
@@ -119,6 +120,12 @@ const isMobileNavMode = ref(false)
 
 const hoveredHeaderIndex = ref<number | null>(null)
 const isCoverActive = ref(false)
+
+const creditsRows = computed(() => [
+  { role: t.value.credits.roles.webDesign, name: 'Edgar Lubicz' },
+  { role: t.value.credits.roles.art, name: 'Laurent Carcelle' },
+  { role: t.value.credits.roles.logoDesign, name: 'Katrin Ammermüller' },
+])
 
 const activeCover = ref<{ src: string; srcset?: string; key?: string } | null>(null)
 
@@ -475,6 +482,11 @@ const handleKeydown = (e: KeyboardEvent) => {
     if (e.defaultPrevented) return
     if (eventPathBlocksEscape(e)) return
 
+    if (isCreditsOverlayOpen.value) {
+      isCreditsOverlayOpen.value = false
+      return
+    }
+
     if (isHeaderNavOpen.value) {
       isHeaderNavOpen.value = false
       return
@@ -508,6 +520,7 @@ const handleLogoHover = (hovered: boolean) => {
 
 const handleCardClick = (route: string) => {
   if (isAnimating.value) return
+  isCreditsOverlayOpen.value = false
 
   // Find the clicked card index
   const cardIndex = menuItems.findIndex((item) => item.route === route)
@@ -520,6 +533,7 @@ const handleCardClick = (route: string) => {
 
 const handleLogoClick = () => {
   if (isAnimating.value || currentView.value !== 'logo') return
+  isCreditsOverlayOpen.value = false
   startAnimating()
 
   // Notify that logo will be hidden
@@ -627,7 +641,13 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
 
   const clickedInsideSocial = targetEl?.closest('.card-dealer__social') !== null
   const clickedInsideCredits = targetEl?.closest('.card-dealer__credits') !== null
+  const clickedInsideCreditsOverlay = targetEl?.closest('.card-dealer__credits-overlay') !== null
   const clickedInsideLegalLinks = targetEl?.closest('.card-dealer__legal-links') !== null
+
+  if (isCreditsOverlayOpen.value && clickedInsideCreditsOverlay) {
+    isCreditsOverlayOpen.value = false
+    return
+  }
 
   const clickedMobileNavBtn = targetEl?.closest('.card-dealer__mobile-nav-btn') !== null
   const clickedInsideHeaderDrawer = targetEl?.closest('.card-dealer__header-drawer-panel') !== null
@@ -655,6 +675,7 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
       clickedInsideCards ||
       clickedInsideSocial ||
       clickedInsideCredits ||
+      clickedInsideCreditsOverlay ||
       clickedInsideLegalLinks
     )
       return
@@ -673,6 +694,20 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
     playContentCloseAndCardsReturn()
   }
 }
+
+const toggleCreditsOverlay = () => {
+  isCreditsOverlayOpen.value = !isCreditsOverlayOpen.value
+}
+
+const closeCreditsOverlay = () => {
+  isCreditsOverlayOpen.value = false
+}
+
+watch(currentView, (view) => {
+  if (view === 'content') {
+    isCreditsOverlayOpen.value = false
+  }
+})
 
 const playLogoCloseAndCardOpen = () => {
   const logoEl = getLogoElement()
@@ -1750,7 +1785,7 @@ onBeforeUnmount(() => {
       </a>
 
       <a
-        href="mailto:frisches.band@gmail.com"
+        href="mailto:contact@frisches.band"
         class="card-dealer__social-link"
         aria-label="Email"
         @click="trackEvent('social-click', { platform: 'email' })"
@@ -1760,8 +1795,34 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Footer credits (bottom center) -->
-    <div v-if="currentView !== 'content'" class="card-dealer__credits" aria-label="Credits">
+    <button
+      v-if="currentView !== 'content'"
+      type="button"
+      class="card-dealer__credits"
+      :class="{ 'is-open': isCreditsOverlayOpen }"
+      :aria-label="t.credits.text"
+      :aria-expanded="isCreditsOverlayOpen"
+      @click.stop="toggleCreditsOverlay"
+    >
       {{ t.credits.text }}
+    </button>
+
+    <div
+      v-if="currentView !== 'content' && isCreditsOverlayOpen"
+      class="card-dealer__credits-overlay"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="t.credits.text"
+      @click="closeCreditsOverlay"
+    >
+      <div class="card-dealer__credits-overlay-panel">
+        <div class="card-dealer__credits-roll" aria-live="polite">
+          <div v-for="credit in creditsRows" :key="credit.role" class="card-dealer__credits-row">
+            <span class="card-dealer__credits-role">{{ credit.role }}</span>
+            <span class="card-dealer__credits-name">{{ credit.name }}</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Legal links (bottom right, desktop only — mobile gets them inside the drawer) -->
@@ -1949,7 +2010,7 @@ onBeforeUnmount(() => {
               <span aria-hidden="true" v-html="githubSvg" />
             </a>
             <a
-              href="mailto:frisches.band@gmail.com"
+              href="mailto:contact@frisches.band"
               class="card-dealer__social-link"
               aria-label="Email"
               @click="trackEvent('social-click', { platform: 'email' })"
@@ -2023,6 +2084,78 @@ onBeforeUnmount(() => {
           >
             {{ item.headerTitle }}
           </button>
+          <div class="card-dealer__header-drawer-social" :aria-label="t.logo.socialLinks">
+            <a
+              :href="props.socialLinks?.instagram || undefined"
+              class="card-dealer__social-link card-dealer__header-drawer-social-link"
+              :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.instagram }"
+              :aria-disabled="!props.socialLinks?.instagram || undefined"
+              :tabindex="props.socialLinks?.instagram ? undefined : -1"
+              aria-label="Instagram"
+              target="_blank"
+              rel="noopener noreferrer"
+              @click="
+                props.socialLinks?.instagram
+                  ? trackEvent('social-click', { platform: 'instagram' })
+                  : $event.preventDefault()
+              "
+            >
+              <span aria-hidden="true" v-html="instagramSvg" />
+            </a>
+            <a
+              :href="props.socialLinks?.spotify || undefined"
+              class="card-dealer__social-link card-dealer__header-drawer-social-link"
+              :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.spotify }"
+              :aria-disabled="!props.socialLinks?.spotify || undefined"
+              :tabindex="props.socialLinks?.spotify ? undefined : -1"
+              aria-label="Spotify"
+              target="_blank"
+              rel="noopener noreferrer"
+              @click="
+                props.socialLinks?.spotify
+                  ? trackEvent('social-click', { platform: 'spotify' })
+                  : $event.preventDefault()
+              "
+            >
+              <span aria-hidden="true" v-html="spotifySvg" />
+            </a>
+            <a
+              :href="props.socialLinks?.youtube || undefined"
+              class="card-dealer__social-link card-dealer__header-drawer-social-link"
+              :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.youtube }"
+              :aria-disabled="!props.socialLinks?.youtube || undefined"
+              :tabindex="props.socialLinks?.youtube ? undefined : -1"
+              aria-label="YouTube"
+              target="_blank"
+              rel="noopener noreferrer"
+              @click="
+                props.socialLinks?.youtube
+                  ? trackEvent('social-click', { platform: 'youtube' })
+                  : $event.preventDefault()
+              "
+            >
+              <span aria-hidden="true" v-html="youtubeSvg" />
+            </a>
+            <a
+              v-if="props.socialLinks?.github"
+              :href="props.socialLinks.github"
+              class="card-dealer__social-link card-dealer__header-drawer-social-link"
+              aria-label="GitHub"
+              target="_blank"
+              rel="noopener noreferrer"
+              @click="trackEvent('social-click', { platform: 'github' })"
+            >
+              <span aria-hidden="true" v-html="githubSvg" />
+            </a>
+            <a
+              href="mailto:contact@frisches.band"
+              class="card-dealer__social-link card-dealer__header-drawer-social-link"
+              aria-label="Email"
+              @click="trackEvent('social-click', { platform: 'email' })"
+            >
+              <span aria-hidden="true" v-html="emailSvg" />
+            </a>
+          </div>
           <nav class="card-dealer__header-drawer-legal" :aria-label="legalT.impressum.title">
             <RouterLink
               to="/impressum"

@@ -15,7 +15,7 @@ const { closeLegalPage } = useLegalPageClose()
       <h2>{{ t.privacy.s1Title }}</h2>
       <p>
         {{ t.privacy.s1ContactLabel }}:
-        <a href="mailto:frisches.band@gmail.com">frisches.band@gmail.com</a>
+        <a href="mailto:contact@frisches.band">contact@frisches.band</a>
       </p>
     </section>
 
@@ -71,7 +71,7 @@ const { closeLegalPage } = useLegalPageClose()
       </ul>
       <p>
         {{ t.privacy.s6ContactText }}
-        <a href="mailto:frisches.band@gmail.com">frisches.band@gmail.com</a>
+        <a href="mailto:contact@frisches.band">contact@frisches.band</a>
       </p>
       <p>
         {{ t.privacy.s6AuthorityText }}

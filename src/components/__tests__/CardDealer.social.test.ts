@@ -58,7 +58,7 @@ describe('CardDealer social links', () => {
     expect(anchors[2]!.attributes('tabindex')).toBe('-1')
 
     // Email
-    expect(anchors[3]!.attributes('href')).toBe('mailto:frisches.band@gmail.com')
+    expect(anchors[3]!.attributes('href')).toBe('mailto:contact@frisches.band')
     expect(anchors[3]!.attributes('aria-label')).toBe('Email')
   })
 
