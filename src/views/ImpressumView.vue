@@ -19,7 +19,7 @@ const { closeLegalPage } = useLegalPageClose()
       <h2>{{ t.impressum.contactTitle }}</h2>
       <p>
         {{ t.impressum.contactEmailLabel }}:
-        <a href="mailto:frisches.band@gmail.com">frisches.band@gmail.com</a>
+        <a href="mailto:contact@frisches.band">contact@frisches.band</a>
       </p>
     </section>
 

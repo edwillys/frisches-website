@@ -1785,7 +1785,7 @@ onBeforeUnmount(() => {
       </a>
 
       <a
-        href="mailto:frisches.band@gmail.com"
+        href="mailto:contact@frisches.band"
         class="card-dealer__social-link"
         aria-label="Email"
         @click="trackEvent('social-click', { platform: 'email' })"
@@ -2010,7 +2010,7 @@ onBeforeUnmount(() => {
               <span aria-hidden="true" v-html="githubSvg" />
             </a>
             <a
-              href="mailto:frisches.band@gmail.com"
+              href="mailto:contact@frisches.band"
               class="card-dealer__social-link"
               aria-label="Email"
               @click="trackEvent('social-click', { platform: 'email' })"
@@ -2148,7 +2148,7 @@ onBeforeUnmount(() => {
               <span aria-hidden="true" v-html="githubSvg" />
             </a>
             <a
-              href="mailto:frisches.band@gmail.com"
+              href="mailto:contact@frisches.band"
               class="card-dealer__social-link card-dealer__header-drawer-social-link"
               aria-label="Email"
               @click="trackEvent('social-click', { platform: 'email' })"
