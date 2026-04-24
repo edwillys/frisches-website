@@ -36,6 +36,19 @@
       "command": "npm",
       "args": ["run", "test:e2e"],
       "group": "test"
+    },
+    {
+      "label": "Build press kit PDF",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "scripts/build-press-kit-pdf.ps1"
+      ],
+      "group": "build"
     }
   ]
 }
