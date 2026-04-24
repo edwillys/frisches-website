@@ -121,11 +121,11 @@ const isMobileNavMode = ref(false)
 const hoveredHeaderIndex = ref<number | null>(null)
 const isCoverActive = ref(false)
 
-const creditsRows = [
-  { role: 'Web Design', name: 'Edgar Lubicz' },
-  { role: 'Art', name: 'Laurent Carcelle' },
-  { role: 'Logo Design', name: 'Katrin Ammermüller' },
-]
+const creditsRows = computed(() => [
+  { role: t.value.credits.roles.webDesign, name: 'Edgar Lubicz' },
+  { role: t.value.credits.roles.art, name: 'Laurent Carcelle' },
+  { role: t.value.credits.roles.logoDesign, name: 'Katrin Ammermüller' },
+])
 
 const activeCover = ref<{ src: string; srcset?: string; key?: string } | null>(null)
 
@@ -1800,7 +1800,7 @@ onBeforeUnmount(() => {
       type="button"
       class="card-dealer__credits"
       :class="{ 'is-open': isCreditsOverlayOpen }"
-      aria-label="Credits"
+      :aria-label="t.credits.text"
       :aria-expanded="isCreditsOverlayOpen"
       @click.stop="toggleCreditsOverlay"
     >

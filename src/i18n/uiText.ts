@@ -99,6 +99,11 @@ export interface UiText {
   // Footer credits
   credits: {
     text: string
+    roles: {
+      webDesign: string
+      art: string
+      logoDesign: string
+    }
   }
 }
 
@@ -192,6 +197,11 @@ export const uiText: Record<AppLocale, UiText> = {
     },
     credits: {
       text: 'Credits',
+      roles: {
+        webDesign: 'Web Design',
+        art: 'Art',
+        logoDesign: 'Logo',
+      },
     },
   },
   de: {
@@ -283,6 +293,11 @@ export const uiText: Record<AppLocale, UiText> = {
     },
     credits: {
       text: 'Credits',
+      roles: {
+        webDesign: 'Webdesign',
+        art: 'Grafik',
+        logoDesign: 'Logo',
+      },
     },
   },
   fr: {
@@ -375,6 +390,11 @@ export const uiText: Record<AppLocale, UiText> = {
     },
     credits: {
       text: 'Crédits',
+      roles: {
+        webDesign: 'Design web',
+        art: 'Graphisme',
+        logoDesign: 'Logo',
+      },
     },
   },
   'pt-BR': {
@@ -466,6 +486,11 @@ export const uiText: Record<AppLocale, UiText> = {
     },
     credits: {
       text: 'Créditos',
+      roles: {
+        webDesign: 'Web design',
+        art: 'Arte',
+        logoDesign: 'Logo',
+      },
     },
   },
 }
