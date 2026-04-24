@@ -191,7 +191,7 @@ export const uiText: Record<AppLocale, UiText> = {
       loading: 'Loading...',
     },
     credits: {
-      text: 'Web Design: Edgar Lubicz · Art: Laurent Carcelle',
+      text: 'Credits',
     },
   },
   de: {
@@ -282,7 +282,7 @@ export const uiText: Record<AppLocale, UiText> = {
       loading: 'Lädt...',
     },
     credits: {
-      text: 'Webdesign: Edgar Lubicz · Grafik: Laurent Carcelle',
+      text: 'Credits',
     },
   },
   fr: {
@@ -374,7 +374,7 @@ export const uiText: Record<AppLocale, UiText> = {
       loading: 'Chargement...',
     },
     credits: {
-      text: 'Design web: Edgar Lubicz · Graphisme: Laurent Carcelle',
+      text: 'Crédits',
     },
   },
   'pt-BR': {
@@ -465,7 +465,7 @@ export const uiText: Record<AppLocale, UiText> = {
       loading: 'Carregando...',
     },
     credits: {
-      text: 'Web Design: Edgar Lubicz · Arte: Laurent Carcelle',
+      text: 'Créditos',
     },
   },
 }

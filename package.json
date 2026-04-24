@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "npm run generate:gallery && vite",
+    "host": "npm run generate:gallery && vite --host",
     "build": "npm run generate:gallery && run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "test:unit": "vitest",
