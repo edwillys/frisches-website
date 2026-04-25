@@ -1,10 +1,20 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import gsap from 'gsap'
 import { useAudioStore } from '@/stores/audio'
 import { getAlbumById } from '@/data/albums'
+import { useReducedMotion } from '@/composables/useMediaHelpers'
 import { useUiText } from '@/composables/useUiText'
 import { usePlayerThemeStyle } from '@/composables/usePlayerThemeStyle'
 import { useTooltipSuppression } from '@/composables/useTooltipSuppression'
+import {
+  MINI_PROGRESS_WOBBLE,
+  buildWavePathData,
+  makeWave,
+  scheduleWaveRestart,
+  updateWaveMotion,
+  type TravelingWaveState,
+} from './miniPlayerWobble'
 import InstrumentFaders from './InstrumentFaders.vue'
 
 // Icon imports
@@ -22,16 +32,37 @@ import volumeLowSvg from '@/assets/icons/volume-low.svg?raw'
 import volumeMidSvg from '@/assets/icons/volume-mid.svg?raw'
 import volumeHighSvg from '@/assets/icons/volume-high.svg?raw'
 
+const props = withDefaults(
+  defineProps<{
+    enableMiniProgressWobble?: boolean
+    wobbleRespectReducedMotion?: boolean
+  }>(),
+  {
+    enableMiniProgressWobble: true,
+    wobbleRespectReducedMotion: true,
+  }
+)
+
 const audioStore = useAudioStore()
 
 const audioEl = ref<HTMLAudioElement | null>(null)
 const miniPlayerEl = ref<HTMLElement | null>(null)
+const miniPlayerProgressVisualEl = ref<SVGSVGElement | null>(null)
+const miniPlayerWobbleTrackEl = ref<SVGRectElement | null>(null)
+const miniPlayerWobbleBaseFillEl = ref<SVGRectElement | null>(null)
+const miniPlayerWobblePrimaryEl = ref<SVGPathElement | null>(null)
+const miniPlayerWobbleSecondaryEl = ref<SVGPathElement | null>(null)
 const titleEl = ref<HTMLElement | null>(null)
 const artistEl = ref<HTMLElement | null>(null)
 let miniPlayerResizeObserver: ResizeObserver | null = null
 let textResizeObserver: ResizeObserver | null = null
 let lastMiniPlayerOffsetPx = -1
 let rafOverflowUpdateId = 0
+let progressTickerFn: (() => void) | null = null
+let progressLastFrameMs = 0
+let wobbleTickerFn: (() => void) | null = null
+let wobbleWaves: TravelingWaveState[] = []
+let wobbleLastFrameMs = 0
 let windowResizeHandler: (() => void) | null = null
 
 const showStemFaders = ref(false)
@@ -39,6 +70,7 @@ const t = useUiText()
 const isTitleOverflowing = ref(false)
 const isArtistOverflowing = ref(false)
 const isCompactMiniPlayerUi = ref(false)
+const { prefersReducedMotion } = useReducedMotion()
 
 const shouldShowMiniPlayer = computed(
   () => audioStore.persistAcrossPages && audioStore.hasUserStartedPlayback && !audioStore.isStopped
@@ -82,12 +114,179 @@ watch(
   { immediate: true }
 )
 
-const progressPercent = computed(() => {
-  const d = audioStore.duration
-  if (!Number.isFinite(d) || d <= 0) return '0%'
-  const p = Math.min(1, Math.max(0, audioStore.currentTime / d))
-  return `${Math.round(p * 100)}%`
+const visualProgressRatio = ref(0)
+const progressPercent = computed(() => `${(visualProgressRatio.value * 100).toFixed(3)}%`)
+
+const isMiniPlayerWobbleEnabled = computed(() => {
+  if (!props.enableMiniProgressWobble) return false
+  if (!shouldShowMiniPlayer.value || !isCompactMiniPlayerUi.value) return false
+  if (props.wobbleRespectReducedMotion && prefersReducedMotion.value) return false
+  return true
 })
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+function updateVisualProgressRatio(dtSec = 0) {
+  const duration = audioStore.duration
+  if (!Number.isFinite(duration) || duration <= 0) {
+    visualProgressRatio.value = 0
+    return
+  }
+
+  let current = audioStore.currentTime
+  if (audioStore.isPlaying) {
+    const mediaTime = audioEl.value?.currentTime
+    if (typeof mediaTime === 'number' && Number.isFinite(mediaTime)) {
+      current = mediaTime
+    } else if (dtSec > 0) {
+      current = Math.min(duration, current + dtSec)
+    }
+  }
+
+  visualProgressRatio.value = clamp(current / duration, 0, 1)
+}
+
+function startProgressTicker() {
+  if (progressTickerFn) return
+  progressTickerFn = () => {
+    const nowMs = performance.now()
+    if (!progressLastFrameMs) progressLastFrameMs = nowMs
+    const dtSec = clamp((nowMs - progressLastFrameMs) / 1000, 1 / 120, 0.08)
+    progressLastFrameMs = nowMs
+    updateVisualProgressRatio(dtSec)
+  }
+  gsap.ticker.add(progressTickerFn)
+}
+
+function stopProgressTicker() {
+  if (!progressTickerFn) return
+  gsap.ticker.remove(progressTickerFn)
+  progressTickerFn = null
+  progressLastFrameMs = 0
+}
+
+function ensureWobbleWaves() {
+  if (wobbleWaves.length === 2) return
+  wobbleWaves = [
+    makeWave({
+      startDelaySec: MINI_PROGRESS_WOBBLE.wavePrimaryStartDelaySec,
+      startDelayJitterSec: MINI_PROGRESS_WOBBLE.wavePrimaryStartJitterSec,
+      durationBiasSec: MINI_PROGRESS_WOBBLE.wavePrimaryDurationBiasSec,
+      amplitudeMultiplier: MINI_PROGRESS_WOBBLE.wavePrimaryAmplitudeMultiplier,
+    }),
+    makeWave({
+      startDelaySec: MINI_PROGRESS_WOBBLE.waveSecondaryStartDelaySec,
+      startDelayJitterSec: MINI_PROGRESS_WOBBLE.waveSecondaryStartJitterSec,
+      durationBiasSec: MINI_PROGRESS_WOBBLE.waveSecondaryDurationBiasSec,
+      amplitudeMultiplier: MINI_PROGRESS_WOBBLE.waveSecondaryAmplitudeMultiplier,
+    }),
+  ]
+}
+
+function drawWavePath(
+  pathEl: SVGPathElement,
+  wave: TravelingWaveState,
+  fillWidthPx: number,
+  topY: number,
+  playedRatio: number
+) {
+  pathEl.setAttribute(
+    'd',
+    buildWavePathData(wave, fillWidthPx, topY, MINI_PROGRESS_WOBBLE, playedRatio)
+  )
+}
+
+function updateWobbleVisualFrame() {
+  const svgEl = miniPlayerProgressVisualEl.value
+  const trackEl = miniPlayerWobbleTrackEl.value
+  const baseFillEl = miniPlayerWobbleBaseFillEl.value
+  const primaryWaveEl = miniPlayerWobblePrimaryEl.value
+  const secondaryWaveEl = miniPlayerWobbleSecondaryEl.value
+  if (!svgEl || !trackEl || !baseFillEl || !primaryWaveEl || !secondaryWaveEl) return
+
+  const widthPx = svgEl.clientWidth
+  if (widthPx <= 0) return
+
+  const nowMs = performance.now()
+  if (!wobbleLastFrameMs) wobbleLastFrameMs = nowMs
+  const dtSec = clamp((nowMs - wobbleLastFrameMs) / 1000, 1 / 120, 0.08)
+  wobbleLastFrameMs = nowMs
+  const nowSec = nowMs / 1000
+
+  updateVisualProgressRatio(dtSec)
+
+  const fillWidthPx = visualProgressRatio.value * widthPx
+  const trackHeight = MINI_PROGRESS_WOBBLE.trackThicknessPx
+  const topY = (MINI_PROGRESS_WOBBLE.shellHeightPx - trackHeight) / 2
+  const r = MINI_PROGRESS_WOBBLE.baseCornerRadiusPx
+
+  trackEl.setAttribute('y', topY.toFixed(2))
+  trackEl.setAttribute('height', trackHeight.toFixed(2))
+  trackEl.setAttribute('rx', r.toFixed(2))
+
+  baseFillEl.setAttribute('y', topY.toFixed(2))
+  baseFillEl.setAttribute('height', trackHeight.toFixed(2))
+  baseFillEl.setAttribute('rx', r.toFixed(2))
+  baseFillEl.setAttribute('width', Math.max(0, fillWidthPx).toFixed(2))
+
+  if (audioStore.isPlaying && fillWidthPx > 1) {
+    ensureWobbleWaves()
+    for (const wave of wobbleWaves) {
+      updateWaveMotion(wave, dtSec, fillWidthPx, audioStore.isPlaying, nowSec)
+    }
+  } else {
+    for (const wave of wobbleWaves) {
+      wave.active = false
+    }
+  }
+
+  drawWavePath(primaryWaveEl, wobbleWaves[0]!, fillWidthPx, topY, visualProgressRatio.value)
+  drawWavePath(secondaryWaveEl, wobbleWaves[1]!, fillWidthPx, topY, visualProgressRatio.value)
+
+  const isRunning = wobbleWaves.some((wave) => wave.active)
+  svgEl.dataset.wobbleReady = 'true'
+  svgEl.dataset.wobbleRunning = isRunning ? 'true' : 'false'
+}
+
+function startWobbleTicker() {
+  if (wobbleTickerFn) return
+  wobbleTickerFn = updateWobbleVisualFrame
+  gsap.ticker.add(wobbleTickerFn)
+}
+
+function stopWobbleTicker() {
+  if (!wobbleTickerFn) return
+  gsap.ticker.remove(wobbleTickerFn)
+  wobbleTickerFn = null
+}
+
+function resetWobble(nowSec = performance.now() / 1000) {
+  ensureWobbleWaves()
+  wobbleLastFrameMs = 0
+  wobbleWaves.forEach((wave) => {
+    scheduleWaveRestart(wave, nowSec, MINI_PROGRESS_WOBBLE, { includeStartDelay: true })
+  })
+  updateWobbleVisualFrame()
+}
+
+function syncMiniPlayerWobbleLoop() {
+  const visualEl = miniPlayerProgressVisualEl.value
+  if (visualEl) {
+    visualEl.dataset.wobbleActive = isMiniPlayerWobbleEnabled.value ? 'true' : 'false'
+    visualEl.dataset.wobbleReady = 'false'
+  }
+
+  if (!isMiniPlayerWobbleEnabled.value) {
+    stopWobbleTicker()
+    if (wobbleWaves.length) resetWobble()
+    return
+  }
+
+  resetWobble()
+  startWobbleTicker()
+}
 
 function getRepeatLabel() {
   return audioStore.repeatMode === 'off'
@@ -249,7 +448,48 @@ watch(
   () => audioStore.currentTime,
   (t) => {
     safeSetAudioCurrentTime(t)
+    updateVisualProgressRatio()
   }
+)
+
+watch(
+  [shouldShowMiniPlayer, () => audioStore.isPlaying],
+  ([showMiniPlayer, playing]) => {
+    if (showMiniPlayer && playing) {
+      startProgressTicker()
+    } else {
+      stopProgressTicker()
+      updateVisualProgressRatio()
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  () => audioStore.isPlaying,
+  (playing) => {
+    if (!isMiniPlayerWobbleEnabled.value) return
+    if (playing) {
+      resetWobble()
+    } else {
+      wobbleWaves.forEach((wave) => {
+        wave.active = false
+      })
+      updateWobbleVisualFrame()
+    }
+  }
+)
+
+watch(miniPlayerProgressVisualEl, () => {
+  syncMiniPlayerWobbleLoop()
+})
+
+watch(
+  isMiniPlayerWobbleEnabled,
+  () => {
+    syncMiniPlayerWobbleLoop()
+  },
+  { immediate: true }
 )
 
 function updateTextOverflow() {
@@ -337,6 +577,7 @@ watch(
 
 onMounted(() => {
   updateCompactMiniPlayerUi()
+  updateVisualProgressRatio()
 
   const el = audioEl.value
   if (!el) return
@@ -381,6 +622,11 @@ onUnmounted(() => {
     window.cancelAnimationFrame(rafOverflowUpdateId)
     rafOverflowUpdateId = 0
   }
+
+  stopProgressTicker()
+  stopWobbleTicker()
+  wobbleWaves = []
+  wobbleLastFrameMs = 0
 
   textResizeObserver?.disconnect()
   textResizeObserver = null
@@ -548,6 +794,7 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
           formatTime(audioStore.currentTime)
         }}</span>
         <input
+          v-if="!isCompactMiniPlayerUi"
           type="range"
           class="mini-player__progress"
           min="0"
@@ -557,6 +804,51 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
           @input="onSeek"
           :aria-label="t.player.seek"
         />
+        <div v-else class="mini-player__progress-wrap">
+          <!-- SVG visual: constant fill bar with two filled crest overlays -->
+          <svg
+            ref="miniPlayerProgressVisualEl"
+            class="mini-player__progress-visual"
+            :class="{ 'is-wobbling': isMiniPlayerWobbleEnabled }"
+            :data-wobble-active="isMiniPlayerWobbleEnabled ? 'true' : 'false'"
+            data-wobble-ready="false"
+            data-wobble-running="false"
+            data-testid="mini-progress-visual"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect
+              ref="miniPlayerWobbleTrackEl"
+              x="0"
+              y="6"
+              width="100%"
+              height="4"
+              rx="2"
+              class="wobble-track"
+            />
+            <rect
+              ref="miniPlayerWobbleBaseFillEl"
+              x="0"
+              y="6"
+              width="0"
+              height="4"
+              rx="2"
+              class="wobble-base-fill"
+            />
+            <path ref="miniPlayerWobblePrimaryEl" class="wobble-wave wobble-wave--primary" />
+            <path ref="miniPlayerWobbleSecondaryEl" class="wobble-wave wobble-wave--secondary" />
+          </svg>
+          <!-- Transparent range input sits on top for seeking and accessibility -->
+          <input
+            type="range"
+            class="mini-player__progress mini-player__progress--wobble"
+            min="0"
+            :max="audioStore.duration || 100"
+            :value="audioStore.currentTime"
+            @input="onSeek"
+            :aria-label="t.player.seek"
+          />
+        </div>
         <span v-if="!isCompactMiniPlayerUi" class="mini-player__time mini-player__time--duration">{{
           formatTime(audioStore.duration)
         }}</span>
@@ -938,6 +1230,98 @@ audio {
   background: var(--player-accent-color);
 }
 
+.mini-player__progress--wobble::-webkit-slider-runnable-track {
+  border-radius: 999px;
+  background: transparent;
+}
+
+.mini-player__progress--wobble:hover::-webkit-slider-runnable-track {
+  background: transparent;
+}
+
+.mini-player__progress--wobble::-moz-range-track {
+  border-radius: 999px;
+  background: transparent;
+}
+
+.mini-player__progress--wobble::-moz-range-progress {
+  border-radius: 999px;
+  background: transparent;
+}
+
+.mini-player__progress--wobble:hover::-moz-range-progress {
+  background: transparent;
+}
+
+.mini-player__progress-wrap {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  height: 16px; /* matches MINI_PROGRESS_WOBBLE.shellHeightPx */
+}
+
+.mini-player__progress-visual {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.wobble-track {
+  fill: rgba(255, 255, 255, 0.3);
+}
+
+.wobble-base-fill {
+  fill: white;
+}
+
+.wobble-wave {
+  fill: white;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.22));
+}
+
+.wobble-wave--secondary {
+  opacity: 0.46;
+}
+
+.mini-player__progress-visual.is-wobbling .wobble-wave {
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.38));
+}
+
+.mini-player__progress-wrap:hover .wobble-wave {
+  fill: var(--player-accent-color);
+}
+
+.mini-player__progress-wrap:hover .wobble-base-fill {
+  fill: var(--player-accent-color);
+}
+
+.mini-player__progress {
+  grid-column: 2;
+  grid-row: 2;
+  width: 100%;
+  height: 20px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  align-self: center;
+}
+
+.mini-player__progress--wobble {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  opacity: 0;
+  z-index: 1;
+  cursor: pointer;
+}
+
 /* Right: Close */
 .mini-player__right {
   grid-column: 2;
@@ -1218,7 +1602,7 @@ audio {
     font-size: 10px;
   }
 
-  .mini-player__center--mobile .mini-player__progress {
+  .mini-player__center--mobile .mini-player__progress-wrap {
     grid-column: 1 / -1;
     grid-row: 2;
     width: 100%;

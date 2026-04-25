@@ -7,11 +7,12 @@ import { useAudioStore } from '@/stores/audio'
 describe('GlobalAudioPlayer', () => {
   const originalMatchMedia = window.matchMedia
   const originalInnerWidth = window.innerWidth
+  let reduceMotion = false
 
   beforeEach(() => {
     setActivePinia(createPinia())
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: false,
+      matches: query === '(prefers-reduced-motion: reduce)' ? reduceMotion : false,
       media: query,
       onchange: null,
       addListener: vi.fn(),
@@ -23,6 +24,7 @@ describe('GlobalAudioPlayer', () => {
   })
 
   afterEach(() => {
+    reduceMotion = false
     window.matchMedia = originalMatchMedia
     Object.defineProperty(window, 'innerWidth', {
       configurable: true,
@@ -256,5 +258,120 @@ describe('GlobalAudioPlayer', () => {
     await wrapper.vm.$nextTick()
 
     expect(wrapper.find('[data-testid="stems-overlay"]').exists()).toBe(false)
+  })
+
+  it('enables wobble in compact mode by default', async () => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 768,
+    })
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:01-misled')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+
+    const visual = wrapper.find('[data-testid="mini-progress-visual"]')
+    expect(visual.exists()).toBe(true)
+    expect(visual.attributes('data-wobble-active')).toBe('true')
+  })
+
+  it('disables wobble when enableMiniProgressWobble prop is false', async () => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 768,
+    })
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:01-misled')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      props: {
+        enableMiniProgressWobble: false,
+      },
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+
+    const visual = wrapper.find('[data-testid="mini-progress-visual"]')
+    expect(visual.exists()).toBe(true)
+    expect(visual.attributes('data-wobble-active')).toBe('false')
+  })
+
+  it('disables wobble for reduced motion when respected', async () => {
+    reduceMotion = true
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 768,
+    })
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:01-misled')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      props: {
+        wobbleRespectReducedMotion: true,
+      },
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+
+    const visual = wrapper.find('[data-testid="mini-progress-visual"]')
+    expect(visual.exists()).toBe(true)
+    expect(visual.attributes('data-wobble-active')).toBe('false')
+  })
+
+  it('allows wobble for reduced motion when override is disabled', async () => {
+    reduceMotion = true
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 768,
+    })
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:01-misled')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      props: {
+        wobbleRespectReducedMotion: false,
+      },
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+
+    const visual = wrapper.find('[data-testid="mini-progress-visual"]')
+    expect(visual.exists()).toBe(true)
+    expect(visual.attributes('data-wobble-active')).toBe('true')
   })
 })
