@@ -1,5 +1,9 @@
 import { test, expect, Page, type Locator } from '@playwright/test'
-import { waitForAnimations, clickAndWaitForAnimations } from './helpers.js'
+import {
+  waitForAnimations,
+  clickAndWaitForAnimations,
+  waitForMiniPlayerWobbleState,
+} from './helpers.js'
 
 test.describe('Lyrics Display Feature', () => {
   async function clickRobust(locator: Locator) {
@@ -110,6 +114,17 @@ test.describe('Lyrics Display Feature', () => {
     await expect(lyricsBtn).toBeVisible({ timeout: 3000 })
     await expect(lyricsBtn).toBeEnabled()
     await expect(lyricsBtn).not.toHaveClass(/is-disabled/)
+  })
+
+  test('compact mini-player enables wobble visual by default', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 })
+    await navigateToMusicPlayer(page)
+    await playTrackWithLyrics(page)
+
+    await waitForMiniPlayerWobbleState(page)
+
+    const wobbleVisual = page.locator('[data-testid="mini-progress-visual"]')
+    await expect(wobbleVisual).toHaveAttribute('data-wobble-active', 'true')
   })
 
   test('clicking lyrics button shows lyrics display', async ({ page }) => {
