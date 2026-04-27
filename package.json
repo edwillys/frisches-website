@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@primevue/themes": "^4.5.4",
-    "@sentry/vue": "^10.49.0",
+    "@sentry/vue": "^10.50.0",
     "gsap": "^3.15.0",
     "pinia": "^3.0.3",
     "primeicons": "^7.0.0",
