@@ -18,6 +18,7 @@
   --color-accent-dark: #b8941f;
   --color-neon-cyan: #68c6e0; /* Slightly dimmed cyan for neon effects */
   --color-neon-magenta: #bf075a; /* Slightly dimmed magenta for neon effects */
+  --lyrics-album-contour: #d4711c;
 
   /* Neutral Colors */
   --color-background: #0a0a12;
@@ -78,6 +79,18 @@
   --bg-main-particles: 220, 40, 40;
   /* Optionally tweak cover transition duration (seconds) */
   --bg-cover-transition-duration: 1.6s;
+  /* Shared About cards and subheader sizing */
+  --about-card-width-desktop: 17rem;
+  --about-card-width-mobile: 16rem;
+  --about-card-aspect-ratio: 5 / 7.2;
+  --about-card-gap: 0.85rem;
+  --about-max-cards: 4;
+  --about-track-inline-padding: 0.8rem;
+  --about-track-max-width: calc(
+    (var(--about-card-width-desktop) * var(--about-max-cards)) +
+      (var(--about-card-gap) * (var(--about-max-cards) - 1)) +
+      (var(--about-track-inline-padding) * 2)
+  );
 
   /* Typography Scale */
   --font-family-base: 'Space Mono', 'Courier New', monospace;

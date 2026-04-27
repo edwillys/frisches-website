@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 /**
  * CardDealer Component
  *
@@ -29,7 +29,7 @@ import { ref, reactive, onMounted, nextTick, onBeforeUnmount, computed, watch } 
 import MenuCard from './MenuCard.vue'
 import LogoButton from './LogoButton.vue'
 import AudioPlayer from './AudioPlayer.vue'
-import AboutMembersView from './AboutMembersView.vue'
+import AboutView from './AboutView.vue'
 import GalleryManager from './GalleryManager.vue'
 import { useGSAP } from '../composables/useGSAP'
 import { useNavigationSections } from '../composables/useNavigationSections'
@@ -37,12 +37,14 @@ import { useUiText } from '../composables/useUiText'
 import { currentAppLocale } from '@/i18n/locale'
 import { getLegalText } from '@/i18n/legalText'
 import { readParticlesPaletteFromCss } from '../composables/useCardDealerPalette'
-import { getTargetXYToViewportCenter, getViewportCenter } from './cardDealer/viewportCenter'
 import { computeLeadStagger, distanceFromLead } from './cardDealer/leadStagger'
 import { getOffsetsToContainerCenter } from './cardDealer/containerOffsets'
 import { titleContainsSection, type MenuSectionKey } from './cardDealer/menuSections'
 import gsap from 'gsap'
 import { CustomEase } from 'gsap/CustomEase'
+import { useAudioStore } from '@/stores/audio'
+import { MINI_PLAYER_OPEN_LYRICS_EVENT } from '@/constants/events'
+import { useAboutHeaderMenu, type AboutViewExpose } from '@/composables/useAboutHeaderMenu'
 
 import instagramSvg from '@/assets/icons/social-instagram.svg?raw'
 import spotifySvg from '@/assets/icons/social-spotify.svg?raw'
@@ -107,9 +109,11 @@ const backButtonRef = ref<HTMLElement | null>(null)
 const headerActionsRef = ref<HTMLElement | null>(null)
 const headerRef = ref<HTMLElement | null>(null)
 const headerTitleRef = ref<HTMLElement | null>(null)
-import { useAudioStore } from '@/stores/audio'
+
+const aboutViewRef = ref<AboutViewExpose | null>(null)
 const currentView = ref<'logo' | 'cards' | 'content'>('logo')
 const selectedCard = ref<number | null>(null)
+const contentReturnSelectedCard = ref<number | null>(null)
 const isAnimating = ref(false)
 const isCreditsOverlayOpen = ref(false)
 
@@ -205,6 +209,10 @@ const selectedItemMatchesSection = (sectionKey: MenuSectionKey) =>
 
 const isGalleryActive = computed(
   () => currentView.value === 'content' && selectedItemMatchesSection('gallery')
+)
+
+const isAboutActive = computed(
+  () => currentView.value === 'content' && selectedItemMatchesSection('about')
 )
 
 const selectedItem = computed(() =>
@@ -314,11 +322,13 @@ function closeHeaderNav() {
 
 function onHeaderNavHomeClick() {
   closeHeaderNav()
+  closeSubmenu()
   handleHeaderHomeClick()
 }
 
 function onHeaderNavItemClick(index: number) {
   closeHeaderNav()
+  closeSubmenu()
   handleHeaderTitleClick(index)
 }
 
@@ -477,10 +487,35 @@ const eventPathBlocksEscape = (e: KeyboardEvent) => {
   return path.some((p) => p instanceof HTMLElement && p.dataset.carddealerEscBlock === 'true')
 }
 
+const shouldIgnoreGlobalNavKey = (e: KeyboardEvent) => {
+  if (e.altKey || e.ctrlKey || e.metaKey) return true
+  const target = e.target
+  if (!(target instanceof HTMLElement)) return false
+  const tag = target.tagName.toLowerCase()
+  return tag === 'input' || tag === 'textarea' || target.isContentEditable
+}
+
 const handleKeydown = (e: KeyboardEvent) => {
+  if (shouldIgnoreGlobalNavKey(e)) return
+
+  if (e.key === 'ArrowLeft') {
+    if (e.defaultPrevented) return
+    if (eventPathBlocksEscape(e)) return
+    if (hasBlockingOverlayOpen()) return
+
+    e.preventDefault()
+    handleBackClick()
+    return
+  }
+
   if (e.key === 'Escape') {
     if (e.defaultPrevented) return
     if (eventPathBlocksEscape(e)) return
+
+    if (isAboutSubmenuOpenDesktop.value) {
+      closeSubmenu()
+      return
+    }
 
     if (isCreditsOverlayOpen.value) {
       isCreditsOverlayOpen.value = false
@@ -496,12 +531,34 @@ const handleKeydown = (e: KeyboardEvent) => {
   }
 }
 
+const handleMiniPlayerOpenLyricsRequest = () => {
+  if (isAnimating.value) return
+
+  const musicIndex = menuItems.findIndex((item) => item.route === '/music')
+  if (musicIndex < 0) return
+
+  if (currentView.value === 'content' && selectedItem.value?.route === '/music') {
+    return
+  }
+
+  isCreditsOverlayOpen.value = false
+  isHeaderNavOpen.value = false
+
+  selectedCard.value = musicIndex
+  hasMountedContentView.value = true
+  hasMountedMusic.value = true
+  currentView.value = 'content'
+  syncCoverForMenuIndex(musicIndex)
+}
+
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
+  window.addEventListener(MINI_PLAYER_OPEN_LYRICS_EVENT, handleMiniPlayerOpenLyricsRequest)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener(MINI_PLAYER_OPEN_LYRICS_EVENT, handleMiniPlayerOpenLyricsRequest)
 })
 
 const handleLogoHover = (hovered: boolean) => {
@@ -568,6 +625,9 @@ const getLogoElement = () => {
 
 const getCardElements = () => cardsRef.value.filter((card): card is HTMLElement => Boolean(card))
 
+const getContentReturnLeadIndex = (selectedIdx: number | null) =>
+  selectedIdx !== null ? selectedIdx : deckLeadIndex
+
 const setCardMaskState = (card: HTMLElement, hidden: boolean) => {
   if (hidden) {
     card.dataset.deckMasked = 'true'
@@ -591,8 +651,92 @@ const setDeckMask = (cards: HTMLElement[], maskNonLead: boolean) => {
   })
 }
 
+const stageCardsForContentReturn = (cards: HTMLElement[], selectedIdx: number | null) => {
+  const leadIndex = getContentReturnLeadIndex(selectedIdx)
+
+  cards.forEach((card, index) => {
+    const isSelected = index === leadIndex
+
+    card.dataset.deckMasked = isSelected ? 'false' : 'true'
+
+    if (isSelected) {
+      card.removeAttribute('aria-hidden')
+    } else {
+      card.setAttribute('aria-hidden', 'true')
+    }
+
+    gsap.set(card, {
+      opacity: 0,
+      visibility: 'visible',
+      x: 0,
+      y: 0,
+      scale: isSelected ? 1 : 0.98,
+      rotation: 0,
+      filter: isSelected ? 'blur(0px)' : 'blur(12px)',
+      zIndex: isSelected ? 50 : 40,
+    })
+  })
+}
+
+const syncCardsVisibilityForView = () => {
+  const cards = getCardElements()
+  if (!cards.length) return
+
+  if (currentView.value === 'content' && !isAnimating.value) {
+    cards.forEach((card) => setCardMaskState(card, true))
+    return
+  }
+
+  if (
+    currentView.value === 'content' &&
+    isAnimating.value &&
+    contentReturnSelectedCard.value !== null
+  ) {
+    stageCardsForContentReturn(cards, contentReturnSelectedCard.value)
+    return
+  }
+
+  cards.forEach((card) => setCardMaskState(card, false))
+}
+
+watch([() => currentView.value, () => isAnimating.value], () => {
+  syncCardsVisibilityForView()
+})
+
+const {
+  isAboutSubmenuOpenDesktop,
+  aboutActiveSubmenu,
+  aboutCanGoBack,
+  aboutSubmenuItems,
+  closeSubmenu,
+  handleAboutStateChange,
+  getAboutSubmenuLabel,
+  isAboutMenuRoute,
+  goToAboutSubmenu,
+  toggleAboutSubmenuFromHeader,
+  onAboutMenuItemFocusout,
+  handleAboutMenuMouseEnter,
+  handleAboutMenuMouseLeave,
+} = useAboutHeaderMenu({
+  currentView,
+  isAnimating,
+  isMobileNavMode,
+  selectedCard,
+  menuItems,
+  hoveredHeaderIndex,
+  isAboutActive,
+  aboutViewRef,
+  onNavigateToAbout: (index) => handleHeaderTitleClick(index),
+})
+
 const handleBackClick = () => {
   if (isAnimating.value) return
+
+  closeSubmenu()
+
+  if (isAboutActive.value && aboutCanGoBack.value && aboutViewRef.value?.goBackOneStep()) {
+    return
+  }
 
   // Leaving the Music screen should always exit karaoke mode.
   if (currentView.value === 'content' && selectedItem.value?.route === '/music') {
@@ -600,9 +744,11 @@ const handleBackClick = () => {
   }
 
   if (currentView.value == 'content') {
+    contentReturnSelectedCard.value = selectedCard.value
     startAnimating()
     playContentCloseAndCardsReturn()
   } else if (currentView.value == 'cards') {
+    contentReturnSelectedCard.value = null
     startAnimating()
     playCardCloseAndLogoReappear()
   }
@@ -682,6 +828,11 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
     startAnimating()
     playCardCloseAndLogoReappear()
   } else if (currentView.value === 'content') {
+    if (isAboutSubmenuOpenDesktop.value && !clickedHeaderTitles) {
+      closeSubmenu()
+      return
+    }
+
     if (
       clickedInsideContent ||
       clickedBackButton ||
@@ -690,6 +841,7 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
       clickedHeaderTitles
     )
       return
+    contentReturnSelectedCard.value = selectedCard.value
     startAnimating()
     playContentCloseAndCardsReturn()
   }
@@ -706,7 +858,10 @@ const closeCreditsOverlay = () => {
 watch(currentView, (view) => {
   if (view === 'content') {
     isCreditsOverlayOpen.value = false
+    return
   }
+
+  closeSubmenu()
 })
 
 const playLogoCloseAndCardOpen = () => {
@@ -987,31 +1142,30 @@ const playContentCloseAndCardsReturn = (opts?: { thenToLogo?: boolean }) => {
   const headerActions = headerActionsRef.value
   const headerTitle = headerTitleRef.value
   const container = cardsContainerRef.value
+  const selectedIdx = getContentReturnLeadIndex(selectedCard.value)
 
   if (!container) {
+    contentReturnSelectedCard.value = null
     stopAnimating()
     return
   }
 
-  // We want the “gather to center” point to be the CENTER OF THE SCREEN (viewport),
-  // not the center of the cards container (which is auto-sized and can be offset).
-  const viewportCenter = getViewportCenter()
-
-  const selectedIdx = selectedCard.value
+  stageCardsForContentReturn(cards, selectedIdx)
 
   const tl = gsap.timeline({
-    defaults: { ease: deckSpreadEase },
+    defaults: { ease: 'power2.out' },
     onStart: () => {
       emit('palette-change', readParticlesPaletteFromCss('main'))
     },
     onComplete: () => {
       // Don't clear opacity as it defaults to 0 in CSS
       cards.forEach((card) =>
-        gsap.set(card, { clearProps: 'transform,visibility,zIndex,borderRadius' })
+        gsap.set(card, { clearProps: 'transform,visibility,zIndex,borderRadius,filter' })
       )
       selectedCard.value = null
       currentView.value = 'cards'
       isCoverActive.value = false
+      contentReturnSelectedCard.value = null
 
       if (opts?.thenToLogo) {
         // Continue the animation chain: cards -> logo.
@@ -1088,93 +1242,61 @@ const playContentCloseAndCardsReturn = (opts?: { thenToLogo?: boolean }) => {
     )
   }
 
-  // Phase 3: Make selected card visible and animate to center.
+  // Phase 3: Crossfade from content into the three-card state.
+  // All three cards fade in together while content fades out.
+  // The selected card stays crisp; the other two appear blurred first.
   if (selectedIdx !== null && cards[selectedIdx]) {
-    const selectedCardEl = cards[selectedIdx]
-
-    if (selectedCardEl) {
-      // Use a 0-duration tween instead of tl.set for test-mock compatibility.
-      tl.to(
-        selectedCardEl,
-        {
-          opacity: 1,
-          zIndex: 50,
-          duration: 0,
-        },
-        0.4
-      )
-    }
+    tl.to(
+      cards[selectedIdx],
+      {
+        opacity: 1,
+        filter: 'blur(0px)',
+        scale: 1,
+        y: 0,
+        zIndex: 50,
+        duration: 0.24,
+      },
+      0
+    )
   }
 
-  // Compute per-card targets to gather at the viewport center.
-  const cardTargetsToCenter = cards.map((card) => getTargetXYToViewportCenter(card, viewportCenter))
-
-  // Animate selected card to center
-  if (selectedIdx !== null && cards[selectedIdx]) {
-    const selectedCard = cards[selectedIdx]
-    const target = cardTargetsToCenter[selectedIdx]
-
-    if (selectedCard && target) {
-      tl.to(
-        selectedCard,
-        {
-          x: target.x,
-          y: target.y,
-          scale: 1,
-          rotation: 0,
-          duration: 0.5,
-        },
-        0.5
-      )
-    }
-  }
-
-  // Phase 4: Set other cards at center position
+  // Phase 4: Background cards fade in blurred.
   cards.forEach((card, index) => {
-    if (index !== selectedIdx) {
-      const target = cardTargetsToCenter[index]
-      if (!target) return
+    if (index === selectedIdx) return
 
-      // Use a 0-duration tween instead of tl.set for test-mock compatibility.
-      tl.to(
-        card,
-        {
-          x: target.x,
-          y: target.y,
-          scale: 1,
-          rotation: 0,
-          opacity: 1,
-          zIndex: 40,
-          duration: 0,
-        },
-        0.9
-      )
-    }
-  })
-
-  // Phase 5: Distribute all cards from center to their grid positions
-  const deckLeadIndex = Math.floor(cards.length / 2)
-  cards.forEach((card, index) => {
-    const { at, duration } = computeLeadStagger(index, deckLeadIndex, {
-      startBase: 1.0,
-      startStep: 0.14,
-      durationBase: 0.7,
-      durationStep: 0.1,
-    })
+    const distFromCenter = Math.abs(index - deckLeadIndex)
+    const startAt = 0
 
     tl.to(
       card,
       {
-        x: 0,
+        opacity: 0.72,
+        filter: 'blur(12px)',
+        scale: 0.98,
         y: 0,
-        duration,
+        zIndex: 40,
+        duration: 0.24,
       },
-      at
+      startAt
+    )
+
+    tl.to(
+      card,
+      {
+        opacity: 1,
+        filter: 'blur(0px)',
+        scale: 1,
+        y: 0,
+        zIndex: 40,
+        duration: 0.26,
+      },
+      0.18 + distFromCenter * 0.04
     )
   })
 }
 
 const playCardSelection = (cardIndex: number) => {
+  contentReturnSelectedCard.value = null
   const cards = getCardElements()
   if (cards.length === 0 || !cards[cardIndex]) {
     stopAnimating()
@@ -1382,6 +1504,10 @@ const handleHeaderTitleClick = (menuIndex: number) => {
   if (currentView.value !== 'content') return
   if (selectedCard.value === menuIndex) return
 
+  if (!isAboutMenuRoute(menuIndex)) {
+    closeSubmenu()
+  }
+
   // Leaving the Music screen should always exit karaoke mode.
   if (selectedItem.value?.route === '/music') {
     audioStore.closeLyrics()
@@ -1394,6 +1520,8 @@ const handleHeaderTitleClick = (menuIndex: number) => {
 const handleHeaderHomeClick = () => {
   if (isAnimating.value) return
   if (currentView.value !== 'content') return
+
+  closeSubmenu()
 
   // Leaving the Music screen should always exit karaoke mode.
   if (selectedItem.value?.route === '/music') {
@@ -1905,13 +2033,20 @@ onBeforeUnmount(() => {
         />
       </div>
 
-      <!-- Header with back button and header actions (shown in content view) -->
+      <!-- Header with header actions (shown in content view) -->
+      <button
+        v-if="currentView === 'content'"
+        ref="backButtonRef"
+        type="button"
+        class="card-dealer__back-button card-dealer__global-back-button"
+        :aria-label="'Back'"
+        @click="handleBackClick"
+      >
+        <span aria-hidden="true" v-html="arrowLeftSvg" />
+      </button>
+
       <div v-if="currentView === 'content'" ref="headerRef" class="card-dealer__header">
         <div class="card-dealer__header-left">
-          <div ref="backButtonRef" class="card-dealer__back-button" @click="handleBackClick">
-            <span aria-hidden="true" v-html="arrowLeftSvg" />
-          </div>
-
           <div v-if="selectedItem" ref="headerTitleRef" class="card-dealer__header-titles">
             <button
               type="button"
@@ -1922,22 +2057,81 @@ onBeforeUnmount(() => {
             >
               {{ navigationSections.home.headerTitle }}
             </button>
-            <button
-              v-for="(item, index) in menuItems"
-              :key="item.route"
-              type="button"
-              class="card-dealer__header-title-item"
-              :class="{
-                'card-dealer__header-title-item--active': selectedCard === index,
-                'card-dealer__header-title-item--hovered': hoveredHeaderIndex === index,
-              }"
-              :aria-current="selectedCard === index ? 'page' : undefined"
-              @mouseenter="hoveredHeaderIndex = index"
-              @mouseleave="hoveredHeaderIndex = null"
-              @click="handleHeaderTitleClick(index)"
-            >
-              {{ item.headerTitle }}
-            </button>
+
+            <template v-for="(item, index) in menuItems" :key="item.route">
+              <div
+                v-if="item.route === '/about'"
+                class="card-dealer__about-menu-item"
+                :class="{
+                  'is-active': selectedCard === index,
+                  'is-hovered': hoveredHeaderIndex === index,
+                }"
+                @mouseenter="handleAboutMenuMouseEnter(index)"
+                @mouseleave="handleAboutMenuMouseLeave()"
+                @focusout="onAboutMenuItemFocusout"
+              >
+                <button
+                  type="button"
+                  class="card-dealer__header-title-item card-dealer__about-title-button"
+                  :class="{
+                    'card-dealer__header-title-item--active': selectedCard === index,
+                    'card-dealer__header-title-item--hovered': hoveredHeaderIndex === index,
+                  }"
+                  :aria-current="selectedCard === index ? 'page' : undefined"
+                  @click="handleHeaderTitleClick(index)"
+                >
+                  {{ item.headerTitle }}
+                </button>
+
+                <button
+                  type="button"
+                  class="card-dealer__about-dropdown-toggle-btn"
+                  :aria-label="`Open ${t.about.menuAriaLabel}`"
+                  :aria-expanded="isAboutSubmenuOpenDesktop"
+                  @click.stop="toggleAboutSubmenuFromHeader(index)"
+                >
+                  <span
+                    class="card-dealer__about-dropdown-toggle-icon"
+                    :class="{ 'is-open': isAboutSubmenuOpenDesktop }"
+                    aria-hidden="true"
+                  ></span>
+                </button>
+
+                <div
+                  v-if="isAboutSubmenuOpenDesktop"
+                  class="card-dealer__about-dropdown"
+                  role="menu"
+                  :aria-label="t.about.menuAriaLabel"
+                >
+                  <button
+                    v-for="submenu in aboutSubmenuItems"
+                    :key="`about-submenu-${submenu}`"
+                    type="button"
+                    class="card-dealer__about-dropdown-item"
+                    :class="{ 'is-active': isAboutActive && aboutActiveSubmenu === submenu }"
+                    @click="goToAboutSubmenu(submenu)"
+                  >
+                    {{ getAboutSubmenuLabel(submenu) }}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                v-else
+                type="button"
+                class="card-dealer__header-title-item"
+                :class="{
+                  'card-dealer__header-title-item--active': selectedCard === index,
+                  'card-dealer__header-title-item--hovered': hoveredHeaderIndex === index,
+                }"
+                :aria-current="selectedCard === index ? 'page' : undefined"
+                @mouseenter="hoveredHeaderIndex = index"
+                @mouseleave="hoveredHeaderIndex = null"
+                @click="handleHeaderTitleClick(index)"
+              >
+                {{ item.headerTitle }}
+              </button>
+            </template>
           </div>
         </div>
 
@@ -2084,6 +2278,20 @@ onBeforeUnmount(() => {
           >
             {{ item.headerTitle }}
           </button>
+
+          <div v-if="isAboutActive" class="card-dealer__header-drawer-about-submenu">
+            <button
+              v-for="submenu in aboutSubmenuItems"
+              :key="`drawer-about-submenu-${submenu}`"
+              type="button"
+              class="card-dealer__header-drawer-item card-dealer__header-drawer-item--about-submenu"
+              :class="{ 'is-active': aboutActiveSubmenu === submenu }"
+              @click="goToAboutSubmenu(submenu)"
+            >
+              {{ getAboutSubmenuLabel(submenu) }}
+            </button>
+          </div>
+
           <div class="card-dealer__header-drawer-social" :aria-label="t.logo.socialLinks">
             <a
               :href="props.socialLinks?.instagram || undefined"
@@ -2211,7 +2419,11 @@ onBeforeUnmount(() => {
             v-show="selectedItemMatchesSection('about')"
             class="card-dealer__about-content"
           >
-            <AboutMembersView :is-active="selectedItemMatchesSection('about')" />
+            <AboutView
+              ref="aboutViewRef"
+              :is-active="selectedItemMatchesSection('about')"
+              @state-change="handleAboutStateChange"
+            />
           </div>
 
           <!-- Gallery (lazy-mount + keep alive via v-show) -->

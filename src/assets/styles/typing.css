@@ -1,0 +1,17 @@
+:root {
+  --typing-cursor-blink-duration: 1.05s;
+}
+
+@keyframes typing-cursor-blink {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
+}
+
+.typing-cursor--blink {
+  animation: typing-cursor-blink var(--typing-cursor-blink-duration) step-end infinite;
+}

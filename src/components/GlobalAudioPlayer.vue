@@ -31,6 +31,7 @@ import volumeMuteSvg from '@/assets/icons/volume-mute.svg?raw'
 import volumeLowSvg from '@/assets/icons/volume-low.svg?raw'
 import volumeMidSvg from '@/assets/icons/volume-mid.svg?raw'
 import volumeHighSvg from '@/assets/icons/volume-high.svg?raw'
+import { MINI_PLAYER_OPEN_LYRICS_EVENT } from '@/constants/events'
 
 const props = withDefaults(
   defineProps<{
@@ -667,6 +668,17 @@ function onSeek(e: Event) {
 function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number) {
   audioStore.setStemGain(stem, value)
 }
+
+function onLyricsButtonClick() {
+  if (!currentTrackHasLyrics.value) return
+
+  const willOpenLyrics = !audioStore.showLyrics
+  if (willOpenLyrics && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(MINI_PLAYER_OPEN_LYRICS_EVENT))
+  }
+
+  audioStore.toggleLyrics()
+}
 </script>
 
 <template>
@@ -877,7 +889,7 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
             :aria-label="audioStore.showLyrics ? t.player.hideLyrics : t.player.showLyrics"
             :disabled="!currentTrackHasLyrics"
             data-testid="mini-lyrics"
-            @click="audioStore.toggleLyrics"
+            @click="onLyricsButtonClick"
           >
             <span class="mini-player__icon" aria-hidden="true" v-html="lyricsSvg" />
           </button>
@@ -953,7 +965,7 @@ audio {
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: stretch;
   gap: 16px;
-  padding: 12px 16px;
+  padding: 12px 42px 12px 16px;
   background: rgba(0, 0, 0, 0.92);
   backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -1446,13 +1458,14 @@ audio {
 }
 
 .mini-player__close {
-  grid-column: 3;
-  align-self: center;
-  width: 32px;
-  height: 32px;
-  justify-self: end;
-  position: relative;
-  z-index: 2;
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  z-index: 3;
 }
 
 @keyframes mini-player-marquee {
@@ -1495,7 +1508,7 @@ audio {
     grid-template-rows: auto auto;
     align-items: center;
     gap: 6px 8px;
-    padding: 6px 8px 6px;
+    padding: 6px 28px 6px 8px;
     --mini-btn-size: 28px;
     --mini-row-height: 40px;
   }
@@ -1576,17 +1589,14 @@ audio {
      to the far right while padding-right on .mini-player__right keeps actions
      clear of it. */
   .mini-player__close {
-    grid-column: 3;
-    grid-row: 1;
+    position: absolute;
+    top: 4px;
+    right: 6px;
     width: 16px !important;
     height: 16px !important;
     min-width: 16px !important;
     min-height: 16px !important;
-    align-self: start;
-    margin-top: 2px;
-    justify-self: end;
-    flex-shrink: 0;
-    z-index: 2;
+    z-index: 3;
   }
 
   .mini-player__artwork {

@@ -24,6 +24,8 @@ const focusedIndex = ref(0)
 const cardRefs = ref<Array<AboutFlipCardHandle | null>>([])
 const cellRefs = ref<Array<HTMLElement | null>>([])
 const rootRef = ref<HTMLElement | null>(null)
+const activeFlipLocks = ref<string[]>([])
+const isInteractionLocked = computed(() => activeFlipLocks.value.length > 0)
 const initialToIndex = computed(
   () =>
     new Map(
@@ -74,6 +76,8 @@ const focusCardAtIndex = async (index: number) => {
 }
 
 const toggleCard = (index: number) => {
+  if (isInteractionLocked.value) return
+
   const member = aboutMembers.value[index]
   if (!member) return
 
@@ -81,6 +85,17 @@ const toggleCard = (index: number) => {
   flippedMemberIds.value = isOpen
     ? flippedMemberIds.value.filter((memberId) => memberId !== member.id)
     : [...flippedMemberIds.value, member.id]
+}
+
+const setFlipLock = (memberId: string, isLocked: boolean) => {
+  if (isLocked) {
+    if (!activeFlipLocks.value.includes(memberId)) {
+      activeFlipLocks.value = [...activeFlipLocks.value, memberId]
+    }
+    return
+  }
+
+  activeFlipLocks.value = activeFlipLocks.value.filter((lockedId) => lockedId !== memberId)
 }
 
 const playFavoriteSong = (trackId: string) => {
@@ -122,8 +137,7 @@ const handleKeydown = async (event: KeyboardEvent) => {
   }
 
   if (event.key === 'ArrowLeft') {
-    event.preventDefault()
-    await moveFocus('left')
+    return
   }
 
   if (event.key === 'ArrowRight') {
@@ -164,6 +178,15 @@ watch(
   },
   { immediate: true }
 )
+
+watch(
+  () => props.isActive,
+  (isActive) => {
+    if (!isActive) {
+      activeFlipLocks.value = []
+    }
+  }
+)
 </script>
 
 <template>
@@ -178,15 +201,18 @@ watch(
         v-for="(member, index) in aboutMembers"
         :key="member.id"
         class="about-members__cell"
+        data-about-card
         :ref="(element) => setCellRef(element, index)"
       >
         <AboutFlipCard
           :ref="(instance) => setCardRef(instance as AboutFlipCardHandle | null, index)"
           :is-flipped="flippedMemberIds.includes(member.id)"
           :is-focused="focusedIndex === index"
+          :flip-locked="isInteractionLocked"
           :member="member"
           :skeleton-offset="[0, 3, 6, 2][index] ?? 0"
           @focus-card="focusedIndex = index"
+          @flip-lock-change="setFlipLock(member.id, $event)"
           @play-favorite="playFavoriteSong"
           @toggle="toggleCard(index)"
         />
@@ -197,13 +223,13 @@ watch(
 
 <style scoped>
 .about-members {
-  --about-members-card-width: 15.75rem;
-  --about-members-card-width-mobile: 16rem;
+  --about-members-card-width: var(--about-card-width-desktop);
+  --about-members-card-width-mobile: var(--about-card-width-mobile);
   --about-members-cell-max-width: calc(100vw - 2rem);
   --about-members-padding-block: clamp(0.2rem, 0.8vw, 0.5rem);
   --about-members-padding-inline: clamp(0.4rem, 1vw, 0.8rem);
-  --about-members-carousel-gap: 0.85rem;
-  --about-members-carousel-scroll-padding: 0.8rem;
+  --about-members-carousel-gap: var(--about-card-gap);
+  --about-members-carousel-scroll-padding: var(--about-track-inline-padding);
   --about-members-carousel-inline-padding: 0.1rem;
   display: flex;
   align-items: center;

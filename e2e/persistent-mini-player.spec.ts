@@ -80,8 +80,13 @@ test.describe('Persistent mini-player (Phase 1)', () => {
     // Restart path 1: About chip can start playback again
     await page.locator('[data-testid="card-about"]').click()
     await waitForAnimations(page)
+
+    // About now opens to the entry section; navigate into Members
+    const membersBtn = page.getByRole('button', { name: 'Members cards' })
+    await expect(membersBtn).toBeVisible({ timeout: 15000 })
+    await membersBtn.click()
     await expect(page.locator('[data-testid="about-members-view"]')).toBeVisible({
-      timeout: 10000,
+      timeout: 15000,
     })
 
     // Flip Edgar's card to expose the favorite-song chip

@@ -130,6 +130,39 @@ describe('GlobalAudioPlayer', () => {
     expect(wrapper.findAll('[data-testid="mini-lyrics"]').length).toBe(1)
   })
 
+  it('dispatches music-menu request when opening lyrics from mini-player', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:01-misled')
+
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+
+    const lyricsBtn = wrapper.find('[data-testid="mini-lyrics"]')
+    expect(lyricsBtn.exists()).toBe(true)
+    expect(audio.showLyrics).toBe(false)
+
+    await lyricsBtn.trigger('click')
+
+    expect(audio.showLyrics).toBe(true)
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.any(CustomEvent))
+    expect(
+      dispatchSpy.mock.calls.some((args) => {
+        const evt = args[0]
+        return evt instanceof CustomEvent && evt.type === 'frisches:mini-player-open-lyrics'
+      })
+    ).toBe(true)
+  })
+
   it('updates store volume from mini-player volume slider', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
@@ -232,15 +265,20 @@ describe('GlobalAudioPlayer', () => {
     await stemsBtn.trigger('click')
     await wrapper.vm.$nextTick()
 
+    // Icon color now reflects whether fader editing is enabled, not popup visibility.
     expect(stemsBtn.classes()).toContain('is-active')
 
     const overlay = wrapper.find('[data-testid="stems-overlay"]')
     expect(overlay.exists()).toBe(true)
 
+    const enableToggle = overlay.find('[data-testid="stems-enable-toggle"]')
+    expect(enableToggle.exists()).toBe(true)
+
     const drumsSlider = overlay.find('input[aria-label="Drums volume"]')
     await drumsSlider.setValue('0.25')
 
     expect(audio.stemGains.drums).toBeCloseTo(0.25)
+    expect(stemsBtn.classes()).toContain('is-active')
 
     const drumsMute = overlay.find('[data-testid="stem-drums-mute"]')
     expect(drumsMute.exists()).toBe(true)
@@ -254,10 +292,23 @@ describe('GlobalAudioPlayer', () => {
     const closeBtn = overlay.find('[data-testid="stems-close"]')
     expect(closeBtn.exists()).toBe(true)
 
+    // Disabling fader editing should immediately clear the highlighted mini-player icon.
+    await enableToggle.trigger('click')
+    expect(stemsBtn.classes()).not.toContain('is-active')
+
     await closeBtn.trigger('click')
     await wrapper.vm.$nextTick()
 
     expect(wrapper.find('[data-testid="stems-overlay"]').exists()).toBe(false)
+
+    // State is retained while popup is closed.
+    expect(stemsBtn.classes()).not.toContain('is-active')
+
+    await stemsBtn.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="stems-overlay"]').exists()).toBe(true)
+    expect(stemsBtn.classes()).not.toContain('is-active')
   })
 
   it('enables wobble in compact mode by default', async () => {

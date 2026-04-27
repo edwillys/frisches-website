@@ -342,7 +342,7 @@
   z-index: 99;
   display: flex;
   align-items: center;
-  padding: 16px 24px;
+  padding: 16px 24px 16px 86px;
   gap: var(--spacing-md);
   /* Intercept clicks so the global outside-click handler doesn't treat the header as 'outside' */
   pointer-events: auto;
@@ -352,9 +352,18 @@
 
 .card-dealer__header-left {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: var(--spacing-md);
+  justify-content: flex-start;
+  gap: 10px;
   min-width: 0;
+}
+
+.card-dealer__global-back-button {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 102;
 }
 
 .card-dealer__header-right {
@@ -596,6 +605,7 @@
   margin: 0;
   white-space: nowrap;
   pointer-events: auto;
+  position: relative;
 }
 
 .card-dealer__header-title-item {
@@ -619,6 +629,35 @@
   cursor: pointer;
 }
 
+.card-dealer__about-menu-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.card-dealer__about-title-button {
+  display: inline-flex;
+  align-items: center;
+}
+
+.card-dealer__about-dropdown-toggle-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  opacity: 0.65;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin-left: 2px;
+  transition:
+    opacity var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
 .card-dealer__header-title-item--active {
   color: var(--color-text);
   opacity: 1;
@@ -629,6 +668,100 @@
   opacity: 0.95;
   color: var(--color-text);
   transform: translateY(-1px);
+}
+
+.card-dealer__about-dropdown-toggle-icon {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translateY(-1px);
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.card-dealer__about-dropdown-toggle-btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.36);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.card-dealer__about-dropdown-toggle-icon.is-open {
+  transform: rotate(-135deg) translateY(-1px);
+}
+
+.card-dealer__about-menu-item.is-active .card-dealer__about-dropdown-toggle-btn {
+  color: var(--color-text);
+  opacity: 1;
+}
+
+.card-dealer__about-menu-item.is-hovered .card-dealer__about-dropdown-toggle-btn {
+  color: var(--color-text);
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+.card-dealer__about-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 166px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.86);
+  backdrop-filter: blur(10px);
+  z-index: 7;
+}
+
+.card-dealer__about-dropdown-item {
+  appearance: none;
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.card-dealer__about-dropdown-item:hover,
+.card-dealer__about-dropdown-item:focus-visible {
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.16);
+  outline: none;
+}
+
+.card-dealer__about-dropdown-item.is-active {
+  color: var(--color-text);
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.17);
+}
+
+.card-dealer__header-drawer-about-submenu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.card-dealer__header-drawer-item--about-submenu {
+  padding-left: 20px;
+  font-size: 14px;
+  opacity: 0.9;
 }
 
 .card-dealer__content-overlay {
@@ -653,7 +786,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-2xl);
+  padding: var(--spacing-md);
   padding-bottom: calc(var(--spacing-2xl) + var(--mini-player-offset, 0px));
   box-sizing: border-box;
   pointer-events: auto;
@@ -719,7 +852,7 @@
   flex-shrink: 0;
   backface-visibility: hidden;
   transform-style: preserve-3d;
-  will-change: transform, opacity;
+  will-change: transform, opacity, filter;
 }
 
 /* Disable CSS transitions on cards while JS/GSAP animations run to avoid conflicts */
@@ -777,6 +910,13 @@
   }
 
   .card-dealer__back-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .card-dealer__global-back-button {
+    top: 12px;
+    left: 12px;
     width: 44px;
     height: 44px;
   }
