@@ -34,6 +34,7 @@ describe('CardDealer social links', () => {
       global: {
         plugins: [pinia],
         stubs: {
+          RouterLink: true,
           MenuCard: true,
           LogoButton: true,
           AudioPlayer: true,
@@ -76,6 +77,9 @@ describe('CardDealer social links', () => {
       },
       global: {
         plugins: [pinia],
+        stubs: {
+          RouterLink: true,
+        },
       },
     })
 

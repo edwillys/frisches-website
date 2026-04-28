@@ -103,6 +103,7 @@ describe('translation coverage', () => {
           "faders.instrumentVolume",
           "faders.muteToggle",
           "faders.open",
+          "faders.unavailableSuffix",
           "gallery.albumNavLabel",
           "gallery.albums",
           "gallery.clearFilters",

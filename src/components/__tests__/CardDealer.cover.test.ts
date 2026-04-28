@@ -87,6 +87,11 @@ describe('CardDealer cover behavior', () => {
           youtube: '#',
         },
       },
+      global: {
+        stubs: {
+          RouterLink: true,
+        },
+      },
     })
 
     // Find the MenuCard element that contains the title 'About'
@@ -107,7 +112,13 @@ describe('CardDealer cover behavior', () => {
   })
 
   it('renders dim overlay element for covers', () => {
-    const wrapper = mount(CardDealer)
+    const wrapper = mount(CardDealer, {
+      global: {
+        stubs: {
+          RouterLink: true,
+        },
+      },
+    })
     const dim = wrapper.find('.card-dealer__cover-dim')
     expect(dim.exists()).toBe(true)
   })
