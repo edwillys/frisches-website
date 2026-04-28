@@ -1,6 +1,6 @@
 export interface AboutMemberBadge {
   title: string
-  image: string
+  svg: string
 }
 
 export interface AboutMember {

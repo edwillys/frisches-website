@@ -101,6 +101,7 @@ export interface UiText {
     groupLabel: string
     muteToggle: (instrument: string) => string
     instrumentVolume: (instrument: string) => string
+    unavailableSuffix: string
   }
   // Logo / general
   logo: {
@@ -215,6 +216,7 @@ export const uiText: Record<AppLocale, UiText> = {
       groupLabel: 'Instrument faders',
       muteToggle: (instrument) => `${instrument} mute toggle`,
       instrumentVolume: (instrument) => `${instrument} volume`,
+      unavailableSuffix: ' (not available)',
     },
     logo: {
       ariaLabel: 'Frisches - Click to reveal menu',
@@ -325,6 +327,7 @@ export const uiText: Record<AppLocale, UiText> = {
       groupLabel: 'Instrumentregler',
       muteToggle: (instrument) => `${instrument} stummschalten`,
       instrumentVolume: (instrument) => `${instrument} Lautstärke`,
+      unavailableSuffix: ' (nicht verfügbar)',
     },
     logo: {
       ariaLabel: 'Frisches – Klicken, um das Menü zu öffnen',
@@ -436,6 +439,7 @@ export const uiText: Record<AppLocale, UiText> = {
       groupLabel: "Faders d'instruments",
       muteToggle: (instrument) => `Couper ${instrument}`,
       instrumentVolume: (instrument) => `Volume de ${instrument}`,
+      unavailableSuffix: ' (indisponible)',
     },
     logo: {
       ariaLabel: 'Frisches – Cliquez pour afficher le menu',
@@ -546,6 +550,7 @@ export const uiText: Record<AppLocale, UiText> = {
       groupLabel: 'Faders de instrumentos',
       muteToggle: (instrument) => `Silenciar ${instrument}`,
       instrumentVolume: (instrument) => `Volume de ${instrument}`,
+      unavailableSuffix: ' (não disponível)',
     },
     logo: {
       ariaLabel: 'Frisches – Clique para revelar o menu',

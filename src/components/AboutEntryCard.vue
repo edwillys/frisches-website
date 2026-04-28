@@ -2,10 +2,27 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import ArcadeMenuButton from './ArcadeMenuButton.vue'
-import { useAboutMembers } from '@/composables/useAboutMembers'
 import { getTriviaCards } from '@/data/triviaCards'
 import { currentAppLocale } from '@/i18n/locale'
 import { useUiText } from '@/composables/useUiText'
+
+// @ts-expect-error - vite-imagetools generates these at build time
+import bandSmall from '@/assets/private/avatar/band.png?w=128&format=webp&quality=78'
+// @ts-expect-error - vite-imagetools generates these at build time
+import bandMedium from '@/assets/private/avatar/band.png?w=256&format=webp&quality=78'
+// @ts-expect-error - vite-imagetools generates these at build time
+import bandLarge from '@/assets/private/avatar/band.png?w=384&format=webp&quality=78'
+
+const bandFrameModules = import.meta.glob<string>(
+  '../assets/private/avatar/poses/band/band-frame*.png',
+  { eager: true, query: { w: '512', format: 'webp', quality: '78' }, import: 'default' }
+)
+const bandFlipFrames = Object.keys(bandFrameModules)
+  .sort()
+  .flatMap((key) => {
+    const url = bandFrameModules[key]
+    return url ? [url] : []
+  })
 
 interface Props {
   backSignal?: number
@@ -27,7 +44,6 @@ const emit = defineEmits<{
 
 const rootRef = ref<HTMLElement | null>(null)
 const titleRef = ref<HTMLElement | null>(null)
-const aboutMembers = useAboutMembers()
 const t = useUiText()
 const isFlipped = ref(false)
 const hoverFrameSrc = ref<string | null>(null)
@@ -45,10 +61,12 @@ let lastHoverFrameIndex = -1
 let titleFitFrame: number | null = null
 let titleResizeObserver: ResizeObserver | null = null
 
-const entryMember = computed(() => {
-  const members = aboutMembers.value
-  return members.find((member) => member.id === 'edgar') ?? members[0]
-})
+const entryMember = computed(() => ({
+  avatar: bandMedium as string,
+  avatarSrcset: `${bandSmall} 128w, ${bandMedium} 256w, ${bandLarge} 384w`,
+  flipFrames: bandFlipFrames,
+  hoverPoseFrame: undefined,
+}))
 
 const storySections = computed(() => {
   const sections = getTriviaCards(currentAppLocale.value)

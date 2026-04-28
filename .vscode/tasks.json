@@ -36,6 +36,17 @@
       "command": "npm",
       "args": ["run", "test:e2e"],
       "group": "test"
+    },
+    {
+      "label": "Normalize SVG assets",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "normalize:svg"],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
     }
   ]
 }

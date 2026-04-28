@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import gsap from 'gsap'
-import { useAudioStore } from '@/stores/audio'
+import { useAudioStore, type AudioStemName } from '@/stores/audio'
 import { getAlbumById } from '@/data/albums'
+import { resolveStemAvailability } from '@/data/stems'
 import { useReducedMotion } from '@/composables/useMediaHelpers'
 import { useUiText } from '@/composables/useUiText'
 import { usePlayerThemeStyle } from '@/composables/usePlayerThemeStyle'
@@ -89,6 +90,8 @@ const currentTrackHasLyrics = computed(() => {
   return !!audioStore.currentTrack?.lyricsPath
 })
 
+const currentStemAvailability = computed(() => resolveStemAvailability(audioStore.currentTrackId))
+
 const currentAlbumId = computed(() => audioStore.currentTrackId?.split(':')[0] ?? null)
 const currentAlbum = computed(() =>
   currentAlbumId.value ? getAlbumById(currentAlbumId.value) : undefined
@@ -117,6 +120,14 @@ watch(
 
 const visualProgressRatio = ref(0)
 const progressPercent = computed(() => `${(visualProgressRatio.value * 100).toFixed(3)}%`)
+const desktopProgressTime = computed(() => {
+  const duration = audioStore.duration
+  if (!Number.isFinite(duration) || duration <= 0) {
+    return Math.max(0, audioStore.currentTime)
+  }
+
+  return clamp(visualProgressRatio.value * duration, 0, duration)
+})
 
 const isMiniPlayerWobbleEnabled = computed(() => {
   if (!props.enableMiniProgressWobble) return false
@@ -665,7 +676,7 @@ function onSeek(e: Event) {
   audioStore.seek(time)
 }
 
-function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number) {
+function onStemGain(stem: AudioStemName, value: number) {
   audioStore.setStemGain(stem, value)
 }
 
@@ -811,7 +822,8 @@ function onLyricsButtonClick() {
           class="mini-player__progress"
           min="0"
           :max="audioStore.duration || 100"
-          :value="audioStore.currentTime"
+          step="any"
+          :value="desktopProgressTime"
           :style="{ '--progress-percent': progressPercent }"
           @input="onSeek"
           :aria-label="t.player.seek"
@@ -872,6 +884,7 @@ function onLyricsButtonClick() {
           <InstrumentFaders
             v-model="showStemFaders"
             :gains="audioStore.stemGains"
+            :availability="currentStemAvailability"
             @setGain="onStemGain"
           />
 

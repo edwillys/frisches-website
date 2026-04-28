@@ -456,6 +456,18 @@ const handleFavoriteSongClick = () => {
   emit('play-favorite', props.member.favoriteTrackId)
 }
 
+const buildBadgeSvgMarkup = (svg: string) => {
+  const normalizedSvg = svg.trim()
+
+  if (!normalizedSvg) return ''
+
+  // Inline SVG must expose currentColor so badge tone follows the back-card cyan.
+  return normalizedSvg.replace(
+    '<svg',
+    '<svg class="about-flip-card__badge-icon" aria-hidden="true" focusable="false"'
+  )
+}
+
 const clearFlipUnlockTimeout = () => {
   if (flipUnlockTimeoutId !== null) {
     clearTimeout(flipUnlockTimeoutId)
@@ -677,11 +689,11 @@ onBeforeUnmount(() => {
               :aria-label="badge.title"
               class="about-flip-card__badge"
               :title="badge.title"
+              data-testid="member-badge"
               @click.stop
               @pointerdown.stop
-            >
-              <img :alt="badge.title" :src="badge.image" data-testid="member-badge" />
-            </span>
+              v-html="buildBadgeSvgMarkup(badge.svg)"
+            ></span>
           </div>
 
           <div
@@ -1082,6 +1094,7 @@ onBeforeUnmount(() => {
 }
 
 .about-flip-card__badge {
+  color: var(--color-neon-cyan);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1096,9 +1109,11 @@ onBeforeUnmount(() => {
   background: rgba(0, 0, 0, 0.22);
 }
 
-.about-flip-card__badge img {
+.about-flip-card__badge :deep(.about-flip-card__badge-icon) {
   width: var(--about-card-back-badge-inner-size);
   height: var(--about-card-back-badge-inner-size);
+  display: block;
+  fill: currentColor;
 }
 
 .about-flip-card__song-chip {

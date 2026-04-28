@@ -17,6 +17,7 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "generate:gallery": "node scripts/generate-gallery.js",
+    "normalize:svg": "node scripts/normalize-svg.js src/assets",
     "lint": "eslint . --fix --cache",
     "format": "prettier --write src/",
     "prepare": "husky"

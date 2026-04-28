@@ -3,12 +3,12 @@ import { getAboutMembersText } from '@/data/aboutMembersText'
 import { getTrackById } from '@/data/tracks'
 import type { AppLocale } from '@/i18n/locale'
 
-import guitarHeadSvg from '@/assets/badges/guitar-head.svg'
-import bassHeadSvg from '@/assets/badges/bass-head.svg'
-import microphoneSvg from '@/assets/badges/microphone.svg'
-import fluteSvg from '@/assets/badges/flute.svg'
-import drumSticksSvg from '@/assets/badges/drum-sticks.svg'
-import choirSvg from '@/assets/badges/choir.svg'
+import guitarHeadSvg from '@/assets/badges/guitar-head.svg?raw'
+import bassHeadSvg from '@/assets/badges/bass-head.svg?raw'
+import microphoneSvg from '@/assets/badges/microphone.svg?raw'
+import fluteSvg from '@/assets/badges/flute.svg?raw'
+import drumSticksSvg from '@/assets/badges/drum-sticks.svg?raw'
+import choirSvg from '@/assets/badges/choir.svg?raw'
 
 // @ts-expect-error - vite-imagetools generates these at build time
 import edgarSmall from '@/assets/private/avatar/edgar.png?w=128&format=webp&quality=78'
@@ -98,9 +98,9 @@ const avatarSrcset = (small: string, medium: string, large: string) =>
   `${small} 128w, ${medium} 256w, ${large} 384w`
 
 const createBadges = (titles: readonly string[], images: readonly string[]) =>
-  images.flatMap((image, index) => {
+  images.flatMap((svg, index) => {
     const title = titles[index]
-    return title ? [{ title, image }] : []
+    return title ? [{ title, svg }] : []
   })
 
 export const getAboutMembers = (locale: AppLocale): AboutMember[] => {

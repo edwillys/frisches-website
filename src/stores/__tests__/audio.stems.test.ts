@@ -14,6 +14,10 @@ describe('Audio Store - Stem Gains', () => {
       guitar: 1,
       bass: 1,
       vocals: 1,
+      flute: 1,
+      brass: 1,
+      percussion: 1,
+      keyboard: 1,
     })
   })
 
