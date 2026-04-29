@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "frisches-website",
+  "pages_build_output_dir": "dist",
   "compatibility_date": "2026-04-20",
   "observability": {
     "enabled": true,
