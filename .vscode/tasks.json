@@ -36,6 +36,50 @@
       "command": "npm",
       "args": ["run", "test:e2e"],
       "group": "test"
+    },
+    {
+      "label": "Normalize SVG assets",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "normalize:svg"],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Sync private assets → R2 (upload)",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "sync:r2:up"],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Sync private assets ← R2 (download)",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "sync:r2:down"],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Sync private assets ↔ R2 (bisync)",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "sync:r2:bisync"],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
     }
   ]
 }

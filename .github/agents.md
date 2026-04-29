@@ -30,6 +30,12 @@ We are building a dynamic website for the rock band **Frisches** using Vue.js. T
 
 - Run unit tests once and exit (no watch / no prompt): `npm run test:unit -- --run`
 
+## Testing Policy (Red Then Green)
+
+- For every bug fix or behavior change, write or update a targeted automated test first so it fails on the current code (red).
+- Only then implement the code fix and rerun the same targeted test until it passes (green).
+- After green, run closely related tests to guard against regressions in adjacent behavior.
+
 ## Visual Effects
 
 ### Luminescent Dust Particles (MouseParticles Component)

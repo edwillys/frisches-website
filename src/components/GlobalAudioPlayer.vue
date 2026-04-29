@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import gsap from 'gsap'
-import { useAudioStore } from '@/stores/audio'
+import { useAudioStore, type AudioStemName } from '@/stores/audio'
 import { getAlbumById } from '@/data/albums'
+import { resolveStemAvailability } from '@/data/stems'
 import { useReducedMotion } from '@/composables/useMediaHelpers'
 import { useUiText } from '@/composables/useUiText'
 import { usePlayerThemeStyle } from '@/composables/usePlayerThemeStyle'
@@ -31,6 +32,7 @@ import volumeMuteSvg from '@/assets/icons/volume-mute.svg?raw'
 import volumeLowSvg from '@/assets/icons/volume-low.svg?raw'
 import volumeMidSvg from '@/assets/icons/volume-mid.svg?raw'
 import volumeHighSvg from '@/assets/icons/volume-high.svg?raw'
+import { MINI_PLAYER_OPEN_LYRICS_EVENT } from '@/constants/events'
 
 const props = withDefaults(
   defineProps<{
@@ -88,6 +90,8 @@ const currentTrackHasLyrics = computed(() => {
   return !!audioStore.currentTrack?.lyricsPath
 })
 
+const currentStemAvailability = computed(() => resolveStemAvailability(audioStore.currentTrackId))
+
 const currentAlbumId = computed(() => audioStore.currentTrackId?.split(':')[0] ?? null)
 const currentAlbum = computed(() =>
   currentAlbumId.value ? getAlbumById(currentAlbumId.value) : undefined
@@ -116,6 +120,14 @@ watch(
 
 const visualProgressRatio = ref(0)
 const progressPercent = computed(() => `${(visualProgressRatio.value * 100).toFixed(3)}%`)
+const desktopProgressTime = computed(() => {
+  const duration = audioStore.duration
+  if (!Number.isFinite(duration) || duration <= 0) {
+    return Math.max(0, audioStore.currentTime)
+  }
+
+  return clamp(visualProgressRatio.value * duration, 0, duration)
+})
 
 const isMiniPlayerWobbleEnabled = computed(() => {
   if (!props.enableMiniProgressWobble) return false
@@ -664,8 +676,19 @@ function onSeek(e: Event) {
   audioStore.seek(time)
 }
 
-function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number) {
+function onStemGain(stem: AudioStemName, value: number) {
   audioStore.setStemGain(stem, value)
+}
+
+function onLyricsButtonClick() {
+  if (!currentTrackHasLyrics.value) return
+
+  const willOpenLyrics = !audioStore.showLyrics
+  if (willOpenLyrics && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(MINI_PLAYER_OPEN_LYRICS_EVENT))
+  }
+
+  audioStore.toggleLyrics()
 }
 </script>
 
@@ -799,7 +822,8 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
           class="mini-player__progress"
           min="0"
           :max="audioStore.duration || 100"
-          :value="audioStore.currentTime"
+          step="any"
+          :value="desktopProgressTime"
           :style="{ '--progress-percent': progressPercent }"
           @input="onSeek"
           :aria-label="t.player.seek"
@@ -860,6 +884,7 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
           <InstrumentFaders
             v-model="showStemFaders"
             :gains="audioStore.stemGains"
+            :availability="currentStemAvailability"
             @setGain="onStemGain"
           />
 
@@ -877,7 +902,7 @@ function onStemGain(stem: 'drums' | 'guitar' | 'bass' | 'vocals', value: number)
             :aria-label="audioStore.showLyrics ? t.player.hideLyrics : t.player.showLyrics"
             :disabled="!currentTrackHasLyrics"
             data-testid="mini-lyrics"
-            @click="audioStore.toggleLyrics"
+            @click="onLyricsButtonClick"
           >
             <span class="mini-player__icon" aria-hidden="true" v-html="lyricsSvg" />
           </button>
@@ -953,7 +978,7 @@ audio {
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: stretch;
   gap: 16px;
-  padding: 12px 16px;
+  padding: 12px 42px 12px 16px;
   background: rgba(0, 0, 0, 0.92);
   backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -1446,13 +1471,14 @@ audio {
 }
 
 .mini-player__close {
-  grid-column: 3;
-  align-self: center;
-  width: 32px;
-  height: 32px;
-  justify-self: end;
-  position: relative;
-  z-index: 2;
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  z-index: 3;
 }
 
 @keyframes mini-player-marquee {
@@ -1495,7 +1521,7 @@ audio {
     grid-template-rows: auto auto;
     align-items: center;
     gap: 6px 8px;
-    padding: 6px 8px 6px;
+    padding: 6px 28px 6px 8px;
     --mini-btn-size: 28px;
     --mini-row-height: 40px;
   }
@@ -1576,17 +1602,14 @@ audio {
      to the far right while padding-right on .mini-player__right keeps actions
      clear of it. */
   .mini-player__close {
-    grid-column: 3;
-    grid-row: 1;
+    position: absolute;
+    top: 4px;
+    right: 6px;
     width: 16px !important;
     height: 16px !important;
     min-width: 16px !important;
     min-height: 16px !important;
-    align-self: start;
-    margin-top: 2px;
-    justify-self: end;
-    flex-shrink: 0;
-    z-index: 2;
+    z-index: 3;
   }
 
   .mini-player__artwork {

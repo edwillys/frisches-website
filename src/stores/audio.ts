@@ -5,7 +5,15 @@ import { trackEvent, trackLyricsToggled } from '@/analytics'
 
 export type AudioRepeatMode = 'off' | 'all' | 'one'
 export type AudioStartSource = 'music' | 'about'
-export type AudioStemName = 'drums' | 'guitar' | 'bass' | 'vocals'
+export type AudioStemName =
+  | 'drums'
+  | 'guitar'
+  | 'bass'
+  | 'vocals'
+  | 'flute'
+  | 'brass'
+  | 'percussion'
+  | 'keyboard'
 
 export const useAudioStore = defineStore('audio', () => {
   const persistAcrossPages = true as const
@@ -38,6 +46,10 @@ export const useAudioStore = defineStore('audio', () => {
     guitar: 1,
     bass: 1,
     vocals: 1,
+    flute: 1,
+    brass: 1,
+    percussion: 1,
+    keyboard: 1,
   })
 
   const currentTrack = computed<Track | null>(() => {

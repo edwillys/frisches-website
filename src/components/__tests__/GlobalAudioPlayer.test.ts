@@ -1,8 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import gsap from 'gsap'
 import GlobalAudioPlayer from '../GlobalAudioPlayer.vue'
 import { useAudioStore } from '@/stores/audio'
+
+const { resolveStemAvailabilityMock } = vi.hoisted(() => ({
+  resolveStemAvailabilityMock: vi.fn(),
+}))
+
+vi.mock('@/data/stems', () => ({
+  resolveStemAvailability: resolveStemAvailabilityMock,
+}))
 
 describe('GlobalAudioPlayer', () => {
   const originalMatchMedia = window.matchMedia
@@ -11,6 +20,16 @@ describe('GlobalAudioPlayer', () => {
 
   beforeEach(() => {
     setActivePinia(createPinia())
+    resolveStemAvailabilityMock.mockReturnValue({
+      drums: true,
+      guitar: true,
+      bass: true,
+      vocals: true,
+      flute: true,
+      brass: true,
+      percussion: true,
+      keyboard: true,
+    })
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       matches: query === '(prefers-reduced-motion: reduce)' ? reduceMotion : false,
       media: query,
@@ -130,6 +149,39 @@ describe('GlobalAudioPlayer', () => {
     expect(wrapper.findAll('[data-testid="mini-lyrics"]').length).toBe(1)
   })
 
+  it('dispatches music-menu request when opening lyrics from mini-player', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:01-misled')
+
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+
+    const lyricsBtn = wrapper.find('[data-testid="mini-lyrics"]')
+    expect(lyricsBtn.exists()).toBe(true)
+    expect(audio.showLyrics).toBe(false)
+
+    await lyricsBtn.trigger('click')
+
+    expect(audio.showLyrics).toBe(true)
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.any(CustomEvent))
+    expect(
+      dispatchSpy.mock.calls.some((args) => {
+        const evt = args[0]
+        return evt instanceof CustomEvent && evt.type === 'frisches:mini-player-open-lyrics'
+      })
+    ).toBe(true)
+  })
+
   it('updates store volume from mini-player volume slider', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
@@ -152,6 +204,74 @@ describe('GlobalAudioPlayer', () => {
     await volumeInput.setValue('0.5')
 
     expect(audio.volume).toBeCloseTo(0.5)
+  })
+
+  it('uses smooth media time for the desktop mini-player progress slider while playing', async () => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 1280,
+    })
+
+    const progressTickerHolder: { current: null | (() => void) } = { current: null }
+    const addSpy = vi.spyOn(gsap.ticker, 'add').mockImplementation((fn) => {
+      progressTickerHolder.current = () => {
+        ;(fn as () => void)()
+      }
+      return fn
+    })
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:01-misled')
+    audio.updateFromAudioDuration(100)
+    audio.updateFromAudioTime(10)
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+
+    const audioEl = wrapper.find('audio').element as HTMLAudioElement
+    Object.defineProperty(audioEl, 'currentTime', { value: 10.75, configurable: true })
+
+    progressTickerHolder.current?.()
+    await wrapper.vm.$nextTick()
+
+    const progressInput = wrapper.find('input.mini-player__progress').element as HTMLInputElement
+    expect(Number(progressInput.value)).toBeCloseTo(10.75)
+
+    addSpy.mockRestore()
+  })
+
+  it('allows fractional desktop progress values', async () => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 1280,
+    })
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:01-misled')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+
+    const progressInput = wrapper.find('input.mini-player__progress')
+    expect(progressInput.attributes('step')).toBe('any')
   })
 
   it('hides compact mini-player controls on narrow screens without overriding the stored volume', async () => {
@@ -232,15 +352,22 @@ describe('GlobalAudioPlayer', () => {
     await stemsBtn.trigger('click')
     await wrapper.vm.$nextTick()
 
-    expect(stemsBtn.classes()).toContain('is-active')
+    expect(stemsBtn.classes()).not.toContain('is-active')
 
     const overlay = wrapper.find('[data-testid="stems-overlay"]')
     expect(overlay.exists()).toBe(true)
+
+    const enableToggle = overlay.find('[data-testid="stems-enable-toggle"]')
+    expect(enableToggle.exists()).toBe(true)
+    await enableToggle.trigger('click')
+
+    expect(stemsBtn.classes()).toContain('is-active')
 
     const drumsSlider = overlay.find('input[aria-label="Drums volume"]')
     await drumsSlider.setValue('0.25')
 
     expect(audio.stemGains.drums).toBeCloseTo(0.25)
+    expect(stemsBtn.classes()).toContain('is-active')
 
     const drumsMute = overlay.find('[data-testid="stem-drums-mute"]')
     expect(drumsMute.exists()).toBe(true)
@@ -254,10 +381,58 @@ describe('GlobalAudioPlayer', () => {
     const closeBtn = overlay.find('[data-testid="stems-close"]')
     expect(closeBtn.exists()).toBe(true)
 
+    await enableToggle.trigger('click')
+    expect(stemsBtn.classes()).not.toContain('is-active')
+
     await closeBtn.trigger('click')
     await wrapper.vm.$nextTick()
 
     expect(wrapper.find('[data-testid="stems-overlay"]').exists()).toBe(false)
+
+    // State is retained while popup is closed.
+    expect(stemsBtn.classes()).not.toContain('is-active')
+
+    await stemsBtn.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="stems-overlay"]').exists()).toBe(true)
+    expect(stemsBtn.classes()).not.toContain('is-active')
+  })
+
+  it('disables unavailable stem controls for the current track', async () => {
+    resolveStemAvailabilityMock.mockReturnValue({
+      drums: false,
+      guitar: true,
+      bass: true,
+      vocals: true,
+      flute: true,
+      brass: true,
+      percussion: true,
+      keyboard: true,
+    })
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:01-misled')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+
+    await wrapper.find('[data-testid="mini-stems"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    const overlay = wrapper.find('[data-testid="stems-overlay"]')
+    await overlay.find('[data-testid="stems-enable-toggle"]').trigger('click')
+
+    expect(overlay.find('[data-testid="stem-drums-mute"]').attributes('disabled')).toBeDefined()
+    expect(overlay.find('input[aria-label="Drums volume"]').attributes('disabled')).toBeDefined()
   })
 
   it('enables wobble in compact mode by default', async () => {

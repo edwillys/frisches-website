@@ -79,6 +79,21 @@ export interface UiText {
     syncToCurrent: string
     sync: string
   }
+  // About view
+  about: {
+    subHeaderTitle: string
+    menuAriaLabel: string
+    storyButton: string
+    entryImageAlt: string
+    triviaButton: string
+    membersButton: string
+    lyricsButton: string
+    storyButtonAria: string
+    triviaButtonAria: string
+    membersButtonAria: string
+    lyricsButtonAria: string
+    placeholderButtonAria: string
+  }
   // Instrument faders
   faders: {
     open: string
@@ -86,6 +101,7 @@ export interface UiText {
     groupLabel: string
     muteToggle: (instrument: string) => string
     instrumentVolume: (instrument: string) => string
+    unavailableSuffix: string
   }
   // Logo / general
   logo: {
@@ -180,12 +196,27 @@ export const uiText: Record<AppLocale, UiText> = {
       syncToCurrent: 'Sync to current lyrics',
       sync: 'Sync',
     },
+    about: {
+      subHeaderTitle: "Hi, we're Frisches!",
+      menuAriaLabel: 'About menu',
+      storyButton: 'Story',
+      entryImageAlt: 'Frisches band photo',
+      triviaButton: 'Trivia',
+      membersButton: 'Members',
+      lyricsButton: 'Lyrics',
+      storyButtonAria: 'Story card',
+      triviaButtonAria: 'Trivia cards',
+      membersButtonAria: 'Members cards',
+      lyricsButtonAria: 'Lyrics cards',
+      placeholderButtonAria: 'Coming soon',
+    },
     faders: {
       open: 'Instrument faders',
       close: 'Close instrument faders',
       groupLabel: 'Instrument faders',
       muteToggle: (instrument) => `${instrument} mute toggle`,
       instrumentVolume: (instrument) => `${instrument} volume`,
+      unavailableSuffix: ' (not available)',
     },
     logo: {
       ariaLabel: 'Frisches - Click to reveal menu',
@@ -276,12 +307,27 @@ export const uiText: Record<AppLocale, UiText> = {
       syncToCurrent: 'Mit aktuellem Liedtext synchronisieren',
       sync: 'Synchronisieren',
     },
+    about: {
+      subHeaderTitle: 'Hi, wir sind Frisches!',
+      menuAriaLabel: 'Über-Menü',
+      storyButton: 'Story',
+      entryImageAlt: 'Bandfoto von Frisches',
+      triviaButton: 'Trivia',
+      membersButton: 'Mitglieder',
+      lyricsButton: 'Liedtext',
+      storyButtonAria: 'Story-Karte',
+      triviaButtonAria: 'Trivia-Karten',
+      membersButtonAria: 'Mitgliederkarten',
+      lyricsButtonAria: 'Liedtextkarten',
+      placeholderButtonAria: 'Demnaechst',
+    },
     faders: {
       open: 'Instrumentregler',
       close: 'Instrumentregler schließen',
       groupLabel: 'Instrumentregler',
       muteToggle: (instrument) => `${instrument} stummschalten`,
       instrumentVolume: (instrument) => `${instrument} Lautstärke`,
+      unavailableSuffix: ' (nicht verfügbar)',
     },
     logo: {
       ariaLabel: 'Frisches – Klicken, um das Menü zu öffnen',
@@ -373,12 +419,27 @@ export const uiText: Record<AppLocale, UiText> = {
       syncToCurrent: 'Se resynchroniser sur les paroles en cours',
       sync: 'Synchroniser',
     },
+    about: {
+      subHeaderTitle: 'Salut, nous sommes Frisches!',
+      menuAriaLabel: 'Menu a propos',
+      storyButton: 'Histoire',
+      entryImageAlt: 'Photo du groupe Frisches',
+      triviaButton: 'Trivia',
+      membersButton: 'Membres',
+      lyricsButton: 'Paroles',
+      storyButtonAria: 'Carte histoire',
+      triviaButtonAria: 'Cartes trivia',
+      membersButtonAria: 'Cartes membres',
+      lyricsButtonAria: 'Cartes paroles',
+      placeholderButtonAria: 'Bientot disponible',
+    },
     faders: {
       open: "Afficher les faders d'instruments",
       close: "Fermer les faders d'instruments",
       groupLabel: "Faders d'instruments",
       muteToggle: (instrument) => `Couper ${instrument}`,
       instrumentVolume: (instrument) => `Volume de ${instrument}`,
+      unavailableSuffix: ' (indisponible)',
     },
     logo: {
       ariaLabel: 'Frisches – Cliquez pour afficher le menu',
@@ -469,12 +530,27 @@ export const uiText: Record<AppLocale, UiText> = {
       syncToCurrent: 'Sincronizar com a letra atual',
       sync: 'Sincronizar',
     },
+    about: {
+      subHeaderTitle: 'Olá, nós somos Frisches!',
+      menuAriaLabel: 'Menu sobre',
+      storyButton: 'História',
+      entryImageAlt: 'Foto da banda Frisches',
+      triviaButton: 'Trivia',
+      membersButton: 'Membros',
+      lyricsButton: 'Letra',
+      storyButtonAria: 'Cartão de história',
+      triviaButtonAria: 'Cartoes de trivia',
+      membersButtonAria: 'Cartoes de membros',
+      lyricsButtonAria: 'Cartoes de letra',
+      placeholderButtonAria: 'Em breve',
+    },
     faders: {
       open: 'Faders de instrumentos',
       close: 'Fechar faders de instrumentos',
       groupLabel: 'Faders de instrumentos',
       muteToggle: (instrument) => `Silenciar ${instrument}`,
       instrumentVolume: (instrument) => `Volume de ${instrument}`,
+      unavailableSuffix: ' (não disponível)',
     },
     logo: {
       ariaLabel: 'Frisches – Clique para revelar o menu',

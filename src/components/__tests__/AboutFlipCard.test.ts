@@ -69,17 +69,27 @@ describe('AboutFlipCard', () => {
   })
 
   it('emits toggle on click and on keyboard activation', async () => {
+    vi.useFakeTimers()
+
     const wrapper = mount(AboutFlipCard, {
       props: {
-        member: camiMember,
+        member: steffMember,
         isFlipped: false,
       },
       attachTo: document.body,
     })
 
     await wrapper.trigger('click')
+    await vi.runAllTimersAsync()
+    await nextTick()
+
     await wrapper.trigger('keydown', { key: 'Enter' })
+    await vi.runAllTimersAsync()
+    await nextTick()
+
     await wrapper.trigger('keydown', { key: ' ' })
+    await vi.runAllTimersAsync()
+    await nextTick()
 
     expect(wrapper.emitted('toggle')).toHaveLength(3)
 
@@ -269,5 +279,125 @@ describe('AboutFlipCard', () => {
       expect.any(HTMLElement),
       expect.objectContaining({ rotateY: 180 })
     )
+  })
+
+  it('never uses the final mini-avatar frame as hover frame', async () => {
+    const originalRect = HTMLElement.prototype.getBoundingClientRect
+
+    Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({
+        left: 0,
+        top: 0,
+        right: 200,
+        bottom: 300,
+        width: 200,
+        height: 300,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }),
+    })
+
+    const wrapper = mount(AboutFlipCard, {
+      attachTo: document.body,
+      props: {
+        member: steffMember,
+        isFlipped: false,
+      },
+    })
+
+    window.dispatchEvent(new MouseEvent('pointermove', { clientX: -20, clientY: -20 }))
+    window.dispatchEvent(new MouseEvent('pointermove', { clientX: 24, clientY: 30 }))
+
+    await wrapper.trigger('mouseenter', { clientX: 24, clientY: 30 })
+    await nextTick()
+
+    const flipVideo = wrapper.find('.about-flip-card__flip-video')
+    expect(flipVideo.exists()).toBe(true)
+
+    const frames = steffMember.flipFrames ?? []
+    const finalFrame = frames[frames.length - 1]
+    expect(flipVideo.attributes('src')).not.toBe(finalFrame)
+
+    wrapper.unmount()
+    Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value: originalRect,
+    })
+  })
+
+  it('uses the final frame on click and unlocks interactions after flip duration', async () => {
+    vi.useFakeTimers()
+
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0)
+    const wrapper = mount(AboutFlipCard, {
+      attachTo: document.body,
+      props: {
+        member: steffMember,
+        isFlipped: false,
+      },
+    })
+
+    await wrapper.trigger('click')
+    await nextTick()
+
+    const frames = steffMember.flipFrames ?? []
+    const finalFrame = frames[frames.length - 1]
+    const floatingAvatarImage = wrapper.find('.about-flip-card__floating-avatar img')
+
+    expect(wrapper.emitted('toggle')).toHaveLength(1)
+    expect(wrapper.emitted('flip-lock-change')?.[0]).toEqual([true])
+    expect(floatingAvatarImage.attributes('src')).toBe(finalFrame)
+
+    await vi.advanceTimersByTimeAsync(719)
+    expect(wrapper.emitted('flip-lock-change')).toHaveLength(1)
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(wrapper.emitted('flip-lock-change')).toHaveLength(2)
+    expect(wrapper.emitted('flip-lock-change')?.[1]).toEqual([false])
+
+    randomSpy.mockRestore()
+    wrapper.unmount()
+  })
+
+  it('does not keep pose-frame video visible during click flip', async () => {
+    vi.useFakeTimers()
+
+    const wrapper = mount(AboutFlipCard, {
+      attachTo: document.body,
+      props: {
+        member: steffMember,
+        isFlipped: false,
+      },
+    })
+
+    await wrapper.trigger('click')
+    await nextTick()
+
+    const flipVideo = wrapper.find('.about-flip-card__flip-video')
+    expect(flipVideo.exists()).toBe(true)
+    expect(flipVideo.attributes('style') || '').toContain('display: none;')
+
+    wrapper.unmount()
+  })
+
+  it('does not pre-reveal the back avatar during front-to-back flip', async () => {
+    const wrapper = mount(AboutFlipCard, {
+      props: {
+        member: steffMember,
+        isFlipped: false,
+      },
+    })
+
+    const backAvatarElement = wrapper.find('[data-testid="member-avatar-back"]').element
+
+    await wrapper.setProps({ isFlipped: true })
+
+    const preRevealCall = gsapMocks.to.mock.calls.find(([target, vars]) => {
+      return target === backAvatarElement && (vars as { autoAlpha?: number }).autoAlpha === 1
+    })
+
+    expect(preRevealCall).toBeUndefined()
   })
 })

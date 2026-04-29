@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": "24.x"
+    "node": "24.14.1"
   },
   "scripts": {
     "dev": "npm run generate:gallery && vite",
@@ -17,6 +17,10 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "generate:gallery": "node scripts/generate-gallery.js",
+    "normalize:svg": "node scripts/normalize-svg.js src/assets",
+    "sync:r2:up": "node scripts/sync-r2.mjs up",
+    "sync:r2:down": "node scripts/sync-r2.mjs down",
+    "sync:r2:bisync": "node scripts/sync-r2.mjs bisync",
     "lint": "eslint . --fix --cache",
     "format": "prettier --write src/",
     "prepare": "husky"
@@ -61,7 +65,8 @@
     "vite": "^8.0.9",
     "vite-imagetools": "^10.0.0",
     "vitest": "^4.1.5",
-    "vue-tsc": "^3.2.7"
+    "vue-tsc": "^3.2.7",
+    "wrangler": "^4.86.0"
   },
   "lint-staged": {
     "src/**/*.{ts,js,vue}": [

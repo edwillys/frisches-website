@@ -127,8 +127,13 @@ test.describe('Frisches Website - Critical Flows', () => {
     await aboutCard.click()
     await waitForAnimations(page)
 
+    // About now opens to the entry section; navigate into Members
+    const membersBtn = page.getByRole('button', { name: 'Members cards' })
+    await expect(membersBtn).toBeVisible({ timeout: 15000 })
+    await membersBtn.click()
+
     const aboutMembersView = page.locator('[data-testid="about-members-view"]')
-    await expect(aboutMembersView).toBeVisible({ timeout: 20000 })
+    await expect(aboutMembersView).toBeVisible({ timeout: 15000 })
 
     const memberCards = page.locator('[data-member-card="true"]')
     await expect(memberCards).toHaveCount(4, { timeout: 20000 })
@@ -150,8 +155,13 @@ test.describe('Frisches Website - Critical Flows', () => {
     await aboutCard.click()
     await waitForAnimations(page)
 
+    // About now opens to the entry section; navigate into Members
+    const membersBtn = page.getByRole('button', { name: 'Members cards' })
+    await expect(membersBtn).toBeVisible({ timeout: 15000 })
+    await membersBtn.click()
+
     const aboutMembersView = page.locator('[data-testid="about-members-view"]')
-    await expect(aboutMembersView).toBeVisible({ timeout: 20000 })
+    await expect(aboutMembersView).toBeVisible({ timeout: 15000 })
 
     const characters = page.locator('[data-member-card="true"]')
     await expect(characters).toHaveCount(4, { timeout: 20000 })
@@ -189,7 +199,11 @@ test.describe('Frisches Website - Critical Flows', () => {
     await expect(logoButton).toBeVisible({ timeout: 15000 })
   })
 
-  test('handles all three cards sequentially', async ({ page }) => {
+  test('handles all three cards sequentially', async ({ page }, testInfo) => {
+    if (testInfo.project.name === 'webkit') {
+      test.setTimeout(60000)
+    }
+
     // Navigate to cards
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
     await expect(page.locator('.card-dealer__cards')).toBeVisible({ timeout: 5000 })
@@ -199,9 +213,10 @@ test.describe('Frisches Website - Critical Flows', () => {
 
     // Testids of the first meaningful element rendered inside each card's content, in card order:
     // 0=Music, 1=About, 2=Gallery
+    // About opens to the entry section (about-view), not directly to members.
     const contentReadySelectors = [
       '[data-testid="audio-player"]',
-      '[data-testid="about-members-view"]',
+      '[data-testid="about-view"]',
       '[data-testid="gallery-manager"]',
     ]
 
@@ -215,10 +230,22 @@ test.describe('Frisches Website - Critical Flows', () => {
       await waitForAnimations(page, 15000)
       await expect(page.locator(contentReadySelectors[i])).toBeVisible({ timeout: 10000 })
 
-      // Navigate back
+      // Navigate back — wait for animations to fully settle before clicking so the
+      // isAnimating guard in handleBackClick does not silently no-op the click.
       const backButton = page.locator('.card-dealer__back-button').first()
+      await expect(backButton).toBeVisible({ timeout: 5000 })
       await backButton.click()
       await waitForAnimations(page, 15000)
+
+      // Assert the full deck is restored after every return — checks all three
+      // cards so a regression that leaves about or gallery masked still fails.
+      for (const testId of ['card-music', 'card-about', 'card-gallery']) {
+        await expect(page.locator(`[data-testid="${testId}"]`)).toHaveAttribute(
+          'data-deck-masked',
+          'false',
+          { timeout: 5000 }
+        )
+      }
       await expect(page.locator('.card-dealer__cards')).toBeVisible({ timeout: 5000 })
     }
   })

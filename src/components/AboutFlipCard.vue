@@ -10,17 +10,20 @@ interface Props {
   isFlipped: boolean
   isFocused?: boolean
   skeletonOffset?: number
+  flipLocked?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isFocused: false,
   skeletonOffset: 0,
+  flipLocked: false,
 })
 
 const emit = defineEmits<{
   (e: 'toggle'): void
   (e: 'focus-card'): void
   (e: 'play-favorite', trackId: string): void
+  (e: 'flip-lock-change', isLocked: boolean): void
 }>()
 
 const rootRef = ref<HTMLElement | null>(null)
@@ -63,11 +66,7 @@ const isShowingHoverFrame = computed(
   () => hoverFrameSrc.value !== null && !isPlayingFlipAnimation.value
 )
 
-const currentFlipFrameSrc = computed<string>(
-  () => props.member.flipFrames?.[currentFlipFrameIndex.value] ?? ''
-)
-
-let frameTimer: ReturnType<typeof setInterval> | null = null
+let flipUnlockTimeoutId: ReturnType<typeof setTimeout> | null = null
 
 let titleTypingTimeoutIds: ReturnType<typeof setTimeout>[] = []
 let typingTimeoutIds: ReturnType<typeof setTimeout>[] = []
@@ -232,22 +231,40 @@ const pickHoverFrame = () => {
   const frames = props.member.flipFrames
   if (!frames?.length) return
 
+  const finalFrameIndex = frames.length - 1
+  const allowedIndices = frames
+    .map((_frame, index) => index)
+    .filter((index) => index !== finalFrameIndex)
+
   const fixedIndex = props.member.hoverPoseFrame
   if (fixedIndex !== undefined) {
-    hoverFrameSrc.value = frames[Math.min(fixedIndex, frames.length - 1)] ?? null
+    const boundedFixedIndex = Math.min(Math.max(fixedIndex, 0), frames.length - 1)
+    if (boundedFixedIndex !== finalFrameIndex) {
+      hoverFrameSrc.value = frames[boundedFixedIndex] ?? null
+      lastHoverFrameIndex = boundedFixedIndex
+      return
+    }
+  }
+
+  if (!allowedIndices.length) {
+    hoverFrameSrc.value = null
     return
   }
 
-  let index: number
-  if (frames.length === 1) {
-    index = 0
-  } else {
-    do {
-      index = Math.floor(Math.random() * frames.length)
-    } while (index === lastHoverFrameIndex)
-  }
+  const nonRepeated = allowedIndices.filter((index) => index !== lastHoverFrameIndex)
+  const pool = nonRepeated.length ? nonRepeated : allowedIndices
+  const index = pool[Math.floor(Math.random() * pool.length)] ?? allowedIndices[0] ?? 0
+
   lastHoverFrameIndex = index
   hoverFrameSrc.value = frames[index] ?? null
+}
+
+const selectFlipTargetFrame = () => {
+  const frames = props.member.flipFrames
+  if (!frames?.length) return
+
+  // Click-to-flip always lands on the final mini-avatar frame.
+  currentFlipFrameIndex.value = Math.max(0, frames.length - 1)
 }
 
 const handleMouseenter = (event: MouseEvent) => {
@@ -404,17 +421,7 @@ const animateAvatarTransition = (flipped: boolean, duration: number) => {
     },
   })
 
-  // Only pre-fade the back avatar (front→back) so it blends with the arriving floating avatar.
-  // For back→front let onComplete handle the reveal — avoids the static front avatar
-  // overlapping the still-moving floating avatar.
-  if (flipped) {
-    gsap.to(backAvatar, {
-      autoAlpha: 1,
-      duration: Math.min(duration * 0.22, 0.2),
-      delay: duration * 0.58,
-      overwrite: 'auto',
-    })
-  }
+  // Keep the destination avatar hidden until transition end to avoid double-figure overlap.
 }
 
 const animateFlip = (flipped: boolean) => {
@@ -449,50 +456,58 @@ const handleFavoriteSongClick = () => {
   emit('play-favorite', props.member.favoriteTrackId)
 }
 
-const onFlipAnimationEnded = () => {
-  if (frameTimer !== null) {
-    clearInterval(frameTimer)
-    frameTimer = null
-  }
-  isPlayingFlipAnimation.value = false
-  emit('toggle')
+const buildBadgeSvgMarkup = (svg: string) => {
+  const normalizedSvg = svg.trim()
+
+  if (!normalizedSvg) return ''
+
+  // Inline SVG must expose currentColor so badge tone follows the back-card cyan.
+  return normalizedSvg.replace(
+    '<svg',
+    '<svg class="about-flip-card__badge-icon" aria-hidden="true" focusable="false"'
+  )
 }
 
-const playFlipAnimation = () => {
-  const frames = props.member.flipFrames
-  if (!frames?.length) {
-    emit('toggle')
-    return
+const clearFlipUnlockTimeout = () => {
+  if (flipUnlockTimeoutId !== null) {
+    clearTimeout(flipUnlockTimeoutId)
+    flipUnlockTimeoutId = null
   }
+}
 
-  // Skip frame-by-frame animation in test mode (setInterval never advances).
-  if (import.meta.env.MODE === 'test') {
-    emit('toggle')
-    return
-  }
+const unlockFlipInteractions = () => {
+  clearFlipUnlockTimeout()
+  if (!isPlayingFlipAnimation.value) return
+  isPlayingFlipAnimation.value = false
+  emit('flip-lock-change', false)
+}
 
-  hoverFrameSrc.value = null
-  currentFlipFrameIndex.value = 0
+const lockFlipInteractions = () => {
+  clearFlipUnlockTimeout()
   isPlayingFlipAnimation.value = true
+  emit('flip-lock-change', true)
 
-  const intervalMs = Math.round(1000 / (props.member.flipFps ?? 8))
+  const unlockAfterMs = Math.max(0, Math.round(getFlipDuration() * 1000))
+  flipUnlockTimeoutId = setTimeout(() => {
+    unlockFlipInteractions()
+  }, unlockAfterMs)
+}
 
-  frameTimer = setInterval(() => {
-    const next = currentFlipFrameIndex.value + 1
-    if (next >= frames.length) {
-      onFlipAnimationEnded()
-    } else {
-      currentFlipFrameIndex.value = next
-    }
-  }, intervalMs)
+const triggerFlipWithTargetFrame = () => {
+  selectFlipTargetFrame()
+  hoverFrameSrc.value = null
+  emit('toggle')
+  lockFlipInteractions()
 }
 
 const triggerToggle = () => {
-  if (isPlayingFlipAnimation.value) return
+  if (props.flipLocked || isPlayingFlipAnimation.value) return
+
   if (!props.isFlipped && props.member.flipFrames?.length) {
-    playFlipAnimation()
+    triggerFlipWithTargetFrame()
     return
   }
+
   emit('toggle')
 }
 
@@ -520,6 +535,7 @@ watch(
       return
     }
 
+    unlockFlipInteractions()
     clearTypingTimers()
     resetBackText()
   }
@@ -528,11 +544,7 @@ watch(
 watch(
   () => props.member.id,
   async () => {
-    if (frameTimer !== null) {
-      clearInterval(frameTimer)
-      frameTimer = null
-    }
-    isPlayingFlipAnimation.value = false
+    unlockFlipInteractions()
     hoverFrameSrc.value = null
     lastHoverFrameIndex = -1
     clearTitleTypingTimers()
@@ -593,10 +605,7 @@ onBeforeUnmount(() => {
 
   clearTitleTypingTimers()
   clearTypingTimers()
-  if (frameTimer !== null) {
-    clearInterval(frameTimer)
-    frameTimer = null
-  }
+  unlockFlipInteractions()
   ctx?.revert()
 })
 </script>
@@ -619,6 +628,7 @@ onBeforeUnmount(() => {
     :tabindex="isFocused ? 0 : -1"
     data-member-card="true"
     role="button"
+    :aria-disabled="flipLocked || isPlayingFlipAnimation"
     @click="handleCardClick"
     @focus="emit('focus-card')"
     @mouseenter="handleMouseenter"
@@ -661,8 +671,8 @@ onBeforeUnmount(() => {
           />
           <img
             v-if="member.flipFrames?.length"
-            v-show="isPlayingFlipAnimation || isShowingHoverFrame"
-            :src="isPlayingFlipAnimation ? currentFlipFrameSrc : (hoverFrameSrc ?? '')"
+            v-show="isShowingHoverFrame"
+            :src="hoverFrameSrc ?? ''"
             alt=""
             class="about-flip-card__flip-video"
             aria-hidden="true"
@@ -679,9 +689,11 @@ onBeforeUnmount(() => {
               :aria-label="badge.title"
               class="about-flip-card__badge"
               :title="badge.title"
-            >
-              <img :alt="badge.title" :src="badge.image" data-testid="member-badge" />
-            </span>
+              data-testid="member-badge"
+              @click.stop
+              @pointerdown.stop
+              v-html="buildBadgeSvgMarkup(badge.svg)"
+            ></span>
           </div>
 
           <div
@@ -1082,6 +1094,7 @@ onBeforeUnmount(() => {
 }
 
 .about-flip-card__badge {
+  color: var(--color-neon-cyan);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1096,9 +1109,11 @@ onBeforeUnmount(() => {
   background: rgba(0, 0, 0, 0.22);
 }
 
-.about-flip-card__badge img {
+.about-flip-card__badge :deep(.about-flip-card__badge-icon) {
   width: var(--about-card-back-badge-inner-size);
   height: var(--about-card-back-badge-inner-size);
+  display: block;
+  fill: currentColor;
 }
 
 .about-flip-card__song-chip {

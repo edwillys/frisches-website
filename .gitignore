@@ -7,6 +7,8 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+**/.env
+
 node_modules
 .DS_Store
 dist
@@ -45,3 +47,5 @@ public/videos/*.mp4
 resources/*.mp4
 
 .vercel
+
+src/assets/private

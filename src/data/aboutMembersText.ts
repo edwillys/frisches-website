@@ -75,7 +75,7 @@ export const aboutMembersText: Record<
       name: 'Edgar',
       badgeTitles: ['Guitare', 'Chœurs'],
       descriptionLead:
-        'Joue de la guitare et parfois le bouffon. Compositeur de signatures rythmiques trompeuses, sa note favorite se trouve toujours au prochain virage. Il apporte sa passion pour le rock classique dans chaque riff et solo de Frisches. Intros et jeux de mots en abondance, son conte pr\u00e9f\u00e9r\u00e9 le m\u00e8ne \u00e0',
+        'Joue de la guitare et parfois le bouffon. Compositeur de signatures rythmiques trompeuses, sa note favorite se trouve toujours au prochain virage. Il apporte sa passion pour le rock classique dans chaque riff et solo de Frisches. Intros et jeux de mots en abondance, son conte préféré le mène à',
     },
     cami: {
       name: 'Cami',
@@ -90,7 +90,7 @@ export const aboutMembersText: Record<
       badgeTitles: ['Batterie'],
       descriptionLead:
         "Steff tient le rythme de Frisches solidement en place — tout ce qui s'écarte du tempo n'a aucune chance. Incontournable lors des répétitions du mardi soir : Pizza Funghi, sans pesto. La pluie en chemin ? On joue quand même. La contrebasse est sur l'agenda, prête à combler le cœur et l'âme de nos chansons. Pour elle, rien ne groove plus fort que",
-      descriptionTail: '\u00a0!',
+      descriptionTail: ' !',
     },
     tobi: {
       name: 'Tobi',

@@ -79,9 +79,7 @@ function getAlbumItemLabel(title: string, count: number) {
 }
 
 function getTrackActionLabel(track: Track) {
-  return isCurrentTrack(track) && !isPlaying.value
-    ? t.value.music.resumeTrack(track.title)
-    : t.value.music.playTrack(track.title)
+  return isCurrentTrack(track) && isPlaying.value ? t.value.player.pause : t.value.player.play
 }
 
 function getRepeatActionLabel() {

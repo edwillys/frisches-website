@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive } from 'vue'
+import { computed, reactive, ref } from 'vue'
 
 import { useUiText } from '@/composables/useUiText'
 import closeSvg from '@/assets/icons/close.svg?raw'
@@ -25,13 +25,44 @@ import vocalsLowSvg from '@/assets/icons/instrument-vocals-low.svg?raw'
 import vocalsMidSvg from '@/assets/icons/instrument-vocals-mid.svg?raw'
 import vocalsHighSvg from '@/assets/icons/instrument-vocals-high.svg?raw'
 
-export type StemName = 'drums' | 'guitar' | 'bass' | 'vocals'
+import fluteMuteSvg from '@/assets/icons/instrument-flute-mute.svg?raw'
+import fluteLowSvg from '@/assets/icons/instrument-flute-low.svg?raw'
+import fluteMidSvg from '@/assets/icons/instrument-flute-mid.svg?raw'
+import fluteHighSvg from '@/assets/icons/instrument-flute-high.svg?raw'
+
+import saxophoneMuteSvg from '@/assets/icons/instrument-saxophone-mute.svg?raw'
+import saxophoneLowSvg from '@/assets/icons/instrument-saxophone-low.svg?raw'
+import saxophoneMidSvg from '@/assets/icons/instrument-saxophone-mid.svg?raw'
+import saxophoneHighSvg from '@/assets/icons/instrument-saxophone-high.svg?raw'
+
+import percussionMuteSvg from '@/assets/icons/instrument-percussion-mute.svg?raw'
+import percussionLowSvg from '@/assets/icons/instrument-percussion-low.svg?raw'
+import percussionMidSvg from '@/assets/icons/instrument-percussion-mid.svg?raw'
+import percussionHighSvg from '@/assets/icons/instrument-percussion-high.svg?raw'
+import keyboardMuteSvg from '@/assets/icons/instrument-keyboard-mute.svg?raw'
+import keyboardLowSvg from '@/assets/icons/instrument-keyboard-low.svg?raw'
+import keyboardMidSvg from '@/assets/icons/instrument-keyboard-mid.svg?raw'
+import keyboardHighSvg from '@/assets/icons/instrument-keyboard-high.svg?raw'
+
+import { type StemAvailability, createStemAvailability } from '@/data/stems'
+
+export type StemName =
+  | 'drums'
+  | 'guitar'
+  | 'bass'
+  | 'vocals'
+  | 'flute'
+  | 'brass'
+  | 'percussion'
+  | 'keyboard'
 
 export type StemGains = Record<StemName, number>
+export type { StemAvailability }
 
 const props = defineProps<{
   modelValue: boolean
   gains: StemGains
+  availability?: StemAvailability
 }>()
 
 const emit = defineEmits<{
@@ -44,7 +75,13 @@ const lastNonZeroGain = reactive<StemGains>({
   guitar: 1,
   bass: 1,
   vocals: 1,
+  flute: 1,
+  brass: 1,
+  percussion: 1,
+  keyboard: 1,
 })
+
+const isFaderEditingEnabled = ref(false)
 
 function clamp01(v: number) {
   if (!Number.isFinite(v)) return 0
@@ -57,6 +94,10 @@ function iconFor(stem: StemName, gain: number) {
     if (stem === 'drums') return drumsMuteSvg
     if (stem === 'guitar') return guitarMuteSvg
     if (stem === 'bass') return bassMuteSvg
+    if (stem === 'flute') return fluteMuteSvg
+    if (stem === 'brass') return saxophoneMuteSvg
+    if (stem === 'percussion') return percussionMuteSvg
+    if (stem === 'keyboard') return keyboardMuteSvg
     return vocalsMuteSvg
   }
 
@@ -66,17 +107,32 @@ function iconFor(stem: StemName, gain: number) {
   if (stem === 'drums') return isHigh ? drumsHighSvg : isMid ? drumsMidSvg : drumsLowSvg
   if (stem === 'guitar') return isHigh ? guitarHighSvg : isMid ? guitarMidSvg : guitarLowSvg
   if (stem === 'bass') return isHigh ? bassHighSvg : isMid ? bassMidSvg : bassLowSvg
+  if (stem === 'flute') return isHigh ? fluteHighSvg : isMid ? fluteMidSvg : fluteLowSvg
+  if (stem === 'brass') {
+    return isHigh ? saxophoneHighSvg : isMid ? saxophoneMidSvg : saxophoneLowSvg
+  }
+  if (stem === 'percussion') {
+    return isHigh ? percussionHighSvg : isMid ? percussionMidSvg : percussionLowSvg
+  }
+  if (stem === 'keyboard') {
+    return isHigh ? keyboardHighSvg : isMid ? keyboardMidSvg : keyboardLowSvg
+  }
   return isHigh ? vocalsHighSvg : isMid ? vocalsMidSvg : vocalsLowSvg
 }
 
 const t = useUiText()
 
 const stems = computed(() => {
+  const availability = props.availability ?? createStemAvailability(true)
   const base = [
     { key: 'drums' as const, title: 'Drums' },
     { key: 'guitar' as const, title: 'Guitar' },
     { key: 'bass' as const, title: 'Bass' },
     { key: 'vocals' as const, title: 'Vocals' },
+    { key: 'flute' as const, title: 'Flute' },
+    { key: 'brass' as const, title: 'Brass' },
+    { key: 'percussion' as const, title: 'Percussion' },
+    { key: 'keyboard' as const, title: 'Keyboard' },
   ]
 
   return base.map((s) => {
@@ -84,6 +140,8 @@ const stems = computed(() => {
     return {
       ...s,
       gain,
+      isAvailable: availability[s.key],
+      tooltip: availability[s.key] ? s.title : `${s.title}${t.value.faders.unavailableSuffix}`,
       percent: `${Math.round(gain * 100)}%`,
       icon: iconFor(s.key, gain),
     }
@@ -99,6 +157,7 @@ function close() {
 }
 
 function onInput(stem: StemName, e: Event) {
+  if (!isFaderEditingEnabled.value) return
   const target = e.target as HTMLInputElement
   const value = clamp01(Number.parseFloat(target.value))
   if (value > 0) lastNonZeroGain[stem] = value
@@ -106,6 +165,8 @@ function onInput(stem: StemName, e: Event) {
 }
 
 function toggleMute(stem: StemName) {
+  if (!isFaderEditingEnabled.value) return
+
   const current = clamp01(props.gains[stem])
   if (current <= 0) {
     const restore = clamp01(lastNonZeroGain[stem] ?? 1)
@@ -116,13 +177,17 @@ function toggleMute(stem: StemName) {
   lastNonZeroGain[stem] = current
   emit('setGain', stem, 0)
 }
+
+function toggleFaderEditing() {
+  isFaderEditingEnabled.value = !isFaderEditingEnabled.value
+}
 </script>
 
 <template>
   <div class="stems" :class="{ 'is-open': modelValue }">
     <button
       class="mini-player__btn mini-player__btn--stems"
-      :class="{ 'is-active': modelValue }"
+      :class="{ 'is-active': isFaderEditingEnabled }"
       type="button"
       :data-tooltip="t.faders.open"
       :aria-label="t.faders.open"
@@ -143,6 +208,18 @@ function toggleMute(stem: StemName) {
     >
       <div class="stems__header">
         <button
+          class="stems__activation-toggle"
+          :class="{ 'is-enabled': isFaderEditingEnabled }"
+          type="button"
+          :aria-pressed="isFaderEditingEnabled"
+          :aria-label="'Enable instrument fading'"
+          data-testid="stems-enable-toggle"
+          @click="toggleFaderEditing"
+        >
+          <span class="stems__activation-knob" aria-hidden="true" />
+        </button>
+
+        <button
           class="stems__close"
           type="button"
           :aria-label="t.faders.close"
@@ -153,13 +230,26 @@ function toggleMute(stem: StemName) {
         </button>
       </div>
 
-      <div class="stems__grid" role="group" :aria-label="t.faders.groupLabel">
-        <div v-for="stem in stems" :key="stem.key" class="stem" :data-testid="`stem-${stem.key}`">
+      <div
+        class="stems__grid"
+        :class="{ 'stems__grid--disabled': !isFaderEditingEnabled }"
+        role="group"
+        :aria-label="t.faders.groupLabel"
+      >
+        <div
+          v-for="stem in stems"
+          :key="stem.key"
+          class="stem"
+          :class="{ 'stem--unavailable': !stem.isAvailable }"
+          :data-testid="`stem-${stem.key}`"
+        >
           <button
             class="stem__icon-btn"
             type="button"
+            :data-tooltip="stem.tooltip"
             :aria-label="t.faders.muteToggle(stem.title)"
             :aria-pressed="stem.gain <= 0"
+            :disabled="!isFaderEditingEnabled || !stem.isAvailable"
             :data-testid="`stem-${stem.key}-mute`"
             @click="toggleMute(stem.key)"
           >
@@ -174,6 +264,7 @@ function toggleMute(stem: StemName) {
               max="1"
               step="0.01"
               :value="stem.gain"
+              :disabled="!isFaderEditingEnabled || !stem.isAvailable"
               :aria-label="t.faders.instrumentVolume(stem.title)"
               @input="onInput(stem.key, $event)"
             />
@@ -188,6 +279,11 @@ function toggleMute(stem: StemName) {
 .stems {
   position: relative;
   display: inline-flex;
+  align-items: center;
+}
+
+.stem--unavailable {
+  opacity: 0.45;
 }
 
 .stems__overlay {
@@ -219,9 +315,10 @@ function toggleMute(stem: StemName) {
 
 .stems__header {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   height: 22px;
+  gap: 10px;
 }
 
 .stems__close {
@@ -238,7 +335,43 @@ function toggleMute(stem: StemName) {
 }
 
 .stems__close:hover {
-  color: var(--color-neon-cyan);
+  color: var(--lyrics-album-contour);
+}
+
+.stems__activation-toggle {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.stems__activation-toggle.is-enabled {
+  background: color-mix(in srgb, var(--lyrics-album-contour) 68%, transparent 32%);
+  border-color: color-mix(in srgb, var(--lyrics-album-contour) 82%, #ffffff 18%);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--lyrics-album-contour) 34%, transparent 66%);
+}
+
+.stems__activation-knob {
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  transform: translate(0, -50%);
+  transition: transform 150ms ease;
+}
+
+.stems__activation-toggle.is-enabled .stems__activation-knob {
+  transform: translate(12px, -50%);
 }
 
 :deep(.stems__close-icon svg) {
@@ -250,6 +383,10 @@ function toggleMute(stem: StemName) {
   display: flex;
   gap: 8px;
   align-items: flex-end;
+}
+
+.stems__grid--disabled {
+  opacity: 0.54;
 }
 
 .stem {
@@ -271,12 +408,25 @@ function toggleMute(stem: StemName) {
   border-radius: 6px;
   border: none;
   background: transparent;
-  color: var(--color-text-secondary);
+  color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
 }
 
 .stem__icon-btn:hover {
-  color: var(--color-neon-cyan);
+  color: var(--lyrics-album-contour);
+}
+
+.stem__icon-btn:disabled {
+  cursor: default;
+}
+
+.stems__grid--disabled .stem__icon-btn:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.mini-player__btn--stems {
+  align-self: center;
+  line-height: 0;
 }
 
 :deep(.stem__icon svg) {
@@ -303,6 +453,10 @@ function toggleMute(stem: StemName) {
   background: transparent;
 }
 
+.stem__slider:disabled {
+  cursor: default;
+}
+
 .stem__slider::-webkit-slider-runnable-track {
   height: 2px;
   border-radius: 999px;
@@ -318,8 +472,8 @@ function toggleMute(stem: StemName) {
 .stem:hover .stem__slider::-webkit-slider-runnable-track {
   background: linear-gradient(
     90deg,
-    var(--color-neon-cyan) 0%,
-    var(--color-neon-cyan) var(--stem-percent, 100%),
+    var(--lyrics-album-contour) 0%,
+    var(--lyrics-album-contour) var(--stem-percent, 100%),
     rgba(255, 255, 255, 0.22) var(--stem-percent, 100%),
     rgba(255, 255, 255, 0.22) 100%
   );
@@ -327,17 +481,9 @@ function toggleMute(stem: StemName) {
 
 .stem__slider::-webkit-slider-thumb {
   appearance: none;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: white;
-  border: none;
+  width: 0;
+  height: 0;
   opacity: 0;
-  transition: opacity 150ms ease;
-}
-
-.stem:hover .stem__slider::-webkit-slider-thumb {
-  opacity: 1;
 }
 
 .stem__slider::-moz-range-track {
@@ -353,20 +499,13 @@ function toggleMute(stem: StemName) {
 }
 
 .stem:hover .stem__slider::-moz-range-progress {
-  background: var(--color-neon-cyan);
+  background: var(--lyrics-album-contour);
 }
 
 .stem__slider::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: white;
-  border: none;
+  width: 0;
+  height: 0;
   opacity: 0;
-  transition: opacity 150ms ease;
-}
-
-.stem:hover .stem__slider::-moz-range-thumb {
-  opacity: 1;
+  border: none;
 }
 </style>

@@ -53,6 +53,8 @@ describe('AboutMembersView', () => {
   })
 
   it('supports independent flips via member initial shortcuts', async () => {
+    vi.useFakeTimers()
+
     const wrapper = mount(AboutMembersView, {
       props: {
         isActive: true,
@@ -66,6 +68,9 @@ describe('AboutMembersView', () => {
     const cards = wrapper.findAll('[data-member-card="true"]')
     await cards[0]!.trigger('keydown', { key: 'e' })
     await nextTick()
+    await vi.runAllTimersAsync()
+    await nextTick()
+
     await cards[0]!.trigger('keydown', { key: 'c' })
     await nextTick()
 
@@ -76,6 +81,8 @@ describe('AboutMembersView', () => {
   })
 
   it('moves focus with arrow keys and toggles the focused card with space', async () => {
+    vi.useFakeTimers()
+
     const wrapper = mount(AboutMembersView, {
       props: {
         isActive: true,
@@ -93,6 +100,8 @@ describe('AboutMembersView', () => {
     expect(document.activeElement).toBe(cards[1]!.element)
 
     await cards[1]!.trigger('keydown', { key: ' ' })
+    await nextTick()
+    await vi.runAllTimersAsync()
     await nextTick()
 
     expect(cards[1]!.classes()).toContain('about-flip-card--flipped')
@@ -122,8 +131,12 @@ describe('AboutMembersView', () => {
 
     await vi.runAllTimersAsync()
     await nextTick()
+    await vi.runAllTimersAsync()
+    await nextTick()
 
-    await wrapper.find('[data-testid="favorite-song-chip"]').trigger('click')
+    const favoriteChip = wrapper.find('[data-testid="favorite-song-chip"]')
+    expect(favoriteChip.exists()).toBe(true)
+    await favoriteChip.trigger('click')
 
     expect(startFromAboutSpy).toHaveBeenCalledWith('tftc:02-tojd')
 

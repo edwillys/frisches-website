@@ -4,6 +4,7 @@ import { nextTick, ref, reactive } from 'vue'
 import CardDealer from '../CardDealer.vue'
 import MenuCard from '../MenuCard.vue'
 import { createPinia, setActivePinia } from 'pinia'
+import { useAudioStore } from '@/stores/audio'
 
 // Mock @tresjs/cientos to avoid module resolution issues
 vi.mock('@tresjs/cientos', () => ({
@@ -22,13 +23,17 @@ vi.mock('@tresjs/core', () => ({
  * CardDealer Component Tests
  *
  * Card Animation Behavior:
- * - Opening: Two-phase animation
+ * - Opening (logo → cards): Two-phase animation
  *   1. All cards grow together from a single center point as a unified deck (no stagger)
  *   2. Cards then distribute to their left/right positions (with stagger from center)
  *
- * - Closing: Inverse two-phase animation
+ * - Closing (cards → logo): Inverse two-phase animation
  *   1. Cards gather from distributed positions back to center deck (stagger from edges)
  *   2. All cards shrink together to a single point (no stagger)
+ *
+ * - Return (content → cards): Cards emerge from their grid positions
+ *   Background cards simply rise to the foreground with a stagger from center outward.
+ *   No re-deal animation.
  */
 
 // Mock GSAP to avoid animation issues in tests
@@ -517,6 +522,49 @@ describe('CardDealer', () => {
     expect((contentView.element as HTMLElement).style.display).toBe('none')
     expect(wrapper.find('.card-dealer__cards').attributes('style')).not.toContain('display: none')
 
+    const hasSelectedCardReturnStage = gsapMocks.set.mock.calls.some(([, vars]) => {
+      const typedVars = vars as { opacity?: number; visibility?: string; zIndex?: number }
+      return (
+        typedVars.opacity === 0 && typedVars.visibility === 'visible' && typedVars.zIndex === 50
+      )
+    })
+
+    const hasHiddenBackgroundCardStage = gsapMocks.set.mock.calls.some(([, vars]) => {
+      const typedVars = vars as {
+        opacity?: number
+        visibility?: string
+        zIndex?: number
+        filter?: string
+      }
+      return (
+        typedVars.opacity === 0 &&
+        typedVars.visibility === 'visible' &&
+        typedVars.zIndex === 40 &&
+        typedVars.filter === 'blur(12px)'
+      )
+    })
+
+    const hasBlurredFadeInTween = gsapMocks.timelineTo.mock.calls.some(([, vars]) => {
+      const typedVars = vars as { opacity?: number; filter?: string }
+      return typedVars.opacity === 0.72 && typedVars.filter === 'blur(12px)'
+    })
+
+    const hasUnblurTween = gsapMocks.timelineTo.mock.calls.some(([, vars]) => {
+      const typedVars = vars as { opacity?: number; filter?: string }
+      return typedVars.opacity === 1 && typedVars.filter === 'blur(0px)'
+    })
+
+    const hasSelectedCardFadeInTween = gsapMocks.timelineTo.mock.calls.some(([, vars]) => {
+      const typedVars = vars as { opacity?: number; filter?: string; zIndex?: number }
+      return typedVars.opacity === 1 && typedVars.filter === 'blur(0px)' && typedVars.zIndex === 50
+    })
+
+    expect(hasSelectedCardReturnStage).toBe(true)
+    expect(hasHiddenBackgroundCardStage).toBe(true)
+    expect(hasBlurredFadeInTween).toBe(true)
+    expect(hasUnblurTween).toBe(true)
+    expect(hasSelectedCardFadeInTween).toBe(true)
+
     wrapper.unmount()
   })
 
@@ -542,6 +590,92 @@ describe('CardDealer', () => {
     await nextTick()
 
     expect(wrapper.find('.card-dealer__content-view').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  it('switches to music content when mini-player requests opening lyrics', async () => {
+    const wrapper = mount(CardDealer, {
+      global: {
+        stubs: {
+          MenuCard: true,
+          LogoButton: true,
+          AboutView: true,
+          GalleryManager: true,
+          AudioPlayer: {
+            template: '<div data-testid="audio-player-stub" />',
+          },
+        },
+      },
+    })
+
+    window.dispatchEvent(new CustomEvent('frisches:mini-player-open-lyrics'))
+    await nextTick()
+
+    const contentView = wrapper.find('.card-dealer__content-view')
+    expect(contentView.exists()).toBe(true)
+    expect(contentView.attributes('style') || '').not.toContain('display: none')
+
+    const musicContent = wrapper.find('.card-dealer__music-content')
+    expect(musicContent.exists()).toBe(true)
+    expect(musicContent.attributes('style') || '').not.toContain('display: none')
+    expect(wrapper.find('[data-testid="audio-player-stub"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  it('does not force lyrics state when mini-player requests opening lyrics', async () => {
+    const wrapper = mount(CardDealer)
+    const audio = useAudioStore()
+    audio.showLyrics = false
+
+    window.dispatchEvent(new CustomEvent('frisches:mini-player-open-lyrics'))
+    await nextTick()
+
+    expect(audio.showLyrics).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  it('clicking About down-arrow opens submenu without navigating to About', async () => {
+    const wrapper = mount(CardDealer, {
+      attachTo: document.body,
+      global: {
+        stubs: {
+          AboutView: {
+            template: '<div data-testid="about-view-stub" />',
+          },
+          AudioPlayer: {
+            template: '<div data-testid="audio-player-stub" />',
+          },
+        },
+      },
+    })
+
+    await wrapper.find('.logo-button').trigger('click')
+    await vi.advanceTimersByTimeAsync(1000)
+    await nextTick()
+
+    const musicCard = wrapper.findAllComponents(MenuCard)[0]
+    if (!musicCard) {
+      throw new Error('Expected Music menu card to exist')
+    }
+
+    await musicCard.trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="audio-player-stub"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="about-view-stub"]').exists()).toBe(false)
+
+    const aboutArrow = wrapper.find('.card-dealer__about-dropdown-toggle-icon')
+    expect(aboutArrow.exists()).toBe(true)
+
+    await aboutArrow.trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('.card-dealer__about-dropdown').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="audio-player-stub"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="about-view-stub"]').exists()).toBe(false)
 
     wrapper.unmount()
   })
