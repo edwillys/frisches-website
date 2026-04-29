@@ -63,7 +63,9 @@ jobs:
         run: npm run build
         env:
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
-          VITE_UMAMI_WEBSITE_ID: ${{ secrets.VITE_UMAMI_WEBSITE_ID }} keeps Cloudflare Pages previews available for PRs while using
+          VITE_UMAMI_WEBSITE_ID: ${{ secrets.VITE_UMAMI_WEBSITE_ID }}
+
+      # Direct Upload keeps Cloudflare Pages previews available for PRs while using
       # this workflow's custom asset sync/build pipeline instead of the dashboard build.
       - name: Deploy preview to Cloudflare Pages
         if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
