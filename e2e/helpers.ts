@@ -14,21 +14,24 @@ export async function waitForAnimations(page: Page, timeout = 10000): Promise<vo
   // Wait for the element to exist first
   await cardDealer.waitFor({ state: 'attached', timeout })
 
-  // Try to wait for data-animating to be false with polling
-  // IMPORTANT: waitForFunction signature is (fn, arg?, options?)
-  // If we pass options as the 2nd argument, Playwright treats it as `arg` and
-  // the timeout/polling are ignored (leading to CI-only 30s test timeouts).
+  const startTime = Date.now()
+
   try {
-    await page.waitForFunction(
-      () => {
+    while (Date.now() - startTime < timeout) {
+      if (page.isClosed()) return
+
+      const isSettled = await page.evaluate(() => {
         const element = document.querySelector('[data-testid="card-dealer"]')
         if (!element) return false
         const isAnimating = element.getAttribute('data-animating')
         return isAnimating === 'false' || isAnimating === null
-      },
-      null,
-      { timeout, polling: 100 } // Poll every 100ms
-    )
+      })
+
+      if (isSettled) return
+      await page.waitForTimeout(100)
+    }
+
+    throw new Error(`Timed out after ${timeout}ms waiting for card-dealer animations`)
   } catch (error) {
     // In some browsers/environments, the attribute can occasionally get stuck even though
     // the UI is usable. Treat this as a best-effort wait and continue, but log state to

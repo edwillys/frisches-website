@@ -43,6 +43,13 @@ const isLyricsDetailOpen = ref(false)
 const openStoryAfterEntry = ref(false)
 
 const resetAboutState = () => {
+  const needsReset =
+    isStoryOpen.value ||
+    isLyricsDetailOpen.value ||
+    openStoryAfterEntry.value ||
+    activeSection.value !== 'entry'
+  if (!needsReset) return
+
   isStoryOpen.value = false
   isLyricsDetailOpen.value = false
   openStoryAfterEntry.value = false
@@ -209,7 +216,9 @@ watch(
       resetAboutState()
     }
   },
-  { immediate: true }
+  // flush: 'sync' ensures resetAboutState fires synchronously when isActive changes
+  // (not in a deferred microtask), preventing it from racing with in-flight switchSection calls.
+  { immediate: true, flush: 'sync' }
 )
 
 onMounted(() => {

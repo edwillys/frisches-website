@@ -570,7 +570,7 @@
 .card-dealer__back-button:hover {
   background: rgba(0, 0, 0, 0.7);
   border-color: var(--color-text);
-  transform: scale(1.1);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12);
 }
 
 .card-dealer__back-button :deep(svg) {

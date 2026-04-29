@@ -121,7 +121,7 @@ onBeforeUnmount(() => {
 }
 
 .arcade-menu-button:active:not(:disabled) {
-  transform: translateY(1px) scale(0.97);
+  filter: brightness(0.88);
 }
 
 .arcade-menu-button:focus-visible {

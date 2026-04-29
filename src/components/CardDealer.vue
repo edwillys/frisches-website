@@ -190,6 +190,11 @@ const startAnimating = (fallbackMs = 4500) => {
     if (animToken !== token) return
     if (!isAnimating.value) return
     isAnimating.value = false
+    recoverContentCloseIfStuck()
+    // Clear any stuck GSAP inline styles on the content panel so it remains visible
+    // even when the animation timeline never fires onComplete (e.g., WebKit headless).
+    const panel = contentPanelRef.value
+    if (panel) gsap.set(panel, { clearProps: 'opacity,y,transform' })
   }, fallbackMs)
 }
 
@@ -206,6 +211,22 @@ const initialNavigationSections = navigationSections.value
 
 const selectedItemMatchesSection = (sectionKey: MenuSectionKey) =>
   titleContainsSection(selectedItem.value?.title, sectionKey, navigationSections.value)
+
+const recoverContentCloseIfStuck = () => {
+  if (currentView.value !== 'content' || contentReturnSelectedCard.value === null) return false
+
+  getCardElements().forEach((card) => {
+    card.dataset.deckMasked = 'false'
+    card.removeAttribute('aria-hidden')
+    gsap.set(card, { clearProps: 'opacity,transform,visibility,zIndex,borderRadius,filter' })
+  })
+
+  selectedCard.value = null
+  currentView.value = 'cards'
+  isCoverActive.value = false
+  contentReturnSelectedCard.value = null
+  return true
+}
 
 const isGalleryActive = computed(
   () => currentView.value === 'content' && selectedItemMatchesSection('gallery')

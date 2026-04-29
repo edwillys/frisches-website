@@ -199,7 +199,11 @@ test.describe('Frisches Website - Critical Flows', () => {
     await expect(logoButton).toBeVisible({ timeout: 15000 })
   })
 
-  test('handles all three cards sequentially', async ({ page }) => {
+  test('handles all three cards sequentially', async ({ page }, testInfo) => {
+    if (testInfo.project.name === 'webkit') {
+      test.setTimeout(60000)
+    }
+
     // Navigate to cards
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
     await expect(page.locator('.card-dealer__cards')).toBeVisible({ timeout: 5000 })
@@ -226,10 +230,22 @@ test.describe('Frisches Website - Critical Flows', () => {
       await waitForAnimations(page, 15000)
       await expect(page.locator(contentReadySelectors[i])).toBeVisible({ timeout: 10000 })
 
-      // Navigate back
+      // Navigate back — wait for animations to fully settle before clicking so the
+      // isAnimating guard in handleBackClick does not silently no-op the click.
       const backButton = page.locator('.card-dealer__back-button').first()
+      await expect(backButton).toBeVisible({ timeout: 5000 })
       await backButton.click()
       await waitForAnimations(page, 15000)
+
+      // Assert the full deck is restored after every return — checks all three
+      // cards so a regression that leaves about or gallery masked still fails.
+      for (const testId of ['card-music', 'card-about', 'card-gallery']) {
+        await expect(page.locator(`[data-testid="${testId}"]`)).toHaveAttribute(
+          'data-deck-masked',
+          'false',
+          { timeout: 5000 }
+        )
+      }
       await expect(page.locator('.card-dealer__cards')).toBeVisible({ timeout: 5000 })
     }
   })

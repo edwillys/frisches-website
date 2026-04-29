@@ -18,6 +18,9 @@
     "type-check": "vue-tsc --build",
     "generate:gallery": "node scripts/generate-gallery.js",
     "normalize:svg": "node scripts/normalize-svg.js src/assets",
+    "sync:r2:up": "node scripts/sync-r2.mjs up",
+    "sync:r2:down": "node scripts/sync-r2.mjs down",
+    "sync:r2:bisync": "node scripts/sync-r2.mjs bisync",
     "lint": "eslint . --fix --cache",
     "format": "prettier --write src/",
     "prepare": "husky"

@@ -1,0 +1,4 @@
+# Keep the DigiKam catalog, but skip other SQLite files and trash folders.
++ **/digikam4.db
+- **/*.db
+- **/.dtrash/**

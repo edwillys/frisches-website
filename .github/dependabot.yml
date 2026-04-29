@@ -5,27 +5,61 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 6
     groups:
-      vite-ecosystem:
+      app-runtime:
+        patterns:
+          - vue
+          - vue-router
+          - pinia
+          - primevue
+          - '@primevue/*'
+          - primeicons
+          - '@sentry/*'
+      build-and-types:
         patterns:
           - vite
           - '@vitejs/*'
           - 'vite-*'
-      primevue:
+          - typescript
+          - vue-tsc
+          - '@tsconfig/*'
+          - '@types/node'
+      workspace-tooling:
         patterns:
-          - primevue
-          - '@primevue/*'
-          - primeicons
-      testing:
+          - husky
+          - npm-run-all*
+          - jiti
+          - sass-embedded
+      test-and-qa:
         patterns:
           - vitest
           - '@vitest/*'
           - '@playwright/*'
           - '@vue/test-utils'
+          - jsdom
+          - '@types/jsdom'
+          - canvas
+          - sql.js
+          - eslint-plugin-playwright
+      lint-and-format:
+        patterns:
+          - eslint
+          - 'eslint-*'
+          - '@vue/eslint-*'
+          - '@vitest/eslint-plugin'
+          - prettier
+          - lint-staged
+      asset-pipeline:
+        patterns:
+          - sharp
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
       day: monday
+    groups:
+      github-actions:
+        patterns:
+          - '*'

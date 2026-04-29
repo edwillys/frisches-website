@@ -57,20 +57,25 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
       },
     },
-    ...(process.env.CI ? [
-      {
-        name: 'firefox',
-        use: {
-          ...devices['Desktop Firefox'],
-        },
-      },
-      {
-        name: 'webkit',
-        use: {
-          ...devices['Desktop Safari'],
-        },
-      },
-    ] : []),
+    ...(process.env.CI
+      ? [
+          {
+            name: 'firefox',
+            use: {
+              ...devices['Desktop Firefox'],
+            },
+          },
+          {
+            name: 'webkit',
+            use: {
+              ...devices['Desktop Safari'],
+              // Force reduced-motion so GSAP animations are skipped in headless WebKit,
+              // where requestAnimationFrame can stall and leave elements at opacity:0.
+              reducedMotion: 'reduce',
+            } as (typeof devices)['Desktop Safari'] & Record<string, unknown>,
+          },
+        ]
+      : []),
 
     /* Test against mobile viewports. */
     // {

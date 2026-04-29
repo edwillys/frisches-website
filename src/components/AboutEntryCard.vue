@@ -381,6 +381,7 @@ onBeforeUnmount(() => {
             :label="t.about.storyButton"
             tone-contour="var(--color-neon-cyan)"
             inner-contour-only
+            @click.stop
             @press="openStory"
           />
           <ArcadeMenuButton
@@ -388,6 +389,7 @@ onBeforeUnmount(() => {
             :label="t.about.membersButton"
             tone-contour="var(--color-neon-magenta)"
             inner-contour-only
+            @click.stop
             @press="emit('open-members')"
           />
           <ArcadeMenuButton
@@ -395,6 +397,7 @@ onBeforeUnmount(() => {
             :label="t.about.lyricsButton"
             tone-contour="var(--lyrics-album-contour)"
             inner-contour-only
+            @click.stop
             @press="emit('open-lyrics')"
           />
         </div>
