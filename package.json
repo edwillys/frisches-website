@@ -33,7 +33,7 @@
     "primeicons": "^7.0.0",
     "primevue": "^4.5.5",
     "sharp": "^0.34.5",
-    "vue": "^3.5.22",
+    "vue": "^3.5.33",
     "vue-router": "^4.6.3"
   },
   "devDependencies": {
