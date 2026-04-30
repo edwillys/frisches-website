@@ -1,4 +1,4 @@
-import { ref, watch, type Ref } from 'vue'
+import { onBeforeUnmount, ref, watch, type Ref } from 'vue'
 
 interface UseTypewriterTextOptions {
   text: Ref<string>
@@ -67,6 +67,10 @@ export const useTypewriterText = (options: UseTypewriterTextOptions) => {
     },
     { immediate: true }
   )
+
+  onBeforeUnmount(() => {
+    clearTimers()
+  })
 
   return {
     displayedText,

@@ -106,7 +106,7 @@ test.describe('Frisches Website - Extended User Flows', () => {
 
     // All cards should still be present
     const cards = page.locator('.menu-card')
-    expect(await cards.count()).toBe(3)
+    await expect(cards).toHaveCount(3)
   })
 
   test('responsive card layout properties', async ({ page }) => {

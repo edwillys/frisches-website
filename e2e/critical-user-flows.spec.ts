@@ -191,7 +191,7 @@ test.describe('Frisches Website - Critical Flows', () => {
 
     // Verify all three cards are present
     const cards = page.locator('.menu-card')
-    expect(await cards.count()).toBe(3)
+    await expect(cards).toHaveCount(3)
 
     // Step 4: Cards → Logo (click outside)
     await page.mouse.click(100, 100)
@@ -199,11 +199,7 @@ test.describe('Frisches Website - Critical Flows', () => {
     await expect(logoButton).toBeVisible({ timeout: 15000 })
   })
 
-  test('handles all three cards sequentially', async ({ page }, testInfo) => {
-    if (testInfo.project.name === 'webkit') {
-      test.setTimeout(60000)
-    }
-
+  test('handles all three cards sequentially', async ({ page }) => {
     // Navigate to cards
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
     await expect(page.locator('.card-dealer__cards')).toBeVisible({ timeout: 5000 })
