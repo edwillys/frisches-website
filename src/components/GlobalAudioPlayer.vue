@@ -714,12 +714,7 @@ function onLyricsButtonClick() {
       <!-- Left: Track Info -->
       <div class="mini-player__left">
         <div class="mini-player__artwork">
-          <img
-            v-if="currentCover"
-            class="mini-player__art"
-            :src="currentCover"
-            :alt="currentTitle"
-          />
+          <img v-if="currentCover" class="mini-player__art" :src="currentCover" alt="" />
           <div v-else class="mini-player__art--placeholder" aria-hidden="true"></div>
         </div>
 

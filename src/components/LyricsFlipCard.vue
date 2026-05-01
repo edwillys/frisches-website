@@ -173,7 +173,7 @@ watch(
             class="lyrics-flip-card__cover"
             :src="card.coverUrl"
             :srcset="card.coverSrcset"
-            :alt="`${card.albumTitle} ${t.music.albumLabel}`"
+            alt=""
             loading="lazy"
           />
           <div class="lyrics-flip-card__header-copy">

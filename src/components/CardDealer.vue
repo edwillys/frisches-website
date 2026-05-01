@@ -2018,14 +2018,14 @@ onBeforeUnmount(() => {
         ref="bgMainRef"
         :src="bgHomeSmall"
         :srcset="bgHomeSrcset"
-        alt="Mysterious card dealer"
+        alt=""
         sizes="100vw"
         class="card-dealer__bg-image card-dealer__bg-main"
       />
       <img
         ref="bgSecondaryRef"
         :src="defaultCoverSrc"
-        alt="Cover"
+        alt=""
         class="card-dealer__bg-image card-dealer__bg-cover"
         style="opacity: 0; visibility: hidden"
       />

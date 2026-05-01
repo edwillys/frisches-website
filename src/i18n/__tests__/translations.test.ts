@@ -82,7 +82,6 @@ describe('translation coverage', () => {
           "music.title",
         ],
         "uiText": [
-          "about.entryImageAlt",
           "about.lyricsButton",
           "about.lyricsButtonAria",
           "about.membersButton",

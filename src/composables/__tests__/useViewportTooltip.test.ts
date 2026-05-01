@@ -19,15 +19,15 @@ function mountComposable(): Wrapper {
 
 // ─── Event helpers ───────────────────────────────────────────────────────────
 
-function mouseOver(target: HTMLElement, relatedTarget?: HTMLElement) {
+function mouseOver(target: EventTarget, relatedTarget?: EventTarget | null) {
   target.dispatchEvent(
-    new MouseEvent('mouseover', { bubbles: true, relatedTarget: relatedTarget ?? null })
+    new MouseEvent('mouseover', { bubbles: true, relatedTarget: (relatedTarget as Node) ?? null })
   )
 }
 
-function mouseOut(target: HTMLElement, relatedTarget?: HTMLElement) {
+function mouseOut(target: EventTarget, relatedTarget?: EventTarget | null) {
   target.dispatchEvent(
-    new MouseEvent('mouseout', { bubbles: true, relatedTarget: relatedTarget ?? null })
+    new MouseEvent('mouseout', { bubbles: true, relatedTarget: (relatedTarget as Node) ?? null })
   )
 }
 
@@ -51,6 +51,10 @@ function getArrow(): HTMLElement | null {
   return document.querySelector('.vp-tooltip-arrow')
 }
 
+function getYoutubeCard(): HTMLElement | null {
+  return document.querySelector('.vp-tooltip--yt-card')
+}
+
 // ─── Suite ───────────────────────────────────────────────────────────────────
 
 describe('useViewportTooltip', () => {
@@ -58,6 +62,7 @@ describe('useViewportTooltip', () => {
 
   beforeEach(() => {
     setHoverDevice(true)
+    vi.stubGlobal('fetch', vi.fn())
     wrapper = mountComposable()
   })
 
@@ -65,6 +70,7 @@ describe('useViewportTooltip', () => {
     wrapper.unmount()
     document.querySelectorAll('.vp-tooltip, .vp-tooltip-arrow').forEach((el) => el.remove())
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   // ── Show / hide ─────────────────────────────────────────────────────────────
@@ -83,6 +89,117 @@ describe('useViewportTooltip', () => {
       expect(tip!.style.display).toBe('block')
 
       btn.remove()
+    })
+
+    it('shows a YouTube metadata card when hovering a data-tooltip-yt target', async () => {
+      const fetchMock = vi.mocked(fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          title: 'Witch Hunting - Frisches (Official Music Video)',
+          thumbnail_url: 'https://i.ytimg.com/vi/_rZYN5G6-gg/hqdefault.jpg',
+        }),
+      } as Response)
+
+      const link = document.createElement('a')
+      link.dataset.tooltipYt = '_rZYN5G6-gg'
+      link.dataset.tooltipCardTitle = 'Fallback title'
+      link.dataset.tooltipCardMetaPrimary = '2023'
+      link.dataset.tooltipCardMetaSecondary = 'Official video'
+      document.body.appendChild(link)
+
+      mouseOver(link)
+
+      const card = getYoutubeCard()
+      expect(card).not.toBeNull()
+      expect(card!.style.display).toBe('block')
+      expect(card!.querySelector('.vp-tooltip__yt-title')?.textContent).toBe('Fallback title')
+      expect(card!.querySelector('.vp-tooltip__yt-meta')?.textContent).toContain('2023')
+      expect(card!.querySelector('.vp-tooltip__yt-meta')?.textContent).toContain('Official video')
+
+      await Promise.resolve()
+      await Promise.resolve()
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(String(fetchMock.mock.calls[0]?.[0])).toContain('_rZYN5G6-gg')
+
+      link.remove()
+    })
+
+    it('evicts the cache entry when the fetch throws, allowing a retry on the next hover', async () => {
+      vi.mocked(fetch).mockRejectedValueOnce(new Error('offline'))
+
+      const link = document.createElement('a')
+      link.dataset.tooltipYt = 'evict-test-id'
+      link.dataset.tooltipCardTitle = 'Fallback'
+      document.body.appendChild(link)
+
+      mouseOver(link)
+
+      // Let the rejection propagate through the cache-eviction .catch and showYoutubeCard .catch
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      mouseOut(link)
+
+      // Second hover should trigger a fresh fetch because the cache entry was evicted
+      vi.mocked(fetch).mockRejectedValueOnce(new Error('offline'))
+      mouseOver(link)
+
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2)
+
+      link.remove()
+    })
+
+    it('updates the YouTube card content and repositions after the async fetch resolves', async () => {
+      vi.mocked(fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          title: 'Live noembed title',
+          thumbnail_url: 'https://img.youtube.com/vi/async-pos-id/hq.jpg',
+        }),
+      } as Response)
+
+      const link = document.createElement('a')
+      link.dataset.tooltipYt = 'async-pos-id'
+      link.dataset.tooltipCardTitle = 'Stored title'
+      document.body.appendChild(link)
+
+      mouseOver(link)
+
+      const card = getYoutubeCard()!
+      expect(card.querySelector('.vp-tooltip__yt-title')?.textContent).toBe('Stored title')
+
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(card.querySelector('.vp-tooltip__yt-title')?.textContent).toBe('Live noembed title')
+      // Card must not be left stuck as hidden after repositioning
+      expect(card.style.visibility).toBe('visible')
+
+      link.remove()
+    })
+
+    it('resolves tooltip targets from nested text nodes inside a tooltip host', () => {
+      const button = document.createElement('button')
+      button.dataset.tooltip = 'Play'
+      const textNode = document.createTextNode('Play')
+      button.appendChild(textNode)
+      document.body.appendChild(button)
+
+      mouseOver(textNode)
+
+      const tip = getTip()
+      expect(tip).not.toBeNull()
+      expect(tip!.textContent).toBe('Play')
+
+      button.remove()
     })
 
     it('hides the tooltip when the mouse leaves the element', () => {

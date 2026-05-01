@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
+import AnimatedLoadingGlyph from './AnimatedLoadingGlyph.vue'
 import ArcadeMenuButton from './ArcadeMenuButton.vue'
-import { getTriviaCards } from '@/data/triviaCards'
+import { useTriggeredTypewriterText } from '@/composables/useTriggeredTypewriterText'
+import { getAboutStoryText } from '@/data/aboutStoryText'
 import { currentAppLocale } from '@/i18n/locale'
 import { useUiText } from '@/composables/useUiText'
 
@@ -44,22 +46,24 @@ const emit = defineEmits<{
 
 const rootRef = ref<HTMLElement | null>(null)
 const titleRef = ref<HTMLElement | null>(null)
+const entryImageRef = ref<HTMLImageElement | null>(null)
 const t = useUiText()
 const isFlipped = ref(false)
 const hoverFrameSrc = ref<string | null>(null)
-const displayedTitleText = ref('')
-const isTypingTitle = ref(false)
 const isHoveringCard = ref(false)
+const isEntryImageLoaded = ref(false)
+const isHoverFrameLoaded = ref(false)
 
 const TEXT_TYPING_CHAR_INTERVAL_TITLE = 30
 
-let titleTypingTimeoutIds: ReturnType<typeof setTimeout>[] = []
 let lastPointerPosition: { x: number; y: number } | null = null
 let previousPointerPosition: { x: number; y: number } | null = null
 let suppressHoverUntilPointerLeaves = false
 let lastHoverFrameIndex = -1
 let titleFitFrame: number | null = null
 let titleResizeObserver: ResizeObserver | null = null
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept alive intentionally: holding references prevents the browser from evicting decoded bitmaps before they are needed
+let preloadedBandFrames: HTMLImageElement[] = []
 
 const entryMember = computed(() => ({
   avatar: bandMedium as string,
@@ -68,34 +72,22 @@ const entryMember = computed(() => ({
   hoverPoseFrame: undefined,
 }))
 
-const storySections = computed(() => {
-  const sections = getTriviaCards(currentAppLocale.value)
-  const preferredOrder = ['story', 'influences', 'gear']
-
-  return preferredOrder
-    .map((id) => sections.find((section) => section.id === id))
-    .filter((section): section is NonNullable<(typeof sections)[number]> => Boolean(section))
-})
-
-const storyBlocks = computed(() =>
-  storySections.value.map((section) => ({
-    id: section.id,
-    content: section.backContent,
-  }))
-)
+const storyParagraphs = computed(() => getAboutStoryText(currentAppLocale.value).paragraphs)
 
 const titleText = computed(() => t.value.about.subHeaderTitle)
+const {
+  displayedText: displayedTitleText,
+  isTyping: isTypingTitle,
+  startTyping: startFrontTitleTyping,
+  setFullText: setFullFrontTitle,
+} = useTriggeredTypewriterText({
+  text: titleText,
+  charIntervalMs: TEXT_TYPING_CHAR_INTERVAL_TITLE,
+  shouldSkipAnimation: () => isFlipped.value || prefersReducedMotion(),
+})
 const showTitleCursor = computed(
   () => isHoveringCard.value && !isFlipped.value && !isTypingTitle.value
 )
-
-const clearTitleTypingTimers = () => {
-  for (const timeoutId of titleTypingTimeoutIds) {
-    clearTimeout(timeoutId)
-  }
-
-  titleTypingTimeoutIds = []
-}
 
 const fitTitleToCard = () => {
   titleFitFrame = null
@@ -127,11 +119,6 @@ const scheduleTitleFit = () => {
   titleFitFrame = window.requestAnimationFrame(fitTitleToCard)
 }
 
-const setFullFrontTitle = () => {
-  displayedTitleText.value = titleText.value
-  isTypingTitle.value = false
-}
-
 const prefersReducedMotion = () => {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
     return false
@@ -140,31 +127,29 @@ const prefersReducedMotion = () => {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
-const startFrontTitleTyping = () => {
-  clearTitleTypingTimers()
+const syncEntryImageLoadState = () => {
+  const entryImage = entryImageRef.value
+  isEntryImageLoaded.value = Boolean(entryImage?.complete && entryImage.naturalWidth > 0)
+}
 
-  if (isFlipped.value || prefersReducedMotion()) {
-    setFullFrontTitle()
-    return
-  }
+const resolveEntryImageLoading = () => {
+  isEntryImageLoaded.value = true
+}
 
-  displayedTitleText.value = ''
-  isTypingTitle.value = true
+const resolveHoverFrameLoading = () => {
+  if (!hoverFrameSrc.value) return
+  isHoverFrameLoaded.value = true
+}
 
-  for (let index = 1; index <= titleText.value.length; index += 1) {
-    const nextValue = titleText.value.slice(0, index)
-    titleTypingTimeoutIds.push(
-      setTimeout(() => {
-        displayedTitleText.value = nextValue
-      }, index * TEXT_TYPING_CHAR_INTERVAL_TITLE)
-    )
-  }
+const preloadBandFrames = () => {
+  if (typeof Image === 'undefined') return
 
-  titleTypingTimeoutIds.push(
-    setTimeout(() => {
-      isTypingTitle.value = false
-    }, titleText.value.length * TEXT_TYPING_CHAR_INTERVAL_TITLE)
-  )
+  preloadedBandFrames = bandFlipFrames.map((src) => {
+    const image = new Image()
+    image.decoding = 'async'
+    image.src = src
+    return image
+  })
 }
 
 const handleWindowPointerMove = (event: PointerEvent) => {
@@ -213,6 +198,7 @@ const pickHoverFrame = () => {
 
   const fixedIndex = entryMember.value?.hoverPoseFrame
   if (fixedIndex !== undefined) {
+    isHoverFrameLoaded.value = false
     hoverFrameSrc.value = frames[Math.min(fixedIndex, frames.length - 1)] ?? null
     return
   }
@@ -227,6 +213,7 @@ const pickHoverFrame = () => {
   }
 
   lastHoverFrameIndex = index
+  isHoverFrameLoaded.value = false
   hoverFrameSrc.value = frames[index] ?? null
 }
 
@@ -243,17 +230,16 @@ const handleMouseEnter = (event: MouseEvent) => {
 const handleMouseLeave = () => {
   isHoveringCard.value = false
   suppressHoverUntilPointerLeaves = false
-  clearTitleTypingTimers()
-  setFullFrontTitle()
   hoverFrameSrc.value = null
+  isHoverFrameLoaded.value = false
 }
 
 const openStory = () => {
   if (isFlipped.value) return
   isHoveringCard.value = false
-  clearTitleTypingTimers()
   setFullFrontTitle()
   hoverFrameSrc.value = null
+  isHoverFrameLoaded.value = false
   isFlipped.value = true
   emit('story-open-change', true)
 }
@@ -281,7 +267,7 @@ watch(
   }
 )
 
-watch([displayedTitleText, showTitleCursor, titleText], () => {
+watch([displayedTitleText, titleText], () => {
   void nextTick(() => {
     scheduleTitleFit()
   })
@@ -302,7 +288,9 @@ onMounted(() => {
     }
   }
 
+  preloadBandFrames()
   setFullFrontTitle()
+  syncEntryImageLoadState()
   syncHoverSuppressionState()
   void nextTick(() => {
     scheduleTitleFit()
@@ -321,8 +309,7 @@ onBeforeUnmount(() => {
 
   titleResizeObserver?.disconnect()
   titleResizeObserver = null
-
-  clearTitleTypingTimers()
+  preloadedBandFrames = []
 })
 </script>
 
@@ -348,30 +335,44 @@ onBeforeUnmount(() => {
           <h3 ref="titleRef" class="about-entry-card__title">
             <span>{{ displayedTitleText }}</span>
             <span
-              v-if="showTitleCursor"
               class="about-entry-card__cursor-indicator"
+              :class="{ 'about-entry-card__cursor-indicator--hidden': !showTitleCursor }"
               aria-hidden="true"
             ></span>
           </h3>
         </header>
 
         <div class="about-entry-card__image-frame">
+          <AnimatedLoadingGlyph
+            v-if="!isEntryImageLoaded"
+            class="about-entry-card__image-skeleton"
+            aria-hidden="true"
+          />
           <img
             v-if="entryMember"
+            ref="entryImageRef"
             class="about-entry-card__image"
-            :class="{ 'about-entry-card__image--hidden': hoverFrameSrc }"
+            :class="{
+              'about-entry-card__image--loaded': isEntryImageLoaded,
+              'about-entry-card__image--covered': isHoverFrameLoaded,
+            }"
             :src="entryMember.avatar"
             :srcset="entryMember.avatarSrcset"
-            :alt="t.about.entryImageAlt"
+            alt=""
             loading="lazy"
             sizes="(max-width: 767px) 280px, 320px"
+            @error="resolveEntryImageLoading"
+            @load="resolveEntryImageLoading"
           />
           <img
             v-if="hoverFrameSrc"
             class="about-entry-card__image about-entry-card__image--frame"
             :src="hoverFrameSrc"
+            :class="{ 'about-entry-card__image--loaded': isHoverFrameLoaded }"
             alt=""
             aria-hidden="true"
+            @error="resolveHoverFrameLoading"
+            @load="resolveHoverFrameLoading"
           />
         </div>
 
@@ -413,11 +414,33 @@ onBeforeUnmount(() => {
 
         <div class="about-entry-card__story" role="article">
           <section
-            v-for="block in storyBlocks"
-            :key="block.id"
+            v-for="para in storyParagraphs"
+            :key="para.id"
             class="about-entry-card__story-block"
           >
-            <p class="about-entry-card__story-copy">{{ block.content }}</p>
+            <p
+              v-if="para.dictParts"
+              class="about-entry-card__story-copy about-entry-card__story-copy--dict"
+            >
+              <strong>{{ para.dictParts.boldWord }}</strong
+              >{{ para.dictParts.pronunciation }}<br /><em>{{ para.dictParts.definition }}</em>
+            </p>
+            <p v-else class="about-entry-card__story-copy">
+              <span>{{ para.text }}</span>
+              <a
+                v-if="para.linkText && para.linkHref"
+                class="about-entry-card__story-link"
+                :href="para.linkHref"
+                :data-tooltip-yt="para.linkYtId"
+                :data-tooltip-card-title="para.linkPreviewTitle"
+                :data-tooltip-card-meta-primary="para.linkPreviewMetaPrimary"
+                :data-tooltip-card-meta-secondary="para.linkPreviewMetaSecondary"
+                target="_blank"
+                rel="noopener noreferrer"
+                >{{ para.linkText }}</a
+              >
+              <span v-if="para.textAfterLink">{{ para.textAfterLink }}</span>
+            </p>
           </section>
         </div>
       </section>
@@ -537,6 +560,11 @@ onBeforeUnmount(() => {
   animation: typing-cursor-blink var(--about-card-cursor-blink-duration) step-end infinite;
 }
 
+.about-entry-card__cursor-indicator--hidden {
+  opacity: 0;
+  animation: none;
+}
+
 .about-entry-card__image-frame {
   position: relative;
   width: 100%;
@@ -546,6 +574,12 @@ onBeforeUnmount(() => {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(10, 10, 18, 0.35));
 }
 
+.about-entry-card__image-skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
 .about-entry-card__image {
   position: absolute;
   inset: 0;
@@ -553,9 +587,15 @@ onBeforeUnmount(() => {
   height: 100%;
   object-fit: cover;
   object-position: center 28%;
+  opacity: 0;
+  transition: opacity 220ms ease;
 }
 
-.about-entry-card__image--hidden {
+.about-entry-card__image--loaded {
+  opacity: 1;
+}
+
+.about-entry-card__image--covered {
   opacity: 0;
 }
 
@@ -600,6 +640,39 @@ onBeforeUnmount(() => {
   font-family: 'Space Mono', 'Courier New', monospace;
   font-size: 0.68rem;
   color: var(--color-text-secondary);
+}
+
+.about-entry-card__story-copy--dict strong {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.about-entry-card__story-copy--dict em {
+  font-style: italic;
+  opacity: 0.75;
+}
+
+.about-entry-card__story-link {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-neon-cyan);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(104, 198, 224, 0.55);
+  text-underline-offset: 0.15em;
+  transition:
+    color var(--transition-base),
+    text-decoration-color var(--transition-base);
+}
+
+.about-entry-card__story-link:hover,
+.about-entry-card__story-link:focus-visible {
+  color: #9fe7fb;
+  text-decoration-color: currentColor;
+  outline: none;
 }
 
 @media (max-width: 767px) {

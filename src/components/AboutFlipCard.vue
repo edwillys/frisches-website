@@ -3,6 +3,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import gsap from 'gsap'
 
 import AnimatedLoadingGlyph from './AnimatedLoadingGlyph.vue'
+import { useTriggeredTypewriterText } from '@/composables/useTriggeredTypewriterText'
+import { useUiText } from '@/composables/useUiText'
 import type { AboutMember } from '@/types/aboutMember'
 
 interface Props {
@@ -34,6 +36,7 @@ const backAvatarSlotRef = ref<HTMLElement | null>(null)
 const backAvatarImageRef = ref<HTMLImageElement | null>(null)
 const floatingAvatarRef = ref<HTMLElement | null>(null)
 const floatingAvatarImageRef = ref<HTMLImageElement | null>(null)
+const t = useUiText()
 
 let ctx: gsap.Context | null = null
 
@@ -47,14 +50,12 @@ const TEXT_TYPING_CHAR_INTERVAL = 13
 const TEXT_TYPING_CHAR_INTERVAL_TITLE = 30
 const TEXT_TYPING_SEGMENT_PAUSE = 80
 
-const displayedTitleText = ref(props.member.name)
 const displayedDescriptionLead = ref(props.isFlipped ? props.member.descriptionLead : '')
 const displayedFavoriteTrackTitle = ref(
   props.isFlipped ? (props.member.favoriteTrackTitle ?? '') : ''
 )
 const displayedDescriptionTail = ref(props.isFlipped ? (props.member.descriptionTail ?? '') : '')
 const isHoveringCard = ref(false)
-const isTypingFrontTitle = ref(false)
 const isTypingBackText = ref(false)
 const isAvatarLoaded = ref(false)
 const isPlayingFlipAnimation = ref(false)
@@ -62,13 +63,14 @@ const currentFlipFrameIndex = ref(0)
 const hoverFrameSrc = ref<string | null>(null)
 let lastHoverFrameIndex = -1
 
+const frontTitleText = computed(() => props.member.name)
+
 const isShowingHoverFrame = computed(
   () => hoverFrameSrc.value !== null && !isPlayingFlipAnimation.value
 )
 
 let flipUnlockTimeoutId: ReturnType<typeof setTimeout> | null = null
 
-let titleTypingTimeoutIds: ReturnType<typeof setTimeout>[] = []
 let typingTimeoutIds: ReturnType<typeof setTimeout>[] = []
 let lastPointerPosition: { x: number; y: number } | null = null
 let previousPointerPosition: { x: number; y: number } | null = null
@@ -123,20 +125,23 @@ const prefersReducedMotion = () => {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
+const {
+  displayedText: displayedTitleText,
+  isTyping: isTypingFrontTitle,
+  startTyping: startFrontTitleTyping,
+  setFullText: setFullFrontTitle,
+} = useTriggeredTypewriterText({
+  text: frontTitleText,
+  charIntervalMs: TEXT_TYPING_CHAR_INTERVAL_TITLE,
+  shouldSkipAnimation: prefersReducedMotion,
+})
+
 const clearTypingTimers = () => {
   for (const timeoutId of typingTimeoutIds) {
     clearTimeout(timeoutId)
   }
 
   typingTimeoutIds = []
-}
-
-const clearTitleTypingTimers = () => {
-  for (const timeoutId of titleTypingTimeoutIds) {
-    clearTimeout(timeoutId)
-  }
-
-  titleTypingTimeoutIds = []
 }
 
 const handleWindowPointerMove = (event: PointerEvent) => {
@@ -188,43 +193,6 @@ const syncAvatarLoadState = () => {
 
 const resolveAvatarLoading = () => {
   isAvatarLoaded.value = true
-}
-
-const setFullFrontTitle = () => {
-  displayedTitleText.value = props.member.name
-  isTypingFrontTitle.value = false
-}
-
-const startFrontTitleTyping = () => {
-  clearTitleTypingTimers()
-
-  if (props.isFlipped) {
-    setFullFrontTitle()
-    return
-  }
-
-  if (prefersReducedMotion()) {
-    setFullFrontTitle()
-    return
-  }
-
-  displayedTitleText.value = ''
-  isTypingFrontTitle.value = true
-
-  for (let index = 1; index <= props.member.name.length; index += 1) {
-    const nextValue = props.member.name.slice(0, index)
-    titleTypingTimeoutIds.push(
-      setTimeout(() => {
-        displayedTitleText.value = nextValue
-      }, index * TEXT_TYPING_CHAR_INTERVAL_TITLE)
-    )
-  }
-
-  titleTypingTimeoutIds.push(
-    setTimeout(() => {
-      isTypingFrontTitle.value = false
-    }, props.member.name.length * TEXT_TYPING_CHAR_INTERVAL_TITLE)
-  )
 }
 
 const pickHoverFrame = () => {
@@ -283,8 +251,6 @@ const handleMouseleave = () => {
   isHoveringCard.value = false
   suppressHoverUntilPointerLeaves = false
   hoverFrameSrc.value = null
-  clearTitleTypingTimers()
-  setFullFrontTitle()
 }
 
 const setFullBackText = () => {
@@ -547,7 +513,6 @@ watch(
     unlockFlipInteractions()
     hoverFrameSrc.value = null
     lastHoverFrameIndex = -1
-    clearTitleTypingTimers()
     setFullFrontTitle()
     clearTypingTimers()
     isHoveringCard.value = false
@@ -603,7 +568,6 @@ onBeforeUnmount(() => {
     window.removeEventListener('pointermove', handleWindowPointerMove)
   }
 
-  clearTitleTypingTimers()
   clearTypingTimers()
   unlockFlipInteractions()
   ctx?.revert()
@@ -724,6 +688,7 @@ onBeforeUnmount(() => {
               v-if="member.favoriteTrackId && displayedFavoriteTrackTitle"
               class="about-flip-card__song-chip"
               data-testid="favorite-song-chip"
+              :data-tooltip="t.player.play"
               type="button"
               @click.stop="handleFavoriteSongClick"
             >

@@ -43,7 +43,7 @@ defineExpose({
       :src="props.image"
       :srcset="props.imageSrcset"
       sizes="(max-width: 640px) 320px, 640px"
-      :alt="props.title"
+      alt=""
       class="menu-card__image"
     />
     <div class="menu-card__overlay"></div>

@@ -27,7 +27,7 @@ describe('MenuCard', () => {
     const img = wrapper.find('.menu-card__image')
     expect(img.exists()).toBe(true)
     expect(img.attributes('src')).toBe(defaultProps.image)
-    expect(img.attributes('alt')).toBe(defaultProps.title)
+    expect(img.attributes('alt')).toBe('')
   })
 
   it('emits click event with route when clicked', async () => {
