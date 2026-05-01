@@ -218,7 +218,7 @@ describe('CardDealer', () => {
 
     const bgImage = wrapper.find('.card-dealer__bg-image')
     expect(bgImage.exists()).toBe(true)
-    expect(bgImage.attributes('alt')).toBe('Mysterious card dealer')
+    expect(bgImage.attributes('alt')).toBe('')
   })
 
   it('renders three menu cards', () => {

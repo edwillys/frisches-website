@@ -1,282 +1,153 @@
 # Agents and Website Plan for Frisches
 
+## Implementation Guidance
+
+- Keep the code tidy, minimal, and reusable.
+- Before adding new logic or text, check whether an existing composable, helper, style pattern, or translation key can be reused.
+- Prefer small focused abstractions over duplicated component-local logic when the same behavior appears in multiple places.
+
 ## Project Overview
 
-We are building a dynamic website for the rock band **Frisches** using Vue.js. The design and mood will be inspired by images and video snippets from the band's animated clip for the song "Witch Hunting." The color palette and atmosphere will be derived from these resources to create a mysterious and engaging experience.
+The Frisches website is a **fully shipped** Vue 3 + TypeScript single-page application for the rock band Frisches. The visual identity is inspired by the band's animated music video for "Witch Hunting" — mysterious, dark, card-based UI with GSAP animations.
 
-## Home Screen Concept
-
-- The initial screen will feature the mysterious card dealer from `Intro_Voyante_00020.jpg` (also seen in the video clips).
-- The dealer will present a set of cards, each representing a menu option:
-  - Music
-  - About
-  - Gallery
-  - (Other typical band site sections)
-- The cards will be interactive and visually styled to match the mood of the media resources.
-
-## Character Selection Behavior
-
-- **One character at a time:** The About/character view displays a single 3D character next to an information card (name, influences, favorite song).
-- **Selection UI:** Users pick characters via circular initial buttons (one per character) in the button row below the scene; the active button is highlighted.
-- **Badges:** Instead of an instrument text list, each character shows small SVG “badge medals” (stored in `src/assets/badges`) rendered in a compact grid beside the portrait.
-- **Preloading & rendering:** All GLTF models are preloaded (instantiated) but only the selected model is visible; this makes swaps instantaneous and avoids loading delays during selection.
-- **Synchronized swap animation:** GSAP timelines animate the card and model out and in synchronously for smooth transitions between characters.
-- **Model framing & orientation:** Camera position / FOV and per-character `rotationY` and `scale` properties are used to ensure each character fits the same visual height as the card and faces forward; OrbitControls rotation is disabled to keep a consistent viewing angle.
-- **Shadow & lighting:** Models use three.js shadows and a small skylight setup to integrate visually with the card backdrop.
-- **Animations & playback:** The loader logs available animation clips; future enhancement is to automatically play a character’s idle animation via an AnimationMixer when present.
-- **Testing & reliability:** Unit tests were updated to mock GSAP timelines (run synchronously in tests) and to assert badges and info sections; all unit tests pass locally (`56/56`).
-
-## Testing (Non-Interactive)
-
-- Run unit tests once and exit (no watch / no prompt): `npm run test:unit -- --run`
-
-## Testing Policy (Red Then Green)
-
-- For every bug fix or behavior change, write or update a targeted automated test first so it fails on the current code (red).
-- Only then implement the code fix and rerun the same targeted test until it passes (green).
-- After green, run closely related tests to guard against regressions in adjacent behavior.
-
-## Visual Effects
-
-### Luminescent Dust Particles (MouseParticles Component)
-
-The website features an ambient particle system that creates a luminescent dust effect inspired by the floating particles from Stranger Things, adding a mystical atmosphere to the entire experience.
-
-**Core Behavior:**
-
-- **Ambient Floating**: 100 particles continuously float across the screen with physics-based motion
-  - Gravity pulls particles down subtly (0.01)
-  - Buoyancy pushes them up (0.015), creating a natural floating effect
-  - Air resistance (0.99) and turbulence (0.02) simulate realistic air currents
-  - Particles wrap around screen edges for seamless, infinite floating
-
-**Visual Characteristics:**
-
-- **Size**: Random sizes between 0.4px and 2.0px for depth variation
-- **Shape**: Slightly irregular shapes (not perfect circles) with 6-sided polygons and 0.35 irregularity factor
-- **Color**: Red theme matching band aesthetic (RGB: 220, 40, 40) with ±10 variance for subtle variation
-- **Glow**: Pulsing glow effect with:
-  - Alpha oscillating between 0.1 and 0.5
-  - Blur oscillating between 4px and 12px
-  - Independent phase for each particle creating organic, random pulsing
-
-**Mouse Interaction:**
-
-- **Speed-Based Attraction**: Particles near the cursor (within 180px radius) are attracted when the mouse moves
-  - Attraction strength is proportional to cursor speed (faster movement = stronger pull)
-  - Only particles close to the mouse path are affected
-  - Spawning rate proportional to cursor speed
-- **Dust Trace Effect**: Fast cursor movements create a visible trail of accumulated particles
-  - New particles spawn at cursor position during movement
-  - Attracted particles follow the cursor path
-  - Creates a dynamic, responsive dust cloud effect
-
-- **Dispersion**: When cursor stops moving, attracted particles gradually disperse
-  - Particles slow down with dispersion rate of 0.96
-  - Return to natural floating behavior after attraction time expires
-  - Ensures most particles remain freely floating in the background
-
-**Logo Button Interaction:**
-
-- **Hover Attraction**: When the user hovers over the logo button, 30% of particles are attracted to orbit around it
-  - Particles smoothly transition to circular orbit paths around the button
-  - Orbit radius: 100px ± 20px variance for natural, layered effect
-  - Fast transition duration (10 frames) creates immediate, responsive feel
-  - Each particle maintains its own orbital angle and speed (0.005-0.008 radians/frame)
-  - Particles closest to the button are selected first for attraction
-- **Automatic Dispersion**: When the logo button is clicked or becomes invisible
-  - `hideLogoButton()` method is called via CardDealer → App → MouseParticles
-  - All attracted particles immediately begin dispersing
-  - Particles transition back to natural floating physics with gradual deceleration
-  - Creates a magical effect where particles scatter as the logo disappears
-- **State Management**:
-  - Tracks `logoButtonVisible` and `logoButtonHovered` states independently
-  - Only attracts particles when button is both visible AND hovered
-  - Ensures particles disperse when either condition becomes false
-
-**Implementation Details:**
-
-- Canvas-based rendering with device pixel ratio optimization (max 2x)
-- Fixed position overlay with `pointer-events: none` for non-intrusive interaction
-- `mix-blend-mode: screen` for additive glow effect
-- Z-index 9999 to overlay card dealer area while remaining subtle
-- Public API methods exposed via `defineExpose`:
-  - `setLogoButtonState(hovered, x, y)` - Updates hover state and button position
-  - `hideLogoButton()` - Triggers particle dispersion when button disappears
-- All parameters exposed as tweakable constants at the top of the component:
-  - `PARTICLE_COUNT`, `PARTICLE_SIZE_MIN/MAX`, `PARTICLE_SPEED_MIN/MAX`
-  - `GRAVITY`, `BUOYANCY`, `AIR_RESISTANCE`, `TURBULENCE`
-  - `MOUSE_ATTRACTION_STRENGTH`, `MOUSE_ATTRACTION_RADIUS`, `DISPERSION_RATE`
-  - `LOGO_ATTRACTION_PERCENTAGE`, `LOGO_ATTRACTION_STRENGTH`, `LOGO_ORBIT_RADIUS`, `LOGO_ORBIT_VARIANCE`, `LOGO_TRANSITION_DURATION`
-  - `GLOW_FREQUENCY`, `GLOW_MIN/MAX_ALPHA`, `GLOW_BLUR_MIN/MAX`
-  - `SHAPE_SEGMENTS`, `SHAPE_IRREGULARITY`
-  - `COLOR` (RGB), `COLOR_VARIANCE`
-
-**Testing:**
-
-- Comprehensive unit tests in `src/components/__tests__/MouseParticles.test.ts`
-- Tests cover:
-  - Component rendering and canvas element presence
-  - Exposed public API methods (`setLogoButtonState`, `hideLogoButton`)
-  - Logo button hover state management
-  - Particle attraction and dispersion behavior
-  - Position updates and state transitions
-  - Accessibility attributes (aria-hidden)
-
-**Design Philosophy:**
-The effect maintains a balance between ambient atmosphere and interactive feedback:
-
-- Particles freely float to create consistent ambient atmosphere
-- Responsive to both mouse movement and logo button interactions
-- Logo hover creates a focused, magical gathering effect
-- Automatic dispersion when logo disappears reinforces the mystical theme
-- Subtle enough not to distract from main content but noticeable enough to enhance the mysterious, magical atmosphere
-
-## Website User Flow
-
-### Initial State (Logo View)
-
-1. **User lands on the website**
-   - Dark, mysterious background with gradient overlay
-   - Background artwork gently pulses/zooms to create a breathing effect
-   - White circle outline with animated Frisches logo in center (bottom-middle area)
-   - Logo emits a continuous heartbeat glow that matches the background pulse for a unified breathing effect
-   - Logo serves as the only interactive element on home screen
-   - Logo fades in sync with the background pulse so both elements feel like the same reveal
-   - Minimal, clean, mysterious aesthetic matching "Witch Hunting" theme
-
-### Logo Click → Cards Reveal (Logo to Cards Transition)
-
-2. **User clicks the logo circle**
-   - Logo animates: Moves to the center of the screen.
-   - Logo animates: 360° rotation with scale shrink (fan closing effect)
-   - Logo fades out over 1.5s while the background pulse eases down
-   - Upon logo completion, cards appear as a single deck at the center point (where the logo disappeared).
-   - **Phase 1 (Deck Appearance):** The deck grows from a small point (scale 0) to full size (scale 1) with a smooth, spline-like easing (`power2.inOut`). The movement is lean and natural, without bouncing. All cards appear together as a single unit (no stagger).
-   - **Phase 2 (Distribution):** Once the deck is fully formed, the cards distribute symmetrically to their final left and right positions, sliding away from the center and appearing from behind the deck.
-   - Duration: Phase 1 (0.8s), Phase 2 (1.0s).
-
-- Cards appear side-by-side (Music, About, Gallery) in horizontal layout
-- All 3 cards are now visible and clickable
-
-### Cards View (Exploration)
-
-3. **User explores the three menu cards**
-   - Cards are positioned horizontally in center of screen
-   - Each card shows title and background image with gradient overlay
-   - Hover state: card scales up 1.05x and lifts (-10px translateY)
-   - Cards are clickable to view content
-   - Clicking outside cards returns to logo view (click-outside detection)
-
-### Card Click → Content View (Card Selection)
-
-4. **User clicks a specific card (e.g., "Music")**
-   - Selected card animates: glides to a fixed position on the left (aligned with where the middle card would be), regardless of which card was clicked.
-   - Other cards smoothly close their gaps and stack behind the active card with progressively smaller offsets (opacity 0.4–0.6)
-   - Content view fades/slides in from the right in sync with the card stack motion
-   - Duration: 1s smooth transition with `power2.inOut` easing
-   - Now in "content" view showing information about selected section
-
-### Content View (Information)
-
-5. **User views content in content view**
-   - Content placeholder shows selected card's title and information
-   - Background remains visible with overlay
-   - Selected card stack stays on the left so the user keeps context of their selection
-   - Full-screen overlay listens for outside clicks (while the content panel itself blocks propagation)
-   - Two ways to exit:
-     - Click outside content panel (on overlay/background) → returns cards to original grid
-   - Navigate to different section → replaces content
-
-### Return to Cards (Content Close)
-
-6. **User clicks outside the content area**
-   - Content view fades/closes while the left-hand stack eases back toward center
-   - Cards glide back to horizontal grid layout with reversing offsets
-   - Animations reverse: cards scale back to 1.0, move to original positions
-   - Duration: 1s with stagger effect (0.05s delay)
-   - Back in "cards" view
-
-### Return to Logo (Cards Close)
-
-7. **User clicks outside cards area (on background)**
-   - **Phase 1 (Gather):** Cards animate back into a single deck at the center (Inverse of Distribution).
-   - **Phase 2 (Disappear):** Once gathered, the deck shrinks and fades away as a single unit (Inverse of Appearance).
-   - Duration: Phase 1 (1.0s), Phase 2 (0.8s) with `power2.inOut` easing.
-   - Once cards disappear, logo reappears at the center.
-   - Logo animates: reverse fan-opening effect (scale 0→1, rotation 360°→0) at the center.
-   - Logo moves back to its initial position at the bottom.
-   - Duration: 1.5s with `power2.inOut` easing
-   - Back in "logo" view - cycle complete
-
-### State Summary
-
-- **Logo View**: Only logo visible, user entry point
-- **Cards View**: Three menu cards side-by-side, user can explore or click outside to go back
-- **Content View**: Detailed content for selected card, can close to return to cards or click outside
-- **Animations**: All transitions are smooth with GSAP, providing visual feedback
-- **Click Detection**: Click-outside detection on semi-transparent overlay (z-index: 2) enables seamless navigation
-
-### User Journey Visualization
-
-```
-[Logo View]
-    ↓ (Click Logo)
-[Cards Appear with 360° spread]
-    ↓ (Click Card)
-[Content View]
-    ↓ (Click Outside)
-[Cards Return]
-    ↓ (Click Outside)
-[Logo Reappears]
-```
-
-## Next Steps
-
-1. Analyze the colors and mood from the provided images and videos.
-2. Design and develop the home screen layout with the card dealer and menu cards as a proof of concept. Only proceed to further steps once the home screen meets expectations.
-3. Organize the folder tree structure as a typical Vue project, including configuration for GitHub Actions to enable CI/CD.
-4. Plan and implement smooth animations for interactive elements.
-5. Expand the site with additional sections (music, about, gallery, etc) after the home screen is approved.
+Tech stack: **Vue 3 · TypeScript · Vite · GSAP · Pinia · Vue Router · Vitest · Playwright**
 
 ## Project Structure
 
 ```
 frisches-website/
-├── .github/                    # GitHub configuration and documentation
-│
-├── public/                     # Static assets served as-is
-│   ├── videos/                # Large video files (gitignored until compressed)
-│   └── audio/                 # Audio/music files (future)
-│
+├── .github/                   # GitHub configuration; agents.md; workflow prompts
+├── public/                    # Static assets served as-is (robots, sitemap, videos, Draco WASM)
+├── e2e/                       # Playwright end-to-end specs
 ├── src/
+│   ├── analytics/             # Umami + Sentry wrappers
 │   ├── assets/
-│   │   ├── images/            # Optimized images with descriptive names
-│   │   └── styles/            # Global CSS (variables, base styles)
-│   │
-│   ├── components/            # Vue components
-│   │   └── __tests__/         # Component unit tests
-│   │
-│   ├── composables/           # Reusable composition functions
-│   │
-│   ├── router/                # Vue Router configuration
-│   ├── stores/                # Pinia state management
-│   ├── App.vue                # Root component
+│   │   ├── gallery_data.json  # Gallery image manifest (generated by scripts/generate-gallery.js)
+│   │   ├── badges/            # SVG instrument badge medals
+│   │   ├── icons/             # SVG UI icons
+│   │   ├── images/            # Optimized images
+│   │   ├── private/           # Band photos / avatars (gitignored, synced via R2)
+│   │   └── styles/            # Global CSS (variables, base, tooltip, fonts, …)
+│   ├── components/            # Vue SFCs (see list below)
+│   │   └── __tests__/         # Component unit tests (Vitest + @vue/test-utils)
+│   ├── composables/           # Reusable composition functions (see list below)
+│   │   └── __tests__/         # Composable unit tests
+│   ├── constants/             # App-wide constant values
+│   ├── data/                  # Static structured content (members, story, albums, tracks, stems)
+│   ├── i18n/                  # Locale config + UI string tables (en/de/fr/pt-BR)
+│   ├── router/                # Vue Router (hash-based; routes: /, /impressum, /privacy)
+│   ├── stores/                # Pinia stores (audio player state)
+│   ├── test/                  # Test setup / global mocks
+│   ├── types/                 # Shared TypeScript interfaces
+│   ├── views/                 # Top-level route views (Home, Gallery, Impressum, Privacy)
+│   ├── App.vue                # Root component — mounts global tooltip + particles
 │   └── main.ts                # App entry point
-│
-├── tests/                     # Additional test files
-└── [config files]             # Vite, Vitest, TypeScript, ESLint configs
+├── scripts/                   # Build helpers (gallery generation, SVG normalisation, R2 sync)
+└── [config files]             # vite.config, vitest.config, tsconfig.*, eslint.config, playwright.config
 ```
+
+## Components
+
+| Component              | Role                                                                                   |
+| ---------------------- | -------------------------------------------------------------------------------------- |
+| `CardDealer`           | Home screen — logo → card fan-out, content routing via MenuCards                       |
+| `MenuCard`             | Individual menu card (Music / About / Gallery)                                         |
+| `LogoButton`           | Animated logo with heartbeat glow; click triggers card reveal                          |
+| `LogoEffect`           | Canvas-based logo render                                                               |
+| `MouseParticles`       | Ambient luminescent particle system; responds to cursor and logo hover                 |
+| `AboutView`            | About section root — manages entry / members / lyrics sub-sections                     |
+| `AboutEntryCard`       | Band intro flip card (front: photo + title typewriter; back: story + YouTube tooltip)  |
+| `AboutFlipCard`        | Member flip card (front: portrait + title typewriter; back: bio + favourite-song chip) |
+| `AboutMembersView`     | Scrollable member card carousel                                                        |
+| `LyricsCardsView`      | Container for the single lyrics flip card                                              |
+| `LyricsFlipCard`       | Lyrics flip card (front: track info; back: synced lyrics display)                      |
+| `LyricsDisplay`        | Scrolling auto-sync lyrics with manual scroll + re-centre button                       |
+| `AudioPlayer`          | Full audio player with stems/fader support                                             |
+| `GlobalAudioPlayer`    | Persistent mini-player overlay                                                         |
+| `InstrumentFaders`     | Per-stem volume faders                                                                 |
+| `GalleryManager`       | Photo gallery with lightbox                                                            |
+| `ArcadeMenuButton`     | Reusable arcade-style press button                                                     |
+| `AnimatedLoadingGlyph` | CSS loading spinner                                                                    |
+| `TypedTextLabel`       | Generic typewriter label                                                               |
+| `LegalPageFrame`       | Shared wrapper for Impressum / Privacy views                                           |
+
+## Composables
+
+| Composable                   | Role                                                                                                                                                                                     |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useViewportTooltip`         | Global tooltip controller — text tooltips and YouTube preview cards. Target lookup handles nested text nodes. Fetches title/thumbnail from noembed; stored metadata used for title/year. |
+| `useTriggeredTypewriterText` | Hover-triggered typewriter: starts on trigger, ignores re-triggers while in flight, replays when idle.                                                                                   |
+| `useTypewriterText`          | Lower-level character-interval typewriter.                                                                                                                                               |
+| `useGSAP`                    | GSAP context wrapper with automatic cleanup.                                                                                                                                             |
+| `useAboutMembers`            | Member list data + active selection state.                                                                                                                                               |
+| `useAboutHeaderMenu`         | About section header navigation state.                                                                                                                                                   |
+| `useAboutSubSection`         | Manages slide transitions between About sub-sections (entry / members / lyrics).                                                                                                         |
+| `useLyricsCards`             | Derives lyrics card data from albums + tracks stores.                                                                                                                                    |
+| `useGalleryData`             | Loads and exposes gallery image manifest.                                                                                                                                                |
+| `useMediaHelpers`            | Responsive breakpoint helpers.                                                                                                                                                           |
+| `useNavigationSections`      | Section scroll/navigation helpers.                                                                                                                                                       |
+| `usePlayerThemeStyle`        | Derives CSS custom-property theme from an audio track''s colour.                                                                                                                         |
+| `useCardDealerPalette`       | Card-dealer background palette transitions.                                                                                                                                              |
+| `useTooltipSuppression`      | Adds/removes `tooltip-suppressed` class on elements.                                                                                                                                     |
+| `useLegalPageClose`          | Handles close/back navigation for legal pages.                                                                                                                                           |
+| `useUiText`                  | Returns computed translated UI strings from `i18n/uiText.ts`.                                                                                                                            |
+
+## Data Layer (`src/data/`)
+
+| File                  | Contents                                                                                                                                                                                                                                        |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `aboutStoryText.ts`   | Localized band story paragraphs (en/de/fr/pt-BR). The "album" paragraph contains the YouTube link for the Witch Hunting video tooltip: `linkYtId`, `linkPreviewTitle`, `linkPreviewMetaPrimary`. Title is also enriched at runtime via noembed. |
+| `aboutMembers.ts`     | Band member records (id, name, avatar paths, badge list, favourite track).                                                                                                                                                                      |
+| `aboutMembersText.ts` | Localized member bio text per locale.                                                                                                                                                                                                           |
+| `albums.ts`           | Album metadata.                                                                                                                                                                                                                                 |
+| `tracks.ts`           | Track list with stem availability flags, colours, and lyric references.                                                                                                                                                                         |
+| `stems.ts`            | Per-track stem file paths.                                                                                                                                                                                                                      |
+
+## i18n
+
+Four locales: `en`, `de`, `fr`, `pt-BR`. Locale state lives in `src/i18n/locale.ts` (`currentAppLocale` ref). UI strings are in `src/i18n/uiText.ts`, accessed via the `useUiText()` composable. Longer content (story paragraphs, member bios) lives directly in the data files, keyed by locale.
+
+## Tooltip System
+
+`useViewportTooltip()` is mounted once in `App.vue` and listens for global `mouseover`/`mouseout` on `document`. It handles two modes:
+
+- **Text tooltip** (`data-tooltip="…"`) — small pill above the target.
+- **YouTube card** (`data-tooltip-yt="<ytId>"`) — preview card with thumbnail, title, and optional meta. Stored title/year come from `data-tooltip-card-title` / `data-tooltip-card-meta-primary` on the element; thumbnail + live title are fetched from noembed on first hover and cached by video id.
+
+`findTarget()` normalises `EventTarget` to an `HTMLElement` before calling `closest()`, so hovers on nested text nodes resolve correctly.
+
+Suppress tooltips by adding the class `tooltip-suppressed` to the target element (use `useTooltipSuppression()`).
+
+## About Section Sub-navigation
+
+`AboutView` manages three sub-sections that slide in/out via `useAboutSubSection`:
+
+1. **Entry** — `AboutEntryCard` (band intro flip card). The back side shows the story text with the Witch Hunting YouTube link + tooltip. Navigation buttons open Members or Lyrics sub-sections.
+2. **Members** — `AboutMembersView` containing `AboutFlipCard` instances (one per member). Front shows portrait + typewriter name, back shows bio and favourite-song chip. Chip plays the track via `GlobalAudioPlayer` and shows a "Play" tooltip.
+3. **Lyrics** — `LyricsCardsView` + `LyricsFlipCard` + `LyricsDisplay`. Lyrics auto-scroll in sync with audio playback; a re-centre button appears when the user manually scrolls.
+
+## Image Handling
+
+- All decorative / band-photo images use `alt=""` (intentional; no descriptive alt text on artwork).
+- `AboutEntryCard` uses a loading skeleton until the base band image fires `load`, then crossfades in. Hover-frame images for the flip animation are preloaded on first hover and replace the base image only after their own `load` event fires.
+- Band photos live in `src/assets/private/` (gitignored) and are synced from Cloudflare R2 via `npm run sync:r2:down`.
+
+## Audio Player
+
+`GlobalAudioPlayer` persists across navigation. Tracks have optional per-stem fader support via `InstrumentFaders`. Theme colour for the player UI is derived per-track via `usePlayerThemeStyle`.
 
 ## Development Guidelines
 
-### Testing Requirements
+### Testing Policy
 
-- **All features must have tests implemented before merging**
-- Component tests in `src/components/__tests__/`
-- Use Vitest for unit tests: `npm run test:unit`
-- Run with coverage: `npm run test:coverage`
-- Ensure tests pass before committing: tests verify functionality, props, events, and responsive behavior
+- For every bug fix or behaviour change, run the directly related test file(s) first to confirm they still pass, then run closely related files to guard regressions.
+- Do **not** run the full e2e suite by default; target only related Playwright specs.
+- Write or update a targeted test before implementing a fix (red → green).
+- Component tests live in `src/components/__tests__/`, composable tests in `src/composables/__tests__/`.
+- Current suite: **196 unit tests across 32 test files** (all passing).
+- Run tests once and exit: `npm run test:unit -- --run`
+- Run a specific file: `npx vitest src/components/__tests__/CardDealer.test.ts`
+- Run with coverage: `npx vitest --coverage`
 
 ### Linting & Type Checking Requirement (CI parity)
 
@@ -303,7 +174,7 @@ Runs on every `git commit` against **staged files only** (fast):
 Runs on every `git push` against the **full project** (thorough):
 
 - `npm run type-check` — full `vue-tsc` type validation
-- `npm run test:unit -- --run` — all unit tests must pass (currently 112 tests / 23 files)
+- `npm run test:unit -- --run` — all unit tests must pass
 
 #### Keeping hooks clean
 
@@ -362,52 +233,43 @@ npx vitest --coverage
 **Setup:**
 
 1. Install **Vitest** extension: Search "Vitest" in Extensions sidebar
-2. Install **Vitest Explorer** extension for visual test runner
-3. Once installed, click the **Testing** icon (beaker/flask) in the left sidebar
+2. Once installed, click the **Testing** icon (beaker/flask) in the left sidebar
 
 **Using the interface:**
 
 - Tests auto-discover from `src/**/__tests__/` and `src/**/*.test.ts`
 - Click ▶️ next to a test file or individual test to run
 - Watch mode: Click ▶️ with refresh icon at top of Test Explorer
-- Failed tests show with ❌ and passing with ✓
+- Failed tests show with ❌, passing with ✓
 - Click on a failed test to jump to the error
 
-**Current test files:**
-
-- `src/components/__tests__/CardDealer.test.ts` - Main component
-- `src/components/__tests__/MenuCard.test.ts` - Menu card component
-- `src/components/__tests__/LogoEffect.test.ts` - Logo animation
-- `src/__tests__/App.spec.ts` - App integration
-- **Total: 112 tests across 23 files (all passing ✅)**
-
-#### Test Organization
+#### Test Organisation
 
 Tests follow Vue Test Utils best practices:
 
 - Use `mount()` to render components
 - Mock external dependencies (Router, GSAP)
 - Test props, events, DOM structure, and responsive layout
-- Use `happy-dom` for fast DOM simulation (configured in `vitest.config.ts`)
+- `happy-dom` is used for fast DOM simulation (configured in `vitest.config.ts`)
 
 #### E2E Testing with Playwright
 
 **Setup (first time):**
 
 ```sh
-npx playwright install
+npx playwright install --with-deps
 ```
 
 **Running E2E tests:**
 
 ```sh
-npm run test:e2e                    # Run all tests
-npm run test:e2e -- --project=chromium  # Chromium only
-npm run test:e2e -- --debug         # Debug mode (opens inspector)
-npm run test:e2e -- tests/example.spec.ts  # Specific file
+npm run test:e2e                                        # Run all tests
+npm run test:e2e -- --project=chromium                  # Chromium only
+npm run test:e2e -- --debug                             # Debug mode (opens Playwright inspector)
+npm run test:e2e -- e2e/critical-user-flows.spec.ts     # Specific file
 ```
 
-**Using VS Code:**
+**Using VS Code (recommended):**
 
 1. Install **Playwright Test for VS Code** extension
 2. Open Testing panel (beaker icon)
@@ -436,10 +298,11 @@ See `.github/prompts/git-workflow.prompt.md` for detailed git commands and workf
 
 ### Media Files
 
-- Videos (`.mp4`) are gitignored until compressed
-- Images are committed with descriptive names
-- Large media files should eventually use CDN (DigitalOcean Spaces)
+- Band photos live in `src/assets/private/` — gitignored, synced from Cloudflare R2.
+- Sync commands: `npm run sync:r2:down` (download), `npm run sync:r2:up` (upload), `npm run sync:r2:bisync` (bidirectional).
+- Videos (`.mp4`) are served from `public/videos/` and gitignored.
+- Gallery image manifest is generated via `scripts/generate-gallery.js`.
 
 ---
 
-This file will be updated as the project progresses to document agents, features, and design decisions.
+This file should be kept up to date whenever significant components, composables, or architectural patterns are added or removed.

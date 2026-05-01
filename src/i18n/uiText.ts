@@ -84,7 +84,6 @@ export interface UiText {
     subHeaderTitle: string
     menuAriaLabel: string
     storyButton: string
-    entryImageAlt: string
     triviaButton: string
     membersButton: string
     lyricsButton: string
@@ -200,7 +199,6 @@ export const uiText: Record<AppLocale, UiText> = {
       subHeaderTitle: "Hi, we're Frisches!",
       menuAriaLabel: 'About menu',
       storyButton: 'Story',
-      entryImageAlt: 'Frisches band photo',
       triviaButton: 'Trivia',
       membersButton: 'Members',
       lyricsButton: 'Lyrics',
@@ -311,7 +309,6 @@ export const uiText: Record<AppLocale, UiText> = {
       subHeaderTitle: 'Hi, wir sind Frisches!',
       menuAriaLabel: 'Über-Menü',
       storyButton: 'Story',
-      entryImageAlt: 'Bandfoto von Frisches',
       triviaButton: 'Trivia',
       membersButton: 'Mitglieder',
       lyricsButton: 'Liedtext',
@@ -423,7 +420,6 @@ export const uiText: Record<AppLocale, UiText> = {
       subHeaderTitle: 'Salut, nous sommes Frisches!',
       menuAriaLabel: 'Menu a propos',
       storyButton: 'Histoire',
-      entryImageAlt: 'Photo du groupe Frisches',
       triviaButton: 'Trivia',
       membersButton: 'Membres',
       lyricsButton: 'Paroles',
@@ -534,7 +530,6 @@ export const uiText: Record<AppLocale, UiText> = {
       subHeaderTitle: 'Olá, nós somos Frisches!',
       menuAriaLabel: 'Menu sobre',
       storyButton: 'História',
-      entryImageAlt: 'Foto da banda Frisches',
       triviaButton: 'Trivia',
       membersButton: 'Membros',
       lyricsButton: 'Letra',

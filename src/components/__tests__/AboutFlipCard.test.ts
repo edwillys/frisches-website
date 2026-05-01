@@ -127,6 +127,9 @@ describe('AboutFlipCard', () => {
     expect(
       wrapper.findAll('.about-flip-card__face--back [data-testid="member-badge"]')
     ).toHaveLength(2)
+    expect(wrapper.find('[data-testid="favorite-song-chip"]').attributes('data-tooltip')).toBe(
+      'Play'
+    )
   })
 
   it('types the front title on hover before showing the cursor', async () => {

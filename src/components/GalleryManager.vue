@@ -246,7 +246,7 @@
               <div v-if="!getAlbumCover(album)" class="album-placeholder">
                 <span class="album-icon">📁</span>
               </div>
-              <img v-else :src="getImageUrl(getAlbumCover(album)!)" :alt="album" loading="lazy" />
+              <img v-else :src="getImageUrl(getAlbumCover(album)!)" alt="" loading="lazy" />
             </div>
             <div class="album-info">
               <h3>{{ album }}</h3>
@@ -374,7 +374,7 @@
             <img
               ref="lightboxImgRef"
               :src="getImageUrl(lightboxImage.relativePath)"
-              :alt="lightboxImage.filename"
+              alt=""
               :style="lightboxImgStyle"
               draggable="false"
             />
