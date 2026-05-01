@@ -73,7 +73,7 @@ const formatLyricsText = (data: LyricsData, fallbackTitle: string) => {
       typeof currentLine.startTime === 'number' &&
       currentLine.startTime - previousSourceLine.endTime >= SECTION_BREAK_GAP_MS
 
-    const previousFormattedLine = formatted.at(-1) ?? ''
+    const previousFormattedLine = formatted[formatted.length - 1] ?? ''
 
     if ((sectionChanged || isSectionLead || hasTimingBreak) && previousFormattedLine !== '') {
       formatted.push('')

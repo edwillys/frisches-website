@@ -32,7 +32,7 @@ const resolveFlipFrames = (
       const url = modules[key]
       return url ? [url] : []
     })
-  return { frames, avatarBack: frames.at(-1) ?? fallback }
+  return { frames, avatarBack: frames[frames.length - 1] ?? fallback }
 }
 
 const edgarFrameModules = import.meta.glob<string>(
