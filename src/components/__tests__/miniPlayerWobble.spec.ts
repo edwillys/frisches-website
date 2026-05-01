@@ -25,9 +25,9 @@ describe('miniPlayerWobble', () => {
 
     expect(points.length).toBe(MINI_PROGRESS_WOBBLE.waveSamples)
     expect(points[0]?.y).toBe(topY)
-    expect(points.at(-1)?.y).toBe(topY)
+    expect(points[points.length - 1]?.y).toBe(topY)
     expect(points[0]?.x).toBe(0)
-    expect(points.at(-1)?.x).toBe(120)
+    expect(points[points.length - 1]?.x).toBe(120)
   })
 
   it('creates at most two crests across the played width', () => {
