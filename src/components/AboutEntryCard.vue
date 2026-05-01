@@ -595,6 +595,7 @@ onBeforeUnmount(() => {
 .about-entry-card__story-copy {
   margin: 0;
   white-space: pre-line;
+  text-align: left;
   line-height: 1.36;
   font-family: 'Space Mono', 'Courier New', monospace;
   font-size: 0.68rem;

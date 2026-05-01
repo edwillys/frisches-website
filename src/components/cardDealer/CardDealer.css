@@ -467,7 +467,7 @@
 }
 
 .card-dealer__header-drawer-panel {
-  width: min(360px, 86vw);
+  width: min(360px, 65vw);
   height: 100dvh;
   max-height: 100dvh;
   background: rgba(0, 0, 0, 0.92);
@@ -477,9 +477,10 @@
   padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   overflow-y: auto;
   overscroll-behavior: contain;
+  padding: 8px 8px 8px 8px;
 }
 
 .card-dealer__header-drawer-item {
@@ -758,6 +759,78 @@
   margin-top: 2px;
 }
 
+.card-dealer__header-drawer-about-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card-dealer__header-drawer-about-row {
+  display: flex;
+  align-items: stretch;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-secondary);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.card-dealer__header-drawer-item--about-parent {
+  flex: 1 1 auto;
+}
+
+.card-dealer__header-drawer-about-row .card-dealer__header-drawer-item--about-parent {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.card-dealer__header-drawer-about-row .card-dealer__header-drawer-item--about-parent:hover,
+.card-dealer__header-drawer-about-row .card-dealer__header-drawer-item--about-parent:focus-visible,
+.card-dealer__header-drawer-about-row .card-dealer__header-drawer-item--about-parent.is-active {
+  border-color: transparent;
+  background: transparent;
+  outline: none;
+}
+
+.card-dealer__header-drawer-about-toggle-btn {
+  width: 44px;
+  min-width: 44px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.card-dealer__header-drawer-about-toggle-btn:hover,
+.card-dealer__header-drawer-about-toggle-btn:focus-visible {
+  background: transparent;
+  color: inherit;
+  outline: none;
+}
+
+.card-dealer__header-drawer-about-row:hover,
+.card-dealer__header-drawer-about-row:focus-within {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: var(--color-text);
+}
+
+.card-dealer__header-drawer-about-row.is-active,
+.card-dealer__header-drawer-about-group.is-expanded .card-dealer__header-drawer-about-row {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--color-text);
+}
+
 .card-dealer__header-drawer-item--about-submenu {
   padding-left: 20px;
   font-size: 14px;
@@ -884,7 +957,7 @@
   }
   .card-dealer__content {
     gap: var(--spacing-xl);
-    padding: var(--spacing-lg);
+    padding: 0;
   }
 
   .card-dealer__cards {
@@ -961,9 +1034,11 @@
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: none;
+    touch-action: pan-x;
     width: 100%;
-    justify-content: flex-start;
-    padding-inline: 16px;
+    justify-content: center;
     scrollbar-width: none;
     gap: 16px;
     box-sizing: border-box;

@@ -978,7 +978,7 @@ audio {
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: stretch;
   gap: 16px;
-  padding: 12px 42px 12px 16px;
+  padding: 12px 12px 12px 16px;
   background: rgba(0, 0, 0, 0.92);
   backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -1521,7 +1521,7 @@ audio {
     grid-template-rows: auto auto;
     align-items: center;
     gap: 6px 8px;
-    padding: 6px 28px 6px 8px;
+    padding: 2px 6px 2px 6px;
     --mini-btn-size: 28px;
     --mini-row-height: 40px;
   }

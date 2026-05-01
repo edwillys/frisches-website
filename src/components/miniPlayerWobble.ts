@@ -3,7 +3,7 @@ export const MINI_PROGRESS_WOBBLE = Object.freeze({
   trackThicknessPx: 4,
   baseCornerRadiusPx: 2,
   waveSamples: 36,
-  amplitudeMaxPx: 3.8,
+  amplitudeMaxPx: 5.0,
   amplitudeRampStartRatio: 0.02,
   amplitudeRampFullRatio: 0.3,
   amplitudeRampCurvePower: 1.45,

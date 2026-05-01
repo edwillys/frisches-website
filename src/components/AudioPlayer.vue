@@ -598,6 +598,9 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   scroll-snap-type: x proximity;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: none;
+  touch-action: pan-x;
   padding: 2px 0;
 }
 
@@ -1040,7 +1043,7 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   }
 
   .album-carousel {
-    padding: 8px 12px;
+    padding: 4px 12px;
   }
 
   .album-carousel__item {

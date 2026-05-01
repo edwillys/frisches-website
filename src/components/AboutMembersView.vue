@@ -254,6 +254,10 @@ watch(
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: none;
+  touch-action: pan-x;
   /* Small edge padding so the first / last card is fully visible when scrolled to the edge */
   padding-inline: var(--about-members-carousel-scroll-padding);
   scrollbar-width: none;

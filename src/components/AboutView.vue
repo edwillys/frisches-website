@@ -346,6 +346,10 @@ defineExpose({
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: none;
+  touch-action: pan-x;
   padding-inline: var(--about-track-inline-padding);
   scrollbar-width: none;
 }

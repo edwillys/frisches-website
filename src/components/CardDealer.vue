@@ -118,6 +118,7 @@ const isAnimating = ref(false)
 const isCreditsOverlayOpen = ref(false)
 
 const isHeaderNavOpen = ref(false)
+const isMobileAboutSubmenuOpen = ref(false)
 
 // The header drawer is a mobile-only affordance.
 const isMobileNavMode = ref(false)
@@ -236,6 +237,10 @@ const isAboutActive = computed(
   () => currentView.value === 'content' && selectedItemMatchesSection('about')
 )
 
+const shouldShowGlobalBackButton = computed(
+  () => currentView.value === 'content' && (!isMobileNavMode.value || isAboutActive.value)
+)
+
 const selectedItem = computed(() =>
   selectedCard.value !== null ? (menuItems[selectedCard.value] ?? null) : null
 )
@@ -280,8 +285,10 @@ watch(isHeaderNavOpen, (open) => {
 
   if (open) {
     document.documentElement.style.overflow = 'hidden'
+    if (isAboutActive.value) isMobileAboutSubmenuOpen.value = true
   } else {
     document.documentElement.style.overflow = ''
+    isMobileAboutSubmenuOpen.value = false
   }
 })
 
@@ -339,6 +346,7 @@ function openHeaderNav() {
 
 function closeHeaderNav() {
   isHeaderNavOpen.value = false
+  isMobileAboutSubmenuOpen.value = false
 }
 
 function onHeaderNavHomeClick() {
@@ -351,6 +359,16 @@ function onHeaderNavItemClick(index: number) {
   closeHeaderNav()
   closeSubmenu()
   handleHeaderTitleClick(index)
+}
+
+function toggleMobileAboutSubmenu(index: number) {
+  if (!isAboutMenuRoute(index)) return
+  isMobileAboutSubmenuOpen.value = !isMobileAboutSubmenuOpen.value
+}
+
+function onHeaderNavAboutSubmenuClick(submenu: (typeof aboutSubmenuItems)[number]) {
+  closeHeaderNav()
+  goToAboutSubmenu(submenu)
 }
 
 function handleMobileNavButtonClick() {
@@ -2056,7 +2074,7 @@ onBeforeUnmount(() => {
 
       <!-- Header with header actions (shown in content view) -->
       <button
-        v-if="currentView === 'content'"
+        v-if="shouldShowGlobalBackButton"
         ref="backButtonRef"
         type="button"
         class="card-dealer__back-button card-dealer__global-back-button"
@@ -2289,29 +2307,63 @@ onBeforeUnmount(() => {
           >
             {{ navigationSections.home.headerTitle }}
           </button>
-          <button
-            v-for="(item, index) in menuItems"
-            :key="item.route"
-            type="button"
-            class="card-dealer__header-drawer-item"
-            :class="{ 'is-active': selectedCard === index }"
-            @click="onHeaderNavItemClick(index)"
-          >
-            {{ item.headerTitle }}
-          </button>
-
-          <div v-if="isAboutActive" class="card-dealer__header-drawer-about-submenu">
-            <button
-              v-for="submenu in aboutSubmenuItems"
-              :key="`drawer-about-submenu-${submenu}`"
-              type="button"
-              class="card-dealer__header-drawer-item card-dealer__header-drawer-item--about-submenu"
-              :class="{ 'is-active': aboutActiveSubmenu === submenu }"
-              @click="goToAboutSubmenu(submenu)"
+          <template v-for="(item, index) in menuItems" :key="item.route">
+            <div
+              v-if="isAboutMenuRoute(index)"
+              class="card-dealer__header-drawer-about-group"
+              :class="{ 'is-expanded': isMobileAboutSubmenuOpen }"
             >
-              {{ getAboutSubmenuLabel(submenu) }}
+              <div
+                class="card-dealer__header-drawer-about-row"
+                :class="{ 'is-active': selectedCard === index }"
+              >
+                <button
+                  type="button"
+                  class="card-dealer__header-drawer-item card-dealer__header-drawer-item--about-parent"
+                  :class="{ 'is-active': selectedCard === index }"
+                  @click="onHeaderNavItemClick(index)"
+                >
+                  {{ item.headerTitle }}
+                </button>
+                <button
+                  type="button"
+                  class="card-dealer__header-drawer-about-toggle-btn"
+                  :aria-label="`Open ${t.about.menuAriaLabel}`"
+                  :aria-expanded="isMobileAboutSubmenuOpen"
+                  @click.stop="toggleMobileAboutSubmenu(index)"
+                >
+                  <span
+                    class="card-dealer__about-dropdown-toggle-icon"
+                    :class="{ 'is-open': isMobileAboutSubmenuOpen }"
+                    aria-hidden="true"
+                  ></span>
+                </button>
+              </div>
+
+              <div v-if="isMobileAboutSubmenuOpen" class="card-dealer__header-drawer-about-submenu">
+                <button
+                  v-for="submenu in aboutSubmenuItems"
+                  :key="`drawer-about-submenu-${submenu}`"
+                  type="button"
+                  class="card-dealer__header-drawer-item card-dealer__header-drawer-item--about-submenu"
+                  :class="{ 'is-active': isAboutActive && aboutActiveSubmenu === submenu }"
+                  @click="onHeaderNavAboutSubmenuClick(submenu)"
+                >
+                  {{ getAboutSubmenuLabel(submenu) }}
+                </button>
+              </div>
+            </div>
+
+            <button
+              v-else
+              type="button"
+              class="card-dealer__header-drawer-item"
+              :class="{ 'is-active': selectedCard === index }"
+              @click="onHeaderNavItemClick(index)"
+            >
+              {{ item.headerTitle }}
             </button>
-          </div>
+          </template>
 
           <div class="card-dealer__header-drawer-social" :aria-label="t.logo.socialLinks">
             <a
