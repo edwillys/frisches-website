@@ -50,7 +50,7 @@ const aboutStoryTextByLocale: Record<AppLocale, StoryText> = {
       },
       {
         id: 'closing',
-        text: `Draw your card and step through the Looking-glass and see what awaits on the other side.`,
+        text: `Draw your cards, step through the Looking-glass and see what awaits on the other side.`,
       },
     ],
   },
@@ -78,7 +78,7 @@ const aboutStoryTextByLocale: Record<AppLocale, StoryText> = {
       },
       {
         id: 'closing',
-        text: `Ziehe deine Karte und tritt durch den Spiegel \u2013 und sieh, was auf der anderen Seite wartet.`,
+        text: `Ziehe deine Karten, tritt durch den Spiegel \u2013 und sieh, was auf der anderen Seite wartet.`,
       },
     ],
   },
@@ -106,7 +106,7 @@ const aboutStoryTextByLocale: Record<AppLocale, StoryText> = {
       },
       {
         id: 'closing',
-        text: `Tirez votre carte et franchissez le miroir \u2013 et d\u00e9couvrez ce qui vous attend de l\u2019autre c\u00f4t\u00e9.`,
+        text: `Tirez vos cartes, franchissez le miroir \u2013 et d\u00e9couvrez ce qui vous attend de l\u2019autre c\u00f4t\u00e9.`,
       },
     ],
   },
@@ -134,7 +134,7 @@ const aboutStoryTextByLocale: Record<AppLocale, StoryText> = {
       },
       {
         id: 'closing',
-        text: `Puxe sua carta e atravesse o espelho \u2013 e veja o que aguarda do outro lado.`,
+        text: `Tire suas cartas, atravesse o espelho \u2013 e veja o que aguarda do outro lado.`,
       },
     ],
   },
