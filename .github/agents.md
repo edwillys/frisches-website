@@ -1,4 +1,4 @@
-﻿# Agents and Website Plan for Frisches
+# Agents and Website Plan for Frisches
 
 ## Implementation Guidance
 
