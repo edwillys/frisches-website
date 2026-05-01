@@ -50,7 +50,7 @@
     "@vue/test-utils": "^2.4.9",
     "@vue/tsconfig": "^0.9.1",
     "canvas": "^3.2.3",
-    "eslint": "^10.2.1",
+    "eslint": "^10.3.0",
     "eslint-plugin-playwright": "^2.10.2",
     "eslint-plugin-vue": "^10.9.0",
     "husky": "^9.1.7",
