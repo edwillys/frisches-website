@@ -237,9 +237,22 @@ const isAboutActive = computed(
   () => currentView.value === 'content' && selectedItemMatchesSection('about')
 )
 
-const shouldShowGlobalBackButton = computed(
-  () => currentView.value === 'content' && (!isMobileNavMode.value || isAboutActive.value)
+const isMusicActive = computed(
+  () => currentView.value === 'content' && selectedItemMatchesSection('music')
 )
+
+const shouldShowGlobalBackButton = computed(() => {
+  // On logo view, there is no "back" action, so the button should never be shown.
+  if (currentView.value === 'logo') return false
+
+  if (isMobileNavMode.value) {
+    // Mobile: show only for card and about content (and its submenus), but NOT for gallery or music
+    return !isGalleryActive.value && !isMusicActive.value
+  } else {
+    // Desktop: show for all remaining
+    return true
+  }
+})
 
 const selectedItem = computed(() =>
   selectedCard.value !== null ? (menuItems[selectedCard.value] ?? null) : null
@@ -537,16 +550,6 @@ const shouldIgnoreGlobalNavKey = (e: KeyboardEvent) => {
 const handleKeydown = (e: KeyboardEvent) => {
   if (shouldIgnoreGlobalNavKey(e)) return
 
-  if (e.key === 'ArrowLeft') {
-    if (e.defaultPrevented) return
-    if (eventPathBlocksEscape(e)) return
-    if (hasBlockingOverlayOpen()) return
-
-    e.preventDefault()
-    handleBackClick()
-    return
-  }
-
   if (e.key === 'Escape') {
     if (e.defaultPrevented) return
     if (eventPathBlocksEscape(e)) return
@@ -824,10 +827,7 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
     ) !== null
   if (clickedInsidePrimeOverlay) return
 
-  const clickedInsideSocial = targetEl?.closest('.card-dealer__social') !== null
-  const clickedInsideCredits = targetEl?.closest('.card-dealer__credits') !== null
   const clickedInsideCreditsOverlay = targetEl?.closest('.card-dealer__credits-overlay') !== null
-  const clickedInsideLegalLinks = targetEl?.closest('.card-dealer__legal-links') !== null
 
   if (isCreditsOverlayOpen.value && clickedInsideCreditsOverlay) {
     isCreditsOverlayOpen.value = false
@@ -848,41 +848,20 @@ const handleGlobalPointerDown = (event: PointerEvent) => {
   // Clicking the mobile nav button should not be treated as an outside-click back action.
   if (clickedMobileNavBtn) return
 
-  const clickedInsideCards = cardsContainerRef.value?.contains(target) ?? false
-  const clickedInsideContent = contentPanelRef.value?.contains(target) ?? false
-  const clickedBackButton = backButtonRef.value?.contains(target) ?? false
-  const clickedHeaderActions = headerActionsRef.value?.contains(target) ?? false
-  const clickedHeader = headerRef.value?.contains(target) ?? false
   const clickedHeaderTitles = headerTitleRef.value?.contains(target) ?? false
 
   if (currentView.value === 'cards') {
-    if (
-      clickedInsideCards ||
-      clickedInsideSocial ||
-      clickedInsideCredits ||
-      clickedInsideCreditsOverlay ||
-      clickedInsideLegalLinks
-    )
-      return
-    startAnimating()
-    playCardCloseAndLogoReappear()
+    // Don't trigger navigation on outside clicks in cards view.
+    // Navigation back is only via explicit back button or home button.
+    return
   } else if (currentView.value === 'content') {
+    // Handle about submenu close (but don't navigate back on outside clicks)
     if (isAboutSubmenuOpenDesktop.value && !clickedHeaderTitles) {
       closeSubmenu()
       return
     }
-
-    if (
-      clickedInsideContent ||
-      clickedBackButton ||
-      clickedHeaderActions ||
-      clickedHeader ||
-      clickedHeaderTitles
-    )
-      return
-    contentReturnSelectedCard.value = selectedCard.value
-    startAnimating()
-    playContentCloseAndCardsReturn()
+    // Navigation back is only via explicit back button or home button.
+    return
   }
 }
 
@@ -1205,6 +1184,13 @@ const playContentCloseAndCardsReturn = (opts?: { thenToLogo?: boolean }) => {
       currentView.value = 'cards'
       isCoverActive.value = false
       contentReturnSelectedCard.value = null
+
+      // The global back button is shared across content/cards views.
+      // Content-close animates it out; clear inline tween styles so it is visible again in cards.
+      const liveBackButton = backButtonRef.value
+      if (liveBackButton) {
+        gsap.set(liveBackButton, { clearProps: 'opacity,scale,transform' })
+      }
 
       if (opts?.thenToLogo) {
         // Continue the animation chain: cards -> logo.

@@ -80,9 +80,9 @@
   /* Optionally tweak cover transition duration (seconds) */
   --bg-cover-transition-duration: 1.6s;
   /* Shared About cards and subheader sizing */
-  --about-card-width-desktop: 17rem;
+  --about-card-width-desktop: 20rem;
   --about-card-width-mobile: 16rem;
-  --about-card-aspect-ratio: 5 / 7.2;
+  --about-card-aspect-ratio: 5 / 8;
   --about-card-gap: 0.85rem;
   --about-max-cards: 4;
   --about-track-inline-padding: 0.8rem;

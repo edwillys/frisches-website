@@ -3,7 +3,7 @@ import { waitForAnimations, clickAndWaitForAnimations } from './helpers.js'
 
 /**
  * End-to-End Integration Test: Extended User Flows
- * 
+ *
  * Tests advanced user journeys and edge cases beyond critical flows.
  * This complements critical-user-flows.spec.ts with more detailed scenarios.
  */
@@ -52,7 +52,7 @@ test.describe('Frisches Website - Extended User Flows', () => {
   test('music card shows audio player', async ({ page }) => {
     // Navigate to music
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
-    
+
     const musicCard = page.locator('[data-testid="card-music"]')
     await musicCard.click()
     await waitForAnimations(page)
@@ -65,19 +65,19 @@ test.describe('Frisches Website - Extended User Flows', () => {
     await expect(audioPlayer).toBeVisible({ timeout: 10000 })
   })
 
-  test('clicking outside cards returns to logo', async ({ page }) => {
+  test('clicking back button in cards returns to logo', async ({ page }) => {
     const logoButton = page.locator('[data-testid="logo-button"]')
-    
+
     // Navigate to cards
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
-    
+
     const cardsContainer = page.locator('.card-dealer__cards')
     await expect(cardsContainer).toBeVisible({ timeout: 5000 })
 
-    // Click outside to return
-    await page.mouse.click(100, 100)
+    // Use explicit back button to return
+    await page.locator('.card-dealer__back-button').first().click()
     await waitForAnimations(page)
-    
+
     // Logo should reappear
     await expect(logoButton).toBeVisible({ timeout: 15000 })
     await expect(logoButton).toBeEnabled()
@@ -86,11 +86,11 @@ test.describe('Frisches Website - Extended User Flows', () => {
   test('back button functionality in content view', async ({ page }) => {
     // Navigate to content
     await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
-    
+
     const firstCard = page.locator('.menu-card').first()
     await firstCard.click()
     await waitForAnimations(page)
-    
+
     const contentView = page.locator('.card-dealer__content-view')
     await expect(contentView).toBeVisible({ timeout: 5000 })
 

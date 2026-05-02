@@ -473,7 +473,7 @@ describe('CardDealer', () => {
     wrapper.unmount()
   })
 
-  it('clicking outside cards returns to logo view with inverse animation: cards gather to center, then shrink to point', async () => {
+  it('clicking outside cards does not return to logo view (explicit back button required)', async () => {
     const wrapper = mount(CardDealer, {
       attachTo: document.body,
     })
@@ -482,18 +482,23 @@ describe('CardDealer', () => {
     await vi.advanceTimersByTimeAsync(1000)
     await nextTick()
 
+    // Should now be in cards view
+    expect(wrapper.find('.card-dealer__cards').exists()).toBe(true)
+
     const outside = document.createElement('div')
     document.body.appendChild(outside)
     outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
     await nextTick()
 
-    expect(wrapper.find('.card-dealer__logo-button-wrapper').exists()).toBe(true)
+    // Should still be in cards view (clicking outside no longer triggers navigation)
+    expect(wrapper.find('.card-dealer__cards').exists()).toBe(true)
+    expect(wrapper.find('.card-dealer__logo-button-wrapper').exists()).toBe(false)
 
     document.body.removeChild(outside)
     wrapper.unmount()
   })
 
-  it('clicking overlay outside the content panel returns to cards view', async () => {
+  it('clicking overlay outside the content panel does not return to cards view (explicit back button required)', async () => {
     const wrapper = mount(CardDealer, {
       attachTo: document.body,
     })
@@ -516,54 +521,10 @@ describe('CardDealer', () => {
     overlay.element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
     await nextTick()
 
-    // Content view is kept mounted (to preserve WebGL contexts); it should be hidden instead.
+    // Content view should still be visible (clicking outside no longer triggers navigation)
     const contentView = wrapper.find('.card-dealer__content-view')
     expect(contentView.exists()).toBe(true)
-    expect((contentView.element as HTMLElement).style.display).toBe('none')
-    expect(wrapper.find('.card-dealer__cards').attributes('style')).not.toContain('display: none')
-
-    const hasSelectedCardReturnStage = gsapMocks.set.mock.calls.some(([, vars]) => {
-      const typedVars = vars as { opacity?: number; visibility?: string; zIndex?: number }
-      return (
-        typedVars.opacity === 0 && typedVars.visibility === 'visible' && typedVars.zIndex === 50
-      )
-    })
-
-    const hasHiddenBackgroundCardStage = gsapMocks.set.mock.calls.some(([, vars]) => {
-      const typedVars = vars as {
-        opacity?: number
-        visibility?: string
-        zIndex?: number
-        filter?: string
-      }
-      return (
-        typedVars.opacity === 0 &&
-        typedVars.visibility === 'visible' &&
-        typedVars.zIndex === 40 &&
-        typedVars.filter === 'blur(12px)'
-      )
-    })
-
-    const hasBlurredFadeInTween = gsapMocks.timelineTo.mock.calls.some(([, vars]) => {
-      const typedVars = vars as { opacity?: number; filter?: string }
-      return typedVars.opacity === 0.72 && typedVars.filter === 'blur(12px)'
-    })
-
-    const hasUnblurTween = gsapMocks.timelineTo.mock.calls.some(([, vars]) => {
-      const typedVars = vars as { opacity?: number; filter?: string }
-      return typedVars.opacity === 1 && typedVars.filter === 'blur(0px)'
-    })
-
-    const hasSelectedCardFadeInTween = gsapMocks.timelineTo.mock.calls.some(([, vars]) => {
-      const typedVars = vars as { opacity?: number; filter?: string; zIndex?: number }
-      return typedVars.opacity === 1 && typedVars.filter === 'blur(0px)' && typedVars.zIndex === 50
-    })
-
-    expect(hasSelectedCardReturnStage).toBe(true)
-    expect(hasHiddenBackgroundCardStage).toBe(true)
-    expect(hasBlurredFadeInTween).toBe(true)
-    expect(hasUnblurTween).toBe(true)
-    expect(hasSelectedCardFadeInTween).toBe(true)
+    expect((contentView.element as HTMLElement).style.display).not.toBe('none')
 
     wrapper.unmount()
   })

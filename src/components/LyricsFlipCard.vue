@@ -312,7 +312,7 @@ watch(
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.3));
   color: var(--color-text);
   font-family: 'Space Mono', 'Courier New', monospace;
-  font-size: 0.74rem;
+  font-size: 0.84rem;
   letter-spacing: 0.04em;
   text-align: left;
   padding: 0.42rem 0.56rem;

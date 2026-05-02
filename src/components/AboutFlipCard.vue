@@ -725,8 +725,8 @@ onBeforeUnmount(() => {
 .about-flip-card {
   --about-card-width: var(--about-members-card-width, 15.75rem);
   --about-card-width-mobile: var(--about-members-card-width-mobile, 16rem);
-  --about-card-height-mobile: clamp(17.4rem, 60vh, 20.6rem);
-  --about-card-aspect-ratio: 5 / 7.2;
+  --about-card-height-mobile: clamp(18.4rem, 65vh, 25rem);
+  --about-card-aspect-ratio: 5 / 8;
   --about-card-face-radius: 1rem;
   --about-card-frame-radius: 0.9rem;
   --about-card-face-gap: 0rem;
@@ -746,7 +746,7 @@ onBeforeUnmount(() => {
   --about-card-back-body-gap: 0.55rem;
   --about-card-title-font-size: clamp(1.1rem, 1.5vw, 1.45rem);
   --about-card-title-line-height: 1.1;
-  --about-card-copy-font-size: 0.87rem;
+  --about-card-copy-font-size: 0.93rem;
   --about-card-copy-font-size-mobile: 0.84rem;
   --about-card-copy-padding-inline-end: 0.2rem;
   --about-card-cursor-width-ratio: 0.5;

@@ -193,8 +193,8 @@ test.describe('Frisches Website - Critical Flows', () => {
     const cards = page.locator('.menu-card')
     await expect(cards).toHaveCount(3)
 
-    // Step 4: Cards → Logo (click outside)
-    await page.mouse.click(100, 100)
+    // Step 4: Cards → Logo (explicit back button)
+    await page.locator('.card-dealer__back-button').first().click()
     await waitForAnimations(page)
     await expect(logoButton).toBeVisible({ timeout: 15000 })
   })
@@ -280,10 +280,8 @@ test.describe('Frisches Website - Critical Flows', () => {
       await expect(cardsContainer).toBeVisible({ timeout: 10000 })
       await expect(page.locator('.menu-card')).toHaveCount(3, { timeout: 10000 })
 
-      // Use a real pointer event in a safe corner of the viewport. The cards/content layer sits
-      // above the animated background, so force-clicking the background element does not reliably
-      // produce an outside target for the global pointerdown handler.
-      await page.mouse.click(16, 16)
+      // Cards -> Logo now requires explicit navigation.
+      await page.locator('.card-dealer__back-button').first().click()
       await waitForAnimations(page)
       await expect(page.locator('[data-testid="logo-button"]')).toBeVisible({ timeout: 10000 })
     }
