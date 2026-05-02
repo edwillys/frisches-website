@@ -63,7 +63,6 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-2xl);
   text-align: center;
 }
 
@@ -851,7 +850,8 @@
   align-items: center;
   justify-content: center;
   padding: var(--spacing-md);
-  padding-bottom: calc(var(--spacing-2xl) + var(--mini-player-offset, 0px));
+  padding-top: var(--spacing-2xl);
+  padding-bottom: var(--spacing-2xl);
   box-sizing: border-box;
   pointer-events: auto;
   overflow-y: auto;
@@ -953,12 +953,6 @@
 
   .card-dealer__cards {
     gap: var(--spacing-md);
-  }
-
-  .card-dealer__content-container {
-    padding: var(--spacing-lg);
-    padding-top: calc(var(--spacing-lg) + 56px);
-    padding-bottom: calc(var(--spacing-lg) + var(--mini-player-offset, 0px));
   }
 
   .card-dealer__content-view {
