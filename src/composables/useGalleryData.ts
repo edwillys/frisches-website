@@ -71,11 +71,18 @@ export interface ImageOptions {
   quality?: number
 }
 
-// Import all images from the gallery directory
+// Import all images from the gallery directory (full resolution — used by lightbox)
 // Returns a record of { [path]: () => Promise<{ default: string }> }
 const imageModules = import.meta.glob<{ default: string }>(
   '/src/assets/private/images/gallery/**/*.{jpg,jpeg,png,gif,webp,JPG,JPEG,PNG,GIF,WEBP}',
   { eager: false }
+)
+
+// Thumbnail versions for grid/album views (400 px wide, WebP, quality 80).
+// Only applies to raster formats that vite-imagetools can resize (no GIF).
+const thumbnailModules = import.meta.glob<{ default: string }>(
+  '/src/assets/private/images/gallery/**/*.{jpg,jpeg,png,JPG,JPEG,PNG}',
+  { eager: false, query: { w: '400', format: 'webp', quality: '80' } }
 )
 
 // Build a normalized path lookup map for fast matching
@@ -87,6 +94,15 @@ Object.keys(imageModules).forEach((path) => {
     .replace(/\\/g, '/')
     .toLowerCase()
   imagePathMap.set(normalized, path)
+})
+
+const thumbnailPathMap = new Map<string, string>()
+Object.keys(thumbnailModules).forEach((path) => {
+  const normalized = path
+    .replace(/^\/src\/assets\/private\/images\/gallery\//, '')
+    .replace(/\\/g, '/')
+    .toLowerCase()
+  thumbnailPathMap.set(normalized, path)
 })
 
 export function useGalleryData() {
@@ -260,6 +276,32 @@ export function useGalleryData() {
   }
 
   /**
+   * Resolve a thumbnail (400 px wide WebP) for grid/album views.
+   * Falls back to full-size for formats not covered by the thumbnail glob (GIF, WebP source).
+   */
+  async function resolveThumbnail(relativePath: string): Promise<string> {
+    if (!relativePath) return ''
+    const normalized = relativePath.toLowerCase().replace(/\\/g, '/')
+    const thumbPath = thumbnailPathMap.get(normalized)
+
+    if (thumbPath) {
+      try {
+        const moduleLoader = thumbnailModules[thumbPath]
+        if (moduleLoader) {
+          const module = await moduleLoader()
+          const url = module.default || (module as unknown as string) || ''
+          if (url) return url
+        }
+      } catch {
+        // fall through to full-size
+      }
+    }
+
+    // Fallback: full-size image (e.g. GIF or formats without a thumbnail module)
+    return resolveImage(relativePath)
+  }
+
+  /**
    * Resolve image synchronously (eager load, no transformations)
    */
   function resolveImageSync(relativePath: string): string {
@@ -412,6 +454,7 @@ export function useGalleryData() {
 
     // Image resolution
     resolveImage,
+    resolveThumbnail,
     resolveImageSync,
   }
 }

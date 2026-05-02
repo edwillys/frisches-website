@@ -182,7 +182,7 @@
 
               <img
                 class="gallery-img gallery-img--masonry"
-                :src="getImageSrc(image.relativePath)"
+                :src="getThumbnailSrc(image.relativePath)"
                 :alt="''"
                 loading="lazy"
                 @load="onImageLoad(image.id)"
@@ -215,7 +215,7 @@
 
               <img
                 class="gallery-img"
-                :src="getImageSrc(image.relativePath)"
+                :src="getThumbnailSrc(image.relativePath)"
                 :alt="''"
                 loading="lazy"
                 @load="onImageLoad(image.id)"
@@ -246,7 +246,7 @@
               <div v-if="!getAlbumCover(album)" class="album-placeholder">
                 <span class="album-icon">📁</span>
               </div>
-              <img v-else :src="getImageUrl(getAlbumCover(album)!)" alt="" loading="lazy" />
+              <img v-else :src="getThumbnailUrl(getAlbumCover(album)!)" alt="" loading="lazy" />
             </div>
             <div class="album-info">
               <h3>{{ album }}</h3>
@@ -276,7 +276,7 @@
 
               <img
                 class="gallery-img gallery-img--masonry"
-                :src="getImageSrc(image.relativePath)"
+                :src="getThumbnailSrc(image.relativePath)"
                 :alt="''"
                 loading="lazy"
                 @load="onImageLoad(image.id)"
@@ -309,7 +309,7 @@
 
               <img
                 class="gallery-img"
-                :src="getImageSrc(image.relativePath)"
+                :src="getThumbnailSrc(image.relativePath)"
                 :alt="''"
                 loading="lazy"
                 @load="onImageLoad(image.id)"
@@ -480,6 +480,7 @@ const {
   prevImage,
   getImagesForAlbum,
   resolveImage,
+  resolveThumbnail,
 } = useGalleryData()
 
 const t = useUiText()
@@ -783,8 +784,8 @@ function getImageUrl(relativePath: string, options?: ImageOptions): string {
   return imageCache.value.get(cacheKey) || ''
 }
 
-function getImageSrc(relativePath: string, options?: ImageOptions): string | undefined {
-  const url = getImageUrl(relativePath, options)
+function getThumbnailSrc(relativePath: string): string | undefined {
+  const url = getThumbnailUrl(relativePath)
   return url || undefined
 }
 
@@ -801,6 +802,32 @@ function onImageError(imageId: number) {
 
 function isImageLoaded(imageId: number): boolean {
   return imageLoaded.value.has(imageId)
+}
+
+// Thumbnail URL resolver: 400 px WebP for grid/album views, full-res fallback for lightbox.
+function getThumbnailUrl(relativePath: string): string {
+  if (!relativePath) return ''
+  const cacheKey = `thumb:${relativePath}`
+
+  if (imageCache.value.has(cacheKey)) {
+    return imageCache.value.get(cacheKey)!
+  }
+
+  if (imagePending.has(cacheKey)) {
+    return ''
+  }
+
+  imagePending.add(cacheKey)
+
+  resolveThumbnail(relativePath).then((url) => {
+    imageCache.value.set(cacheKey, url || '')
+    if (url) {
+      imageCache.value = new Map(imageCache.value)
+    }
+    imagePending.delete(cacheKey)
+  })
+
+  return imageCache.value.get(cacheKey) || ''
 }
 
 // Keyboard navigation for lightbox

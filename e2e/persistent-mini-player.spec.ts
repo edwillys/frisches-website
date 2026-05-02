@@ -53,8 +53,8 @@ test.describe('Persistent mini-player (Phase 1)', () => {
     await waitForAnimations(page)
     await expect(miniPlayer).toBeVisible({ timeout: 10000 })
 
-    // Cards -> Logo (click outside) -> mini-player persists
-    await page.mouse.click(100, 100)
+    // Cards -> Logo (explicit back button) -> mini-player persists
+    await page.locator('.card-dealer__back-button').first().click()
     await waitForAnimations(page)
     await expect(page.locator('[data-testid="logo-button"]')).toBeVisible({ timeout: 15000 })
     await expect(miniPlayer).toBeVisible({ timeout: 10000 })
