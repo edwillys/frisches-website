@@ -841,7 +841,7 @@
   text-transform: none;
   opacity: 0.82;
   background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 0.0625rem solid rgba(255, 255, 255, 0.08);
 }
 
 .card-dealer__header-drawer-item--about-submenu:hover,

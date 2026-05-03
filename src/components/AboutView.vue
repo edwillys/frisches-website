@@ -4,9 +4,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AboutEntryCard from './AboutEntryCard.vue'
 import AboutMembersView from './AboutMembersView.vue'
 import LyricsCardsView from './LyricsCardsView.vue'
+import type { AboutSubmenuKey } from '@/composables/useAboutHeaderMenu'
 import { useAboutSubSection } from '@/composables/useAboutSubSection'
-
-type AboutSubmenuKey = 'none' | 'story' | 'members' | 'lyrics'
 
 interface AboutViewState {
   activeSubmenu: AboutSubmenuKey
