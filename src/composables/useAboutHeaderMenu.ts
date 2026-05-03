@@ -28,7 +28,7 @@ export const useAboutHeaderMenu = (options: UseAboutHeaderMenuOptions) => {
   const aboutActiveSubmenu = ref<AboutSubmenuKey>('none')
   const aboutCanGoBack = ref(false)
   const aboutSubmenuItems: AboutSubmenuKey[] = ['story', 'members', 'lyrics']
-  let closeDesktopSubmenuTimer: ReturnType<typeof window.setTimeout> | null = null
+  let closeDesktopSubmenuTimer: number | null = null
 
   const clearDesktopSubmenuCloseTimer = () => {
     if (closeDesktopSubmenuTimer === null) return
