@@ -4,9 +4,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AboutEntryCard from './AboutEntryCard.vue'
 import AboutMembersView from './AboutMembersView.vue'
 import LyricsCardsView from './LyricsCardsView.vue'
+import type { AboutSubmenuKey } from '@/composables/useAboutHeaderMenu'
 import { useAboutSubSection } from '@/composables/useAboutSubSection'
-
-type AboutSubmenuKey = 'story' | 'members' | 'lyrics'
 
 interface AboutViewState {
   activeSubmenu: AboutSubmenuKey
@@ -89,7 +88,8 @@ const showGlobalBackButton = computed(
 const activeSubmenu = computed<AboutSubmenuKey>(() => {
   if (activeSection.value === 'members') return 'members'
   if (activeSection.value === 'lyrics') return 'lyrics'
-  return 'story'
+  if (isStoryOpen.value) return 'story'
+  return 'none'
 })
 
 const handleGlobalBack = () => {
@@ -182,7 +182,19 @@ const handleOutsideCardPointerDown = (event: PointerEvent) => {
   handleGlobalBack()
 }
 
-watch(activeSection, (section) => {
+watch(activeSection, (section, previousSection) => {
+  if (previousSection === 'entry' && section !== 'entry') {
+    entryViewKey.value += 1
+  }
+
+  if (previousSection === 'members' && section !== 'members') {
+    membersViewKey.value += 1
+  }
+
+  if (previousSection === 'lyrics' && section !== 'lyrics') {
+    lyricsViewKey.value += 1
+  }
+
   if (section === 'entry' && openStoryAfterEntry.value) {
     openStoryAfterEntry.value = false
     storyOpenSignal.value += 1
@@ -303,6 +315,7 @@ defineExpose({
   height: 100%;
   min-height: 0;
   overflow-x: clip;
+  overflow-y: auto;
 }
 
 .about-view__sections {
@@ -311,6 +324,7 @@ defineExpose({
   height: 100%;
   min-height: 0;
   position: relative;
+  overflow-y: auto;
   overflow-x: hidden;
 }
 
@@ -320,9 +334,10 @@ defineExpose({
   height: 100%;
   min-height: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   opacity: 1;
+  overflow-y: auto;
   overflow-x: hidden;
 }
 
@@ -332,7 +347,7 @@ defineExpose({
   height: 100%;
   min-height: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
 }
 
@@ -341,16 +356,17 @@ defineExpose({
   height: 100%;
   min-height: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
-  overscroll-behavior-y: none;
-  touch-action: pan-x;
+  overscroll-behavior-y: contain;
+  touch-action: pan-x pan-y;
   padding-inline: var(--about-track-inline-padding);
+  padding-block: 0.4rem;
   scrollbar-width: none;
 }
 
@@ -361,6 +377,7 @@ defineExpose({
 .about-view__carousel-cell {
   flex: 0 0 min(var(--about-card-width-desktop), calc(100vw - 2rem));
   width: min(var(--about-card-width-desktop), calc(100vw - 2rem));
+  margin-block: auto;
   min-height: 0;
   display: flex;
   align-items: center;

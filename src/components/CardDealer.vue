@@ -119,6 +119,7 @@ const isCreditsOverlayOpen = ref(false)
 
 const isHeaderNavOpen = ref(false)
 const isMobileAboutSubmenuOpen = ref(false)
+const isMobileAboutSubmenuManualOverride = ref(false)
 
 // The header drawer is a mobile-only affordance.
 const isMobileNavMode = ref(false)
@@ -293,17 +294,7 @@ watch(
   { immediate: true }
 )
 
-watch(isHeaderNavOpen, (open) => {
-  if (typeof document === 'undefined') return
-
-  if (open) {
-    document.documentElement.style.overflow = 'hidden'
-    if (isAboutActive.value) isMobileAboutSubmenuOpen.value = true
-  } else {
-    document.documentElement.style.overflow = ''
-    isMobileAboutSubmenuOpen.value = false
-  }
-})
+// Drawer open/close and submenu sync are handled together in a single watcher below.
 
 const rememberLegalReturnState = () => {
   if (typeof window === 'undefined') return
@@ -359,6 +350,7 @@ function openHeaderNav() {
 
 function closeHeaderNav() {
   isHeaderNavOpen.value = false
+  isMobileAboutSubmenuManualOverride.value = false
   isMobileAboutSubmenuOpen.value = false
 }
 
@@ -376,6 +368,7 @@ function onHeaderNavItemClick(index: number) {
 
 function toggleMobileAboutSubmenu(index: number) {
   if (!isAboutMenuRoute(index)) return
+  isMobileAboutSubmenuManualOverride.value = true
   isMobileAboutSubmenuOpen.value = !isMobileAboutSubmenuOpen.value
 }
 
@@ -770,6 +763,44 @@ const {
   aboutViewRef,
   onNavigateToAbout: (index) => handleHeaderTitleClick(index),
 })
+
+watch(
+  [() => isHeaderNavOpen.value, () => isAboutActive.value, () => aboutActiveSubmenu.value],
+  ([isOpen, isAbout, activeSubmenu], [wasOpen]) => {
+    if (typeof document === 'undefined') return
+
+    // Handle open ↔ close transitions
+    if (isOpen !== wasOpen) {
+      document.documentElement.style.overflow = isOpen ? 'hidden' : ''
+      isMobileAboutSubmenuManualOverride.value = false
+      if (!isOpen) {
+        isMobileAboutSubmenuOpen.value = false
+        return
+      }
+      // Drawer just opened — fall through to sync submenu state
+    }
+
+    if (!isOpen) return
+
+    // Sync submenu while drawer is open
+    if (!isAbout) {
+      isMobileAboutSubmenuManualOverride.value = false
+      isMobileAboutSubmenuOpen.value = false
+      return
+    }
+
+    if (activeSubmenu === 'none') {
+      if (!isMobileAboutSubmenuManualOverride.value) {
+        isMobileAboutSubmenuOpen.value = false
+      }
+      return
+    }
+
+    if (!isMobileAboutSubmenuManualOverride.value) {
+      isMobileAboutSubmenuOpen.value = true
+    }
+  }
+)
 
 const handleBackClick = () => {
   if (isAnimating.value) return

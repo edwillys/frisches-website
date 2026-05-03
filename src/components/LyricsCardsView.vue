@@ -37,7 +37,7 @@ const lyricsCards = useLyricsCards()
 <style scoped>
 .lyrics-cards {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   width: 100%;
   height: 100%;
@@ -50,19 +50,20 @@ const lyricsCards = useLyricsCards()
 
 .lyrics-cards__stage {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   width: 100%;
   height: 100%;
   min-height: 0;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
-  overscroll-behavior-y: none;
-  touch-action: pan-x;
+  overscroll-behavior-y: contain;
+  touch-action: pan-x pan-y;
   padding-inline: var(--about-track-inline-padding);
+  padding-block: 0.4rem;
   scrollbar-width: none;
 }
 
@@ -73,6 +74,7 @@ const lyricsCards = useLyricsCards()
 .lyrics-cards__cell {
   flex: 0 1 min(var(--about-card-width-desktop), calc(100vw - 2rem));
   width: min(var(--about-card-width-desktop), calc(100vw - 2rem));
+  margin-block: auto;
   min-height: 0;
   display: flex;
   align-items: center;
