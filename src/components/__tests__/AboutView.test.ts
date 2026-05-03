@@ -81,4 +81,31 @@ describe('AboutView', () => {
 
     wrapper.unmount()
   })
+
+  it('emits none as active submenu on the about entry state', async () => {
+    const wrapper = mount(AboutView, {
+      props: { isActive: true },
+      global: {
+        stubs: {
+          AboutEntryCard: {
+            template: '<div data-testid="entry-stub" />',
+          },
+          AboutMembersView: {
+            template: '<div data-testid="members-stub" />',
+          },
+          LyricsCardsView: {
+            template: '<div data-testid="lyrics-stub" />',
+          },
+        },
+      },
+    })
+
+    await nextTick()
+
+    const emitted = wrapper.emitted('state-change') ?? []
+    expect(emitted.length).toBeGreaterThan(0)
+    expect(emitted[0]?.[0]).toEqual({ activeSubmenu: 'none', canGoBack: false })
+
+    wrapper.unmount()
+  })
 })

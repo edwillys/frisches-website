@@ -1,8 +1,8 @@
-import { nextTick, ref, type ComputedRef, type Ref } from 'vue'
+import { nextTick, onBeforeUnmount, ref, watch, type ComputedRef, type Ref } from 'vue'
 
 import { useUiText } from './useUiText'
 
-export type AboutSubmenuKey = 'story' | 'members' | 'lyrics'
+export type AboutSubmenuKey = 'none' | 'story' | 'members' | 'lyrics'
 
 export interface AboutViewExpose {
   goBackOneStep: () => boolean
@@ -25,18 +25,37 @@ export const useAboutHeaderMenu = (options: UseAboutHeaderMenuOptions) => {
   const t = useUiText()
 
   const isAboutSubmenuOpenDesktop = ref(false)
-  const aboutActiveSubmenu = ref<AboutSubmenuKey>('story')
+  const aboutActiveSubmenu = ref<AboutSubmenuKey>('none')
   const aboutCanGoBack = ref(false)
   const aboutSubmenuItems: AboutSubmenuKey[] = ['story', 'members', 'lyrics']
+  let closeDesktopSubmenuTimer: ReturnType<typeof window.setTimeout> | null = null
+
+  const clearDesktopSubmenuCloseTimer = () => {
+    if (closeDesktopSubmenuTimer === null) return
+    window.clearTimeout(closeDesktopSubmenuTimer)
+    closeDesktopSubmenuTimer = null
+  }
 
   const closeSubmenu = () => {
+    clearDesktopSubmenuCloseTimer()
     isAboutSubmenuOpenDesktop.value = false
+  }
+
+  const resetAboutHeaderStateToNone = () => {
+    closeSubmenu()
+    aboutActiveSubmenu.value = 'none'
+    aboutCanGoBack.value = false
   }
 
   const handleAboutStateChange = (payload: {
     activeSubmenu: AboutSubmenuKey
     canGoBack: boolean
   }) => {
+    if (!options.isAboutActive.value || options.currentView.value !== 'content') {
+      resetAboutHeaderStateToNone()
+      return
+    }
+
     aboutActiveSubmenu.value = payload.activeSubmenu
     aboutCanGoBack.value = payload.canGoBack
   }
@@ -77,6 +96,7 @@ export const useAboutHeaderMenu = (options: UseAboutHeaderMenuOptions) => {
   }
 
   const onAboutMenuItemFocusout = (event: FocusEvent) => {
+    clearDesktopSubmenuCloseTimer()
     const container = event.currentTarget as HTMLElement
     if (!container.contains(event.relatedTarget as Node | null)) {
       closeSubmenu()
@@ -88,14 +108,33 @@ export const useAboutHeaderMenu = (options: UseAboutHeaderMenuOptions) => {
     if (options.isMobileNavMode.value) return
     if (options.isAnimating.value) return
     if (options.currentView.value !== 'content') return
+    clearDesktopSubmenuCloseTimer()
     isAboutSubmenuOpenDesktop.value = true
   }
 
   const handleAboutMenuMouseLeave = () => {
     options.hoveredHeaderIndex.value = null
     if (options.isMobileNavMode.value) return
-    closeSubmenu()
+    clearDesktopSubmenuCloseTimer()
+    closeDesktopSubmenuTimer = window.setTimeout(() => {
+      isAboutSubmenuOpenDesktop.value = false
+      closeDesktopSubmenuTimer = null
+    }, 120)
   }
+
+  watch(
+    [() => options.currentView.value, () => options.isAboutActive.value],
+    ([currentView, isAboutActive]) => {
+      if (currentView !== 'content' || !isAboutActive) {
+        resetAboutHeaderStateToNone()
+      }
+    },
+    { immediate: true }
+  )
+
+  onBeforeUnmount(() => {
+    clearDesktopSubmenuCloseTimer()
+  })
 
   return {
     isAboutSubmenuOpenDesktop,

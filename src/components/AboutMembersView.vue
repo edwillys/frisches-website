@@ -232,7 +232,7 @@ watch(
   --about-members-carousel-scroll-padding: var(--about-track-inline-padding);
   --about-members-carousel-inline-padding: 0.1rem;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   width: 100%;
   height: 100%;
@@ -244,7 +244,7 @@ watch(
 
 .about-members__carousel {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   /* centred when all cards fit; falls back to flex-start via the media query below */
   justify-content: center;
   gap: var(--about-members-carousel-gap);
@@ -252,14 +252,15 @@ watch(
   height: 100%;
   min-height: 0;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
-  overscroll-behavior-y: none;
-  touch-action: pan-x;
+  overscroll-behavior-y: contain;
+  touch-action: pan-x pan-y;
   /* Small edge padding so the first / last card is fully visible when scrolled to the edge */
   padding-inline: var(--about-members-carousel-scroll-padding);
+  padding-block: 0.4rem;
   scrollbar-width: none;
 }
 
@@ -277,6 +278,7 @@ watch(
 .about-members__cell {
   flex: 0 0 min(var(--about-members-card-width), var(--about-members-cell-max-width));
   width: min(var(--about-members-card-width), var(--about-members-cell-max-width));
+  margin-block: auto;
   min-height: 0;
   display: flex;
   align-items: center;

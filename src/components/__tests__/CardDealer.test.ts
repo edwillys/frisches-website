@@ -128,6 +128,21 @@ const mockRouter = {
   push: vi.fn(),
 }
 
+function mockMobileMatchMedia() {
+  return vi.spyOn(window, 'matchMedia').mockImplementation(((query: string) => {
+    return {
+      matches: query === '(max-width: 768px)',
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(() => false),
+    } as unknown as MediaQueryList
+  }) satisfies typeof window.matchMedia)
+}
+
 describe('CardDealer', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -639,5 +654,114 @@ describe('CardDealer', () => {
     expect(wrapper.find('[data-testid="about-view-stub"]').exists()).toBe(false)
 
     wrapper.unmount()
+  })
+
+  it('keeps mobile about drawer submenu closed by default for none, but allows manual arrow open', async () => {
+    const matchMediaSpy = mockMobileMatchMedia()
+
+    const wrapper = mount(CardDealer, {
+      attachTo: document.body,
+      global: {
+        stubs: {
+          AboutView: {
+            emits: ['state-change'],
+            template: '<div data-testid="about-view-stub" />',
+            mounted() {
+              this.$emit('state-change', { activeSubmenu: 'none', canGoBack: false })
+            },
+          },
+        },
+      },
+    })
+
+    await wrapper.find('.logo-button').trigger('click')
+    await vi.advanceTimersByTimeAsync(1000)
+    await nextTick()
+
+    const aboutCard = wrapper.findAllComponents(MenuCard)[1]
+    if (!aboutCard) {
+      throw new Error('Expected About menu card to exist')
+    }
+
+    await aboutCard.trigger('click')
+    await nextTick()
+
+    const mobileNavButton = wrapper.find('.card-dealer__mobile-nav-btn')
+    expect(mobileNavButton.exists()).toBe(true)
+
+    await mobileNavButton.trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('.card-dealer__header-drawer').exists()).toBe(true)
+    expect(wrapper.find('.card-dealer__header-drawer-about-submenu').exists()).toBe(false)
+
+    const aboutToggle = wrapper.find('.card-dealer__header-drawer-about-toggle-btn')
+    expect(aboutToggle.exists()).toBe(true)
+
+    await aboutToggle.trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('.card-dealer__header-drawer-about-submenu').exists()).toBe(true)
+
+    wrapper.unmount()
+    matchMediaSpy.mockRestore()
+  })
+
+  it('closes mobile about drawer submenu when about active submenu transitions to none', async () => {
+    const matchMediaSpy = mockMobileMatchMedia()
+
+    const emitAboutStateChange: ((payload: {
+      activeSubmenu: string
+      canGoBack: boolean
+    }) => void)[] = []
+
+    const wrapper = mount(CardDealer, {
+      attachTo: document.body,
+      global: {
+        stubs: {
+          AboutView: {
+            emits: ['state-change'],
+            template: '<div data-testid="about-view-stub" />',
+            mounted() {
+              emitAboutStateChange.push((payload) => {
+                this.$emit('state-change', payload)
+              })
+              this.$emit('state-change', { activeSubmenu: 'members', canGoBack: true })
+            },
+          },
+        },
+      },
+    })
+
+    await wrapper.find('.logo-button').trigger('click')
+    await vi.advanceTimersByTimeAsync(1000)
+    await nextTick()
+
+    const aboutCard = wrapper.findAllComponents(MenuCard)[1]
+    if (!aboutCard) {
+      throw new Error('Expected About menu card to exist')
+    }
+
+    await aboutCard.trigger('click')
+    await nextTick()
+
+    const mobileNavButton = wrapper.find('.card-dealer__mobile-nav-btn')
+    await mobileNavButton.trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('.card-dealer__header-drawer-about-submenu').exists()).toBe(true)
+
+    const emitState = emitAboutStateChange[0]
+    if (!emitState) {
+      throw new Error('Expected About state-change emitter to exist')
+    }
+
+    emitState({ activeSubmenu: 'none', canGoBack: false })
+    await nextTick()
+
+    expect(wrapper.find('.card-dealer__header-drawer-about-submenu').exists()).toBe(false)
+
+    wrapper.unmount()
+    matchMediaSpy.mockRestore()
   })
 })
