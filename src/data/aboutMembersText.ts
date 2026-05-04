@@ -104,20 +104,20 @@ export const aboutMembersText: Record<
       name: 'Edgar',
       badgeTitles: ['Guitarra', 'Backing Vocals'],
       descriptionLead:
-        'Toca a guitarra e às vezes não se toca. Compositor de fórmulas de compasso enganosas, sua nota favorita está sempre anotada. Ele traz sua paixão pelo rock clássico para cada riff e solo de Frisches. Introduzindo intros e trocadilhos, seu conto favorito o leva a',
+        'Toca a guitarra quando até mesmo nem se toca. Compositor de fórmulas de compasso enganosas, está sempre anotando sua nota predileta. Ele traz sua paixão pelo rock clássico para cada riff e solo dos Frisches. Introduzindo intros e trocadilhos, seu conto favorito o leva a',
     },
     cami: {
       name: 'Cami',
       badgeTitles: ['Voz', 'Flauta'],
       descriptionLead:
-        'Flautista e cantora – e um pouco saxofonista – Cami cresceu com os Beatles e ama o som dos anos 60 e 70. Além de sua formação clássica na flauta transversal, o pop, o rock, o glam rock e o rock progressivo – Elton John, David Bowie, Pink Floyd, King Crimson, Jethro Tull, Led Zeppelin, Jimi Hendrix e Janis Joplin – moldaram sua jornada musical e ainda a acompanham todos os dias. Ela chama',
-      descriptionTail: 'de a prova mais clara de que sempre vale a pena perseguir um tigre branco.',
+        'Flautista e cantora – e arranhando no saxofone – Cami cresceu ouvindo Beatles e ama o som dos anos 60 e 70. Além de sua formação clássica na flauta transversal, outras batidas moldaram sua jornada musical e ainda a acompanham todos os dias: pop, rock, glam rock e rock progressivo – leia-se Elton John, David Bowie, Pink Floyd, King Crimson, Jethro Tull, Led Zeppelin, Jimi Hendrix e Janis Joplin. Ela considera',
+      descriptionTail: ' a prova mais clara de que sempre vale a pena perseguir o "tigre branco".',
     },
     steff: {
       name: 'Steff',
       badgeTitles: ['Bateria'],
       descriptionLead:
-        'Steff mantém o ritmo do Frisches firme no lugar — qualquer coisa que saia do beat não tem a menor chance. Inegociável nos ensaios de terça à noite: Pizza Funghi, sem pesto. Chuva no caminho? A gente toca assim mesmo. O contrabaixo está na pauta, pronto para preencher o coração e a alma das nossas músicas. Para ela, nada groova mais forte do que',
+        'Steff mantém o ritmo do Frisches firme no lugar — qualquer coisa que saia do beat não tem a menor chance. Inegociável nos ensaios de terça à noite: Pizza Funghi, sem pesto. Chuva no caminho? A gente toca assim mesmo. O pedal duplo está na pauta, e em breve preencherá o coração e a alma das nossas músicas. Para ela, nada possui um groove mais forte do que',
       descriptionTail: '!',
     },
     tobi: {
