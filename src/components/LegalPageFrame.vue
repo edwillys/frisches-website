@@ -19,6 +19,8 @@ const closeLabels: Record<AppLocale, string> = {
   de: 'Schließen',
   fr: 'Fermer',
   br: 'Fechar',
+  it: 'Chiudi',
+  ru: 'Закрыть',
 }
 
 const closeAriaLabel = computed(() => closeLabels[currentAppLocale.value] ?? closeLabels.en)
