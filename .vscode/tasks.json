@@ -49,7 +49,7 @@
       }
     },
     {
-      "label": "Sync private assets → R2 (upload)",
+      "label": "Sync private assets → R2 upload",
       "type": "shell",
       "command": "npm",
       "args": ["run", "sync:r2:up"],
@@ -60,7 +60,7 @@
       }
     },
     {
-      "label": "Sync private assets ← R2 (download)",
+      "label": "Sync private assets ← R2 download",
       "type": "shell",
       "command": "npm",
       "args": ["run", "sync:r2:down"],
@@ -71,10 +71,43 @@
       }
     },
     {
-      "label": "Sync private assets ↔ R2 (bisync)",
+      "label": "Sync private assets ↔ R2 bisync",
       "type": "shell",
       "command": "npm",
       "args": ["run", "sync:r2:bisync"],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Sync private assets → R2 upload (dry run)",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "sync:r2:up:dry"],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Sync private assets ← R2 download (dry run)",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "sync:r2:down:dry"],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Sync private assets ↔ R2 bisync (dry run)",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "sync:r2:bisync:dry"],
       "group": "build",
       "presentation": {
         "reveal": "always",

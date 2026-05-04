@@ -21,6 +21,9 @@
     "sync:r2:up": "node scripts/sync-r2.mjs up",
     "sync:r2:down": "node scripts/sync-r2.mjs down",
     "sync:r2:bisync": "node scripts/sync-r2.mjs bisync",
+    "sync:r2:up:dry": "node scripts/sync-r2.mjs up --dry-run",
+    "sync:r2:down:dry": "node scripts/sync-r2.mjs down --dry-run",
+    "sync:r2:bisync:dry": "node scripts/sync-r2.mjs bisync --dry-run",
     "lint": "eslint . --fix --cache",
     "format": "prettier --write src/",
     "prepare": "husky"
