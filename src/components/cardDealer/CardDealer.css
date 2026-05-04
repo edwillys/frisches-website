@@ -68,8 +68,8 @@
 
 .card-dealer__language-switcher-fixed {
   position: fixed;
-  top: var(--spacing-lg);
-  right: var(--spacing-lg);
+  top: calc(var(--spacing-lg) / 2);
+  right: calc(var(--spacing-lg) / 2);
   z-index: 12;
 }
 
@@ -97,7 +97,7 @@
 /* Social links at top center */
 .card-dealer__social {
   position: fixed;
-  top: var(--spacing-lg);
+  top: calc(var(--spacing-lg) / 2);
   left: 50%;
   transform: translateX(-50%);
   z-index: 12;
@@ -113,7 +113,7 @@
   color: var(--color-text-secondary);
   opacity: 0.9;
   background: transparent;
-  padding: 0.625rem;
+  padding: 0.425rem;
   border-radius: 0.625rem;
   min-width: 44px;
   min-height: 44px;
@@ -142,8 +142,8 @@
 }
 
 .card-dealer__social-link :is(svg) {
-  width: 22px;
-  height: 22px;
+  width: 28x;
+  height: 28px;
   display: block;
 }
 
@@ -562,8 +562,8 @@
 }
 
 .card-dealer__back-button {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -174,7 +174,6 @@ onBeforeUnmount(() => {
   color: var(--color-text);
   min-width: 3.2rem;
   min-height: 2.55rem;
-  padding: 0.3rem 0.5rem;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
