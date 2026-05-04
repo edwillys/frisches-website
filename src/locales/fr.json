@@ -12,7 +12,7 @@
     },
     "about": {
       "title": "À propos",
-      "headerTitle": "_À propos",
+      "headerTitle": "_À_Propos",
       "matchTokens": ["about", "à propos"]
     },
     "gallery": {

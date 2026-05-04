@@ -88,11 +88,11 @@ const aboutStoryTextByLocale: Record<AppLocale, StoryText> = {
       },
       {
         id: 'founding',
-        text: `En 2019, le paysage musical engendra une progéniture des plus merveilleuses : Frisches. Nourri des eaux dorées et scintillantes de l’Isar – entre une gorgée et la suivante – Frisches fut livré au monde avec une seule mission : garder le rock frais. Ses rythmes puissants, sa basse percutante et ses riffs granuleux ont touché une corde dans le tréfonds des âmes depuis ce jour.`,
+        text: `En 2019, le paysage musical engendra une progéniture des plus merveilleuses : Frisches. Nourri des eaux dorées et scintillantes de l’Isar – entre une gorgée et la suivante – Frisches fut livré au monde avec une seule mission : garder le rock au frais. Ses rythmes puissants, sa basse percutante et ses riffs granuleux touchent désormais le tréfonds des âmes humaines.`,
       },
       {
         id: 'album',
-        text: `L’album de début, "Tales From The Cellar", est une collection de poésie sonore forgée par ses quatre esprits créatifs : Camilla (chant et flûte), Tobi (basse), Steff (batterie) et Edgar (guitare). Ses titres ont émergé dans les murs de leur laboratoire de répétition souterrain. En 2023, le groupe a élargi sa légende avec le clip animé de `,
+        text: `L’album de début, "Tales From The Cellar", est une collection de poésie sonore forgée par ses quatre esprits créatifs : Camilla (voix et flûte), Tobi (basse), Steff (batterie) et Edgar (guitare). Ses titres ont émergé dans les murs de leur laboratoire souterrain de répétition. En 2023, le groupe a élargi sa légende avec le clip animé de `,
         linkText: `"Witch Hunting"`,
         linkHref: 'https://www.youtube.com/watch?v=_rZYN5G6-gg',
         linkYtId: '_rZYN5G6-gg',
@@ -102,7 +102,7 @@ const aboutStoryTextByLocale: Record<AppLocale, StoryText> = {
       },
       {
         id: 'closing',
-        text: `Tirez vos cartes, franchissez le miroir – et découvrez ce qui vous attend de l’autre côté.`,
+        text: `Tirez vos cartes, franchissez le miroir et découvrez ce qui vous attend de l’autre côté.`,
       },
     ],
   },
