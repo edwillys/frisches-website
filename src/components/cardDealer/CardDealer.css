@@ -66,6 +66,13 @@
   text-align: center;
 }
 
+.card-dealer__language-switcher-fixed {
+  position: fixed;
+  top: var(--spacing-lg);
+  right: var(--spacing-lg);
+  z-index: 12;
+}
+
 /* Cards container: horizontal layout by default */
 .card-dealer__cards {
   display: flex;
@@ -362,6 +369,22 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.card-dealer__header-right .card-dealer__header-social {
+  order: 1;
+}
+
+.card-dealer__header-right .language-switcher {
+  order: 2;
+}
+
+.card-dealer__header-right .card-dealer__header-menu-btn {
+  order: 3;
+}
+
+.card-dealer__header-drawer-language-switcher {
+  padding-top: 0.25rem;
 }
 
 /* Social links in the content-view header (smaller than the top-center ones) */
@@ -974,6 +997,12 @@
   .card-dealer {
     --card-dealer-header-height: 0px;
   }
+
+  .card-dealer__language-switcher-fixed {
+    top: calc(var(--spacing-lg) / 2);
+    right: calc(var(--spacing-lg) / 2);
+  }
+
   .card-dealer__content {
     gap: var(--spacing-xl);
     padding: 0;

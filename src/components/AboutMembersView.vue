@@ -275,6 +275,12 @@ watch(
   }
 }
 
+@media (max-width: 767px) {
+  .about-members {
+    --about-members-card-width: var(--about-members-card-width-mobile);
+  }
+}
+
 .about-members__cell {
   flex: 0 0 min(var(--about-members-card-width), var(--about-members-cell-max-width));
   width: min(var(--about-members-card-width), var(--about-members-cell-max-width));

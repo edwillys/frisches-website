@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { trackSectionViewed } from '@/analytics'
+import { ensurePersistedAppLocale } from '@/i18n/locale'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -28,6 +29,10 @@ const router = createRouter({
 })
 
 export default router
+
+router.beforeEach(() => {
+  ensurePersistedAppLocale()
+})
 
 const SECTION_ROUTES: Record<string, 'music' | 'about' | 'gallery'> = {
   '/home': 'music',

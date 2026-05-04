@@ -134,7 +134,7 @@ defineExpose({
   }
 
   .menu-card__title {
-    font-size: var(--font-size-lg);
+    font-size: var(--font-size-md);
   }
 
   .menu-card--hovered {

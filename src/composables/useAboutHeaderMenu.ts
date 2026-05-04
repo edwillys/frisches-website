@@ -1,8 +1,9 @@
 import { nextTick, onBeforeUnmount, ref, watch, type ComputedRef, type Ref } from 'vue'
 
 import { useUiText } from './useUiText'
+import { SONGSTERR_TABS_URL } from '@/constants/links'
 
-export type AboutSubmenuKey = 'none' | 'story' | 'members' | 'lyrics'
+export type AboutSubmenuKey = 'none' | 'story' | 'members' | 'lyrics' | 'tabs'
 
 export interface AboutViewExpose {
   goBackOneStep: () => boolean
@@ -27,7 +28,7 @@ export const useAboutHeaderMenu = (options: UseAboutHeaderMenuOptions) => {
   const isAboutSubmenuOpenDesktop = ref(false)
   const aboutActiveSubmenu = ref<AboutSubmenuKey>('none')
   const aboutCanGoBack = ref(false)
-  const aboutSubmenuItems: AboutSubmenuKey[] = ['story', 'members', 'lyrics']
+  const aboutSubmenuItems: AboutSubmenuKey[] = ['story', 'members', 'lyrics', 'tabs']
   let closeDesktopSubmenuTimer: number | null = null
 
   const clearDesktopSubmenuCloseTimer = () => {
@@ -63,6 +64,7 @@ export const useAboutHeaderMenu = (options: UseAboutHeaderMenuOptions) => {
   const getAboutSubmenuLabel = (submenu: AboutSubmenuKey): string => {
     if (submenu === 'members') return t.value.about.membersButton
     if (submenu === 'lyrics') return t.value.about.lyricsButton
+    if (submenu === 'tabs') return t.value.about.tabsButton
     return t.value.about.storyButton
   }
 
@@ -72,6 +74,12 @@ export const useAboutHeaderMenu = (options: UseAboutHeaderMenuOptions) => {
     options.menuItems.findIndex((item) => item.route === '/about')
 
   const goToAboutSubmenu = (submenu: AboutSubmenuKey) => {
+    if (submenu === 'tabs') {
+      window.open(SONGSTERR_TABS_URL, '_blank', 'noopener,noreferrer')
+      closeSubmenu()
+      return
+    }
+
     const aboutIndex = getAboutMenuIndex()
     if (aboutIndex < 0) return
 

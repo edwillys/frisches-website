@@ -1,0 +1,205 @@
+{
+  "navigation": {
+    "home": {
+      "title": "Home",
+      "headerTitle": "_Home",
+      "matchTokens": ["home"]
+    },
+    "music": {
+      "title": "Music",
+      "headerTitle": "_Music",
+      "matchTokens": ["music"]
+    },
+    "about": {
+      "title": "About",
+      "headerTitle": "_About",
+      "matchTokens": ["about"]
+    },
+    "gallery": {
+      "title": "Gallery",
+      "headerTitle": "_Gallery",
+      "matchTokens": ["gallery"]
+    }
+  },
+  "gallery": {
+    "modePhotos": "Photos",
+    "modeAlbums": "Albums",
+    "modeLabel": "Gallery mode",
+    "collapseRail": "Collapse gallery sidebar",
+    "expandRail": "Expand gallery sidebar",
+    "collapseLibrary": "Collapse library",
+    "expandLibrary": "Expand library",
+    "filterPlaceholder": "Filter",
+    "filterSearchPlaceholder": "Search",
+    "clearFilters": "Clear",
+    "displayOptions": "Display options",
+    "squareThumbnails": "Square (1:1)",
+    "showTimeline": "Show Timeline",
+    "photoCredit": "Photo credit",
+    "currentMonthLabel": "Current month",
+    "photosCount": {
+      "one": "photo",
+      "other": "photos"
+    },
+    "closeLightbox": "Close",
+    "prevImage": "Previous image",
+    "nextImage": "Next image",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "resetZoom": "Reset zoom",
+    "zoomControls": "Zoom controls",
+    "zoomLevel": "Zoom level",
+    "filterPeople": "People",
+    "filterLocation": "Location",
+    "filterTags": "Tags",
+    "filterDate": "Date",
+    "albums": "Albums",
+    "albumNavLabel": "Album navigation"
+  },
+  "player": {
+    "enableShuffle": "Enable shuffle",
+    "disableShuffle": "Disable shuffle",
+    "toggleShuffle": "Toggle shuffle",
+    "prevTrack": "Previous track",
+    "nextTrack": "Next track",
+    "play": "Play",
+    "pause": "Pause",
+    "enableRepeat": "Enable repeat",
+    "repeatOne": "Repeat one",
+    "disableRepeat": "Disable repeat",
+    "toggleRepeat": "Toggle repeat",
+    "seek": "Seek",
+    "showLyrics": "Show lyrics",
+    "hideLyrics": "Hide lyrics",
+    "noLyrics": "No lyrics available",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "volume": "Volume",
+    "closePlayer": "Close player"
+  },
+  "music": {
+    "albumsNavLabel": "Albums",
+    "albumLabel": "Album",
+    "songsCount": {
+      "one": "song",
+      "other": "songs"
+    },
+    "albumItemLabel": {
+      "one": "song",
+      "other": "songs"
+    },
+    "playAlbum": "Play album",
+    "pauseAlbum": "Pause album",
+    "trackTitleHeader": "Title",
+    "playTrackPrefix": "Play",
+    "resumeTrackPrefix": "Resume",
+    "closeLyrics": "Close lyrics",
+    "lyricsLoading": "Loading lyrics...",
+    "noLyricsForTrack": "No lyrics available for this track"
+  },
+  "lyrics": {
+    "syncToCurrent": "Sync to current lyrics",
+    "sync": "Sync"
+  },
+  "about": {
+    "subHeaderTitle": "Hi, we're Frisches!",
+    "menuAriaLabel": "About menu",
+    "storyButton": "Story",
+    "membersButton": "Members",
+    "lyricsButton": "Lyrics",
+    "tabsButton": "Tabs",
+    "storyButtonAria": "Story card",
+    "membersButtonAria": "Members cards",
+    "lyricsButtonAria": "Lyrics cards",
+    "tabsButtonAria": "Tabs link",
+    "placeholderButtonAria": "Coming soon"
+  },
+  "faders": {
+    "open": "Instrument faders",
+    "close": "Close instrument faders",
+    "groupLabel": "Instrument faders",
+    "muteToggleSuffix": "mute toggle",
+    "instrumentVolumePrefix": "volume",
+    "unavailableSuffix": "(not available)"
+  },
+  "logo": {
+    "ariaLabel": "Frisches - Click to reveal menu",
+    "logoAriaLabel": "Frisches",
+    "socialLinks": "Social links"
+  },
+  "status": {
+    "loading": "Loading..."
+  },
+  "credits": {
+    "text": "Credits",
+    "roles": {
+      "webDesign": "Web Design",
+      "art": "Art",
+      "logoDesign": "Logo"
+    }
+  },
+  "languageSwitcher": {
+    "ariaLabel": "Language selector",
+    "floatingAriaLabel": "Floating language selector",
+    "currentLocaleLabel": "Current language",
+    "options": {
+      "en": { "label": "English", "acronym": "EN", "flag": "🇬🇧" },
+      "de": { "label": "Deutsch", "acronym": "DE", "flag": "🇩🇪" },
+      "fr": { "label": "Français", "acronym": "FR", "flag": "🇫🇷" },
+      "br": { "label": "Brasil", "acronym": "BR", "flag": "🇧🇷" },
+      "it": { "label": "Italiano", "acronym": "IT", "flag": "🇮🇹" },
+      "ru": { "label": "Русский", "acronym": "RU", "flag": "🇷🇺" }
+    }
+  },
+  "legal": {
+    "impressum": {
+      "title": "Legal Notice",
+      "subtitle": "Pursuant to § 5 German Telemedia Act (TMG)",
+      "contactTitle": "Contact",
+      "contactEmailLabel": "E-Mail",
+      "disclaimerTitle": "Disclaimer",
+      "contentLiabilityTitle": "Liability for Content",
+      "contentLiabilityText": "The contents of this website have been prepared with the utmost care. However, we cannot guarantee the accuracy, completeness, or topicality of the content.",
+      "linksLiabilityTitle": "Liability for Links",
+      "linksLiabilityText": "Our website contains links to external third-party websites. We have no influence over their content and therefore accept no liability for such external content.",
+      "copyrightTitle": "Copyright",
+      "copyrightText": "The content and works published on this website are subject to German copyright law. Third-party contributions are identified as such.",
+      "musicTitle": "Music",
+      "musicText": "All music tracks on this website are original compositions by the members of Frisches and are protected by copyright. No samples or cover versions are used."
+    },
+    "privacy": {
+      "title": "Privacy Policy",
+      "subtitle": "May 2026",
+      "s1Title": "1. Controller",
+      "s1ContactLabel": "E-Mail",
+      "s2Title": "2. Data We Collect",
+      "s2Intro": "This website uses Umami Analytics, a privacy-friendly analytics service. Umami sets no analytics cookies and stores no personal data on your device. The following data is collected anonymously on each page visit:",
+      "s2Item1": "Page visited and time on page",
+      "s2Item2": "Referring URL (referrer)",
+      "s2Item3": "Device type, operating system, and browser type (User-Agent)",
+      "s2Item4": "Approximate origin (country) derived from the IP address; the IP address itself is not stored",
+      "s2Item5": "Browser language setting",
+      "s2Outro": "In addition, anonymised interaction events (e.g. song played, social link clicked) are collected to understand how the site is used. To remember your chosen interface language across visits and page refreshes, the site also stores a first-party language-preference cookie and a matching localStorage entry.",
+      "s3Title": "3. Legal Basis",
+      "s3Text": "Processing is based on our legitimate interest in improving and securely providing the website (Art. 6(1)(f) GDPR). The language-preference cookie and localStorage entry are used strictly to provide the language selected by the user and are treated as technically necessary for this website function.",
+      "s4Title": "4. Data Processors and International Transfers",
+      "s4Text1": "Analytics data is processed by Umami Cloud (Umami Software, Inc., USA). The transfer to the USA is based on EU Standard Contractual Clauses (Art. 46(2)(c) GDPR). A Data Processing Agreement (DPA) with Umami has been or will be concluded.",
+      "s4Text2": "The website is served via Cloudflare Pages. Cloudflare processes technically necessary connection data for site delivery. For more information see the Cloudflare Privacy Policy.",
+      "s5Title": "5. Retention Period",
+      "s5Text": "Anonymised analytics data is stored for a maximum of 24 months and then automatically deleted. The language-preference cookie and localStorage entry remain until they are replaced by a new selection or cleared by the user.",
+      "s6Title": "6. Your Rights",
+      "s6Intro": "You have the following rights against us:",
+      "s6Right1": "Right of access (Art. 15 GDPR)",
+      "s6Right2": "Right to rectification (Art. 16 GDPR)",
+      "s6Right3": "Right to erasure (Art. 17 GDPR)",
+      "s6Right4": "Right to restriction of processing (Art. 18 GDPR)",
+      "s6Right5": "Right to data portability (Art. 20 GDPR)",
+      "s6Right6": "Right to object (Art. 21 GDPR)",
+      "s6ContactText": "To exercise your rights, please contact us at",
+      "s6AuthorityText": "You also have the right to lodge a complaint with the competent supervisory authority. For Bavaria, this is the",
+      "s6AuthorityName": "Bavarian State Office for Data Protection Supervision (LDA)",
+      "s7Title": "7. External Links",
+      "s7Text": "This website contains links to external services (Spotify, Instagram, YouTube, GitHub, Songsterr). When you visit these sites, their respective privacy policies apply. We have no control over data processing by these third-party providers."
+    }
+  }
+}

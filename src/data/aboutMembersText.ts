@@ -99,7 +99,7 @@ export const aboutMembersText: Record<
         "Tobi ne pense qu'aux basses et a perdu ses aigus depuis longtemps. Avec lui, on a l'impression que le boost de basses du JBL est resté enclenché : il apporte des lignes pleines de groove qui soutiennent les graves de Frisches.",
     },
   },
-  'pt-BR': {
+  br: {
     edgar: {
       name: 'Edgar',
       badgeTitles: ['Guitarra', 'Backing Vocals'],
@@ -125,6 +125,63 @@ export const aboutMembersText: Record<
       badgeTitles: ['Baixo'],
       descriptionLead:
         'Tobi sabe tudo do baixo e já deixou os agudos para trás faz tempo. Com ele, parece que o bass boost da JBL fica ligado o tempo todo: ele traz linhas cheias de groove que sustentam os graves do Frisches.',
+    },
+  },
+  it: {
+    edgar: {
+      name: 'Edgar',
+      badgeTitles: ['Chitarra', 'Cori'],
+      descriptionLead:
+        'Suona la chitarra e a volte anche il buffone. Compositore di tempi ingannevoli, la sua nota preferita e sempre dietro l angolo. Porta la sua passione per il rock classico in ogni riff e assolo dei Frisches. Tra intro e giochi di parole, il suo racconto preferito lo porta a',
+    },
+    cami: {
+      name: 'Cami',
+      badgeTitles: ['Voce', 'Flauto'],
+      descriptionLead:
+        'Flautista e cantante, e un po anche sassofonista, Cami e cresciuta con i Beatles e ama il suono degli anni 60 e 70. Oltre alla formazione classica al flauto traverso, pop, rock, glam rock e progressive rock, da Elton John a David Bowie, Pink Floyd, King Crimson, Jethro Tull, Led Zeppelin, Jimi Hendrix e Janis Joplin, hanno segnato il suo percorso musicale e la accompagnano ogni giorno. Definisce',
+      descriptionTail: 'la prova piu chiara che vale sempre la pena inseguire una tigre bianca.',
+    },
+    steff: {
+      name: 'Steff',
+      badgeTitles: ['Batteria'],
+      descriptionLead:
+        'Steff tiene il ritmo dei Frisches ben saldo: tutto cio che esce dal beat non ha scampo. Non negoziabile alle prove del martedi sera: Pizza Funghi, niente pesto. Piove sulla strada? Si suona comunque. Il doppio pedale e il prossimo obiettivo, pronto a riempire cuore e anima delle nostre canzoni. Per lei, niente groove piu di',
+      descriptionTail: '!',
+    },
+    tobi: {
+      name: 'Tobi',
+      badgeTitles: ['Basso'],
+      descriptionLead:
+        'Tobi e tutto bassi e gli acuti li ha persi da tempo. Con lui sembra che il bass boost della JBL sia sempre acceso: porta linee piene di groove che sostengono il fondo dei Frisches.',
+    },
+  },
+  ru: {
+    edgar: {
+      name: 'Edgar',
+      badgeTitles: ['Гитара', 'Бэк-вокал'],
+      descriptionLead:
+        'Играет на гитаре и иногда валяет дурака. Композитор обманчивых размеров, его любимая нота всегда за поворотом. Он приносит любовь к классическому року в каждый рифф и соло Frisches. Интро и каламбуры без конца, и его любимая история приводит его к',
+    },
+    cami: {
+      name: 'Cami',
+      badgeTitles: ['Вокал', 'Флейта'],
+      descriptionLead:
+        'Флейтистка и певица, а еще немного саксофонистка, Cami выросла на Beatles и любит звучание 60-х и 70-х. Наряду с классической школой поп, рок, глэм-рок и прог-рок, Elton John, David Bowie, Pink Floyd, King Crimson, Jethro Tull, Led Zeppelin, Jimi Hendrix и Janis Joplin, сформировали ее музыкальный путь и до сих пор сопровождают каждый день. Она называет',
+      descriptionTail:
+        'самым явным доказательством того, что за белым тигром всегда стоит гнаться.',
+    },
+    steff: {
+      name: 'Steff',
+      badgeTitles: ['Ударные'],
+      descriptionLead:
+        'Steff держит ритм Frisches железно: все, что уходит мимо бита, не имеет шансов. Неприкосновенно на репетициях по вторникам: Pizza Funghi, без песто. Дождь по дороге? Играем все равно. Двойная бочка на очереди, чтобы заполнить сердце и душу наших песен. Для нее ничего не грувит сильнее, чем',
+      descriptionTail: '!',
+    },
+    tobi: {
+      name: 'Tobi',
+      badgeTitles: ['Бас'],
+      descriptionLead:
+        'Tobi весь про бас и давно потерял верха. С ним ощущение, будто JBL bass boost всегда включен: он приносит грувовые линии, которые держат низ Frisches.',
     },
   },
 }

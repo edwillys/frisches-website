@@ -5,6 +5,7 @@ import { useAudioStore, type AudioStemName } from '@/stores/audio'
 import { getAlbumById } from '@/data/albums'
 import { resolveStemAvailability } from '@/data/stems'
 import { useReducedMotion } from '@/composables/useMediaHelpers'
+import { useOverflowMarquee } from '@/composables/useOverflowMarquee'
 import { useUiText } from '@/composables/useUiText'
 import { usePlayerThemeStyle } from '@/composables/usePlayerThemeStyle'
 import { useTooltipSuppression } from '@/composables/useTooltipSuppression'
@@ -57,9 +58,7 @@ const miniPlayerWobbleSecondaryEl = ref<SVGPathElement | null>(null)
 const titleEl = ref<HTMLElement | null>(null)
 const artistEl = ref<HTMLElement | null>(null)
 let miniPlayerResizeObserver: ResizeObserver | null = null
-let textResizeObserver: ResizeObserver | null = null
 let lastMiniPlayerOffsetPx = -1
-let rafOverflowUpdateId = 0
 let progressTickerFn: (() => void) | null = null
 let progressLastFrameMs = 0
 let wobbleTickerFn: (() => void) | null = null
@@ -69,10 +68,12 @@ let windowResizeHandler: (() => void) | null = null
 
 const showStemFaders = ref(false)
 const t = useUiText()
-const isTitleOverflowing = ref(false)
-const isArtistOverflowing = ref(false)
 const isCompactMiniPlayerUi = ref(false)
 const { prefersReducedMotion } = useReducedMotion()
+const { isOverflowing: isTitleOverflowing, scheduleOverflowUpdate: scheduleTitleOverflowUpdate } =
+  useOverflowMarquee(titleEl)
+const { isOverflowing: isArtistOverflowing, scheduleOverflowUpdate: scheduleArtistOverflowUpdate } =
+  useOverflowMarquee(artistEl)
 
 const shouldShowMiniPlayer = computed(
   () => audioStore.persistAcrossPages && audioStore.hasUserStartedPlayback && !audioStore.isStopped
@@ -504,31 +505,9 @@ watch(
   { immediate: true }
 )
 
-function updateTextOverflow() {
-  const title = titleEl.value
-  const artist = artistEl.value
-
-  if (title) {
-    const overflow = title.scrollWidth > title.clientWidth + 1
-    isTitleOverflowing.value = overflow
-    const distance = Math.max(0, title.scrollWidth - title.clientWidth)
-    title.style.setProperty('--marquee-distance', `${distance}px`)
-  }
-
-  if (artist) {
-    const overflow = artist.scrollWidth > artist.clientWidth + 1
-    isArtistOverflowing.value = overflow
-    const distance = Math.max(0, artist.scrollWidth - artist.clientWidth)
-    artist.style.setProperty('--marquee-distance', `${distance}px`)
-  }
-}
-
 function scheduleOverflowUpdate() {
-  if (rafOverflowUpdateId) return
-  rafOverflowUpdateId = window.requestAnimationFrame(() => {
-    rafOverflowUpdateId = 0
-    updateTextOverflow()
-  })
+  scheduleTitleOverflowUpdate()
+  scheduleArtistOverflowUpdate()
 }
 
 watch(
@@ -549,8 +528,6 @@ watch(
       setMiniPlayerOffset(0)
       miniPlayerResizeObserver?.disconnect()
       miniPlayerResizeObserver = null
-      textResizeObserver?.disconnect()
-      textResizeObserver = null
       return
     }
 
@@ -565,15 +542,6 @@ watch(
 
     await nextTick()
     scheduleOverflowUpdate()
-
-    if (typeof ResizeObserver !== 'undefined') {
-      textResizeObserver?.disconnect()
-      textResizeObserver = new ResizeObserver(() => {
-        scheduleOverflowUpdate()
-      })
-      if (titleEl.value) textResizeObserver.observe(titleEl.value)
-      if (artistEl.value) textResizeObserver.observe(artistEl.value)
-    }
 
     if (typeof ResizeObserver === 'undefined') return
 
@@ -630,18 +598,10 @@ onUnmounted(() => {
     windowResizeHandler = null
   }
 
-  if (rafOverflowUpdateId) {
-    window.cancelAnimationFrame(rafOverflowUpdateId)
-    rafOverflowUpdateId = 0
-  }
-
   stopProgressTicker()
   stopWobbleTicker()
   wobbleWaves = []
   wobbleLastFrameMs = 0
-
-  textResizeObserver?.disconnect()
-  textResizeObserver = null
 
   miniPlayerResizeObserver?.disconnect()
   miniPlayerResizeObserver = null
@@ -1038,6 +998,7 @@ audio {
   text-overflow: ellipsis;
   white-space: nowrap;
   --marquee-distance: 0px;
+  --marquee-duration: 8.4s;
   display: block;
   width: 100%;
 }
@@ -1055,7 +1016,7 @@ audio {
 
 .mini-player__title.is-marquee .mini-player__text,
 .mini-player__artist.is-marquee .mini-player__text {
-  animation: mini-player-marquee 10s linear infinite;
+  animation: marquee-overflow var(--marquee-duration) linear infinite;
 }
 
 .mini-player__title {
@@ -1476,7 +1437,7 @@ audio {
   z-index: 3;
 }
 
-@keyframes mini-player-marquee {
+@keyframes marquee-overflow {
   /*
     Behavior:
     - Start at beginning

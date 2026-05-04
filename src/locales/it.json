@@ -1,0 +1,205 @@
+{
+  "navigation": {
+    "home": {
+      "title": "Home",
+      "headerTitle": "_Home",
+      "matchTokens": ["home", "casa"]
+    },
+    "music": {
+      "title": "Musica",
+      "headerTitle": "_Musica",
+      "matchTokens": ["musica", "music"]
+    },
+    "about": {
+      "title": "Info",
+      "headerTitle": "_Info",
+      "matchTokens": ["info", "about"]
+    },
+    "gallery": {
+      "title": "Galleria",
+      "headerTitle": "_Galleria",
+      "matchTokens": ["galleria", "gallery"]
+    }
+  },
+  "gallery": {
+    "modePhotos": "Foto",
+    "modeAlbums": "Album",
+    "modeLabel": "Modalità galleria",
+    "collapseRail": "Comprimi barra laterale",
+    "expandRail": "Espandi barra laterale",
+    "collapseLibrary": "Comprimi libreria",
+    "expandLibrary": "Espandi libreria",
+    "filterPlaceholder": "Filtra",
+    "filterSearchPlaceholder": "Cerca",
+    "clearFilters": "Cancella",
+    "displayOptions": "Opzioni di visualizzazione",
+    "squareThumbnails": "Quadrato (1:1)",
+    "showTimeline": "Mostra cronologia",
+    "photoCredit": "Credito foto",
+    "currentMonthLabel": "Mese corrente",
+    "photosCount": {
+      "one": "foto",
+      "other": "foto"
+    },
+    "closeLightbox": "Chiudi",
+    "prevImage": "Immagine precedente",
+    "nextImage": "Immagine successiva",
+    "zoomIn": "Ingrandisci",
+    "zoomOut": "Riduci",
+    "resetZoom": "Ripristina zoom",
+    "zoomControls": "Controlli zoom",
+    "zoomLevel": "Livello di zoom",
+    "filterPeople": "Persone",
+    "filterLocation": "Luogo",
+    "filterTags": "Tag",
+    "filterDate": "Data",
+    "albums": "Album",
+    "albumNavLabel": "Navigazione album"
+  },
+  "player": {
+    "enableShuffle": "Attiva shuffle",
+    "disableShuffle": "Disattiva shuffle",
+    "toggleShuffle": "Attiva/disattiva shuffle",
+    "prevTrack": "Traccia precedente",
+    "nextTrack": "Traccia successiva",
+    "play": "Riproduci",
+    "pause": "Pausa",
+    "enableRepeat": "Attiva ripetizione",
+    "repeatOne": "Ripeti una traccia",
+    "disableRepeat": "Disattiva ripetizione",
+    "toggleRepeat": "Attiva/disattiva ripetizione",
+    "seek": "Posizione di riproduzione",
+    "showLyrics": "Mostra testi",
+    "hideLyrics": "Nascondi testi",
+    "noLyrics": "Testi non disponibili",
+    "mute": "Silenzia",
+    "unmute": "Riattiva audio",
+    "volume": "Volume",
+    "closePlayer": "Chiudi lettore"
+  },
+  "music": {
+    "albumsNavLabel": "Album",
+    "albumLabel": "Album",
+    "songsCount": {
+      "one": "brano",
+      "other": "brani"
+    },
+    "albumItemLabel": {
+      "one": "brano",
+      "other": "brani"
+    },
+    "playAlbum": "Riproduci album",
+    "pauseAlbum": "Metti in pausa album",
+    "trackTitleHeader": "Titolo",
+    "playTrackPrefix": "Riproduci",
+    "resumeTrackPrefix": "Riprendi",
+    "closeLyrics": "Chiudi testi",
+    "lyricsLoading": "Caricamento testi...",
+    "noLyricsForTrack": "Nessun testo disponibile per questa traccia"
+  },
+  "lyrics": {
+    "syncToCurrent": "Sincronizza con i testi attuali",
+    "sync": "Sincronizza"
+  },
+  "about": {
+    "subHeaderTitle": "Ciao, siamo i Frisches!",
+    "menuAriaLabel": "Menu info",
+    "storyButton": "Storia",
+    "membersButton": "Membri",
+    "lyricsButton": "Testi",
+    "tabsButton": "Tabs",
+    "storyButtonAria": "Scheda storia",
+    "membersButtonAria": "Schede membri",
+    "lyricsButtonAria": "Schede testi",
+    "tabsButtonAria": "Link tabs",
+    "placeholderButtonAria": "Prossimamente"
+  },
+  "faders": {
+    "open": "Fader strumenti",
+    "close": "Chiudi fader strumenti",
+    "groupLabel": "Fader strumenti",
+    "muteToggleSuffix": "silenzia",
+    "instrumentVolumePrefix": "volume",
+    "unavailableSuffix": "(non disponibile)"
+  },
+  "logo": {
+    "ariaLabel": "Frisches - Clicca per mostrare il menu",
+    "logoAriaLabel": "Frisches",
+    "socialLinks": "Social"
+  },
+  "status": {
+    "loading": "Caricamento..."
+  },
+  "credits": {
+    "text": "Crediti",
+    "roles": {
+      "webDesign": "Web design",
+      "art": "Grafica",
+      "logoDesign": "Logo"
+    }
+  },
+  "languageSwitcher": {
+    "ariaLabel": "Selettore lingua",
+    "floatingAriaLabel": "Selettore lingua mobile",
+    "currentLocaleLabel": "Lingua corrente",
+    "options": {
+      "en": { "label": "Inglese", "acronym": "EN", "flag": "🇬🇧" },
+      "de": { "label": "Tedesco", "acronym": "DE", "flag": "🇩🇪" },
+      "fr": { "label": "Francese", "acronym": "FR", "flag": "🇫🇷" },
+      "br": { "label": "Portoghese (Brasile)", "acronym": "BR", "flag": "🇧🇷" },
+      "it": { "label": "Italiano", "acronym": "IT", "flag": "🇮🇹" },
+      "ru": { "label": "Russo", "acronym": "RU", "flag": "🇷🇺" }
+    }
+  },
+  "legal": {
+    "impressum": {
+      "title": "Note legali",
+      "subtitle": "Ai sensi del § 5 della legge tedesca sui telemedia (TMG)",
+      "contactTitle": "Contatto",
+      "contactEmailLabel": "E-mail",
+      "disclaimerTitle": "Esclusione di responsabilità",
+      "contentLiabilityTitle": "Responsabilità per i contenuti",
+      "contentLiabilityText": "I contenuti di questo sito sono stati preparati con la massima cura. Tuttavia non possiamo garantire l'accuratezza, la completezza o l'attualità delle informazioni.",
+      "linksLiabilityTitle": "Responsabilità per i link",
+      "linksLiabilityText": "Il nostro sito contiene link a siti esterni di terze parti. Non abbiamo alcuna influenza sui loro contenuti e pertanto non assumiamo responsabilità per tali contenuti esterni.",
+      "copyrightTitle": "Diritto d'autore",
+      "copyrightText": "I contenuti e le opere pubblicati su questo sito sono soggetti alla normativa tedesca sul diritto d'autore. I contributi di terzi sono identificati come tali.",
+      "musicTitle": "Musica",
+      "musicText": "Tutte le tracce musicali presenti su questo sito sono composizioni originali dei membri dei Frisches e sono protette dal diritto d'autore. Non vengono utilizzati campioni né cover."
+    },
+    "privacy": {
+      "title": "Informativa sulla privacy",
+      "subtitle": "Maggio 2026",
+      "s1Title": "1. Titolare del trattamento",
+      "s1ContactLabel": "E-mail",
+      "s2Title": "2. Dati raccolti",
+      "s2Intro": "Questo sito utilizza Umami Analytics, un servizio di analisi rispettoso della privacy. Umami non imposta cookie di analisi e non memorizza dati personali sul tuo dispositivo. A ogni visita vengono raccolti in forma anonima i seguenti dati:",
+      "s2Item1": "Pagina visitata e tempo di permanenza",
+      "s2Item2": "URL di provenienza (referrer)",
+      "s2Item3": "Tipo di dispositivo, sistema operativo e tipo di browser (User-Agent)",
+      "s2Item4": "Origine approssimativa (Paese) derivata dall'indirizzo IP; l'indirizzo IP non viene salvato",
+      "s2Item5": "Impostazione della lingua del browser",
+      "s2Outro": "Inoltre vengono raccolti eventi di interazione anonimizzati (ad es. brano riprodotto, click su link social) per capire come viene utilizzato il sito. Per ricordare la lingua dell'interfaccia scelta tra visite e ricariche pagina, il sito salva anche un cookie proprietario di preferenza lingua e una voce corrispondente in localStorage.",
+      "s3Title": "3. Base giuridica",
+      "s3Text": "Il trattamento si basa sul nostro legittimo interesse a migliorare e fornire in modo sicuro il sito web (art. 6, par. 1, lett. f GDPR). Il cookie di preferenza lingua e la voce in localStorage sono usati esclusivamente per fornire la lingua selezionata dall'utente e sono considerati tecnicamente necessari per questa funzione.",
+      "s4Title": "4. Responsabili del trattamento e trasferimenti internazionali",
+      "s4Text1": "I dati di analisi sono trattati da Umami Cloud (Umami Software, Inc., USA). Il trasferimento negli USA si basa sulle Clausole Contrattuali Standard UE (art. 46, par. 2, lett. c GDPR). È stato o sarà concluso un Data Processing Agreement (DPA) con Umami.",
+      "s4Text2": "Il sito è pubblicato tramite Cloudflare Pages. Cloudflare tratta i dati di connessione tecnicamente necessari per la consegna del sito. Per maggiori informazioni consulta la Privacy Policy di Cloudflare.",
+      "s5Title": "5. Periodo di conservazione",
+      "s5Text": "I dati di analisi anonimizzati sono conservati per un massimo di 24 mesi e poi eliminati automaticamente. Il cookie di preferenza lingua e la voce in localStorage restano fino a quando non vengono sostituiti da una nuova scelta o eliminati dall'utente.",
+      "s6Title": "6. I tuoi diritti",
+      "s6Intro": "Hai i seguenti diritti nei nostri confronti:",
+      "s6Right1": "Diritto di accesso (art. 15 GDPR)",
+      "s6Right2": "Diritto di rettifica (art. 16 GDPR)",
+      "s6Right3": "Diritto alla cancellazione (art. 17 GDPR)",
+      "s6Right4": "Diritto alla limitazione del trattamento (art. 18 GDPR)",
+      "s6Right5": "Diritto alla portabilità dei dati (art. 20 GDPR)",
+      "s6Right6": "Diritto di opposizione (art. 21 GDPR)",
+      "s6ContactText": "Per esercitare i tuoi diritti, contattaci a",
+      "s6AuthorityText": "Hai inoltre il diritto di presentare reclamo all'autorità di controllo competente. Per la Baviera, questa è la",
+      "s6AuthorityName": "Autorità bavarese per la vigilanza sulla protezione dei dati (LDA)",
+      "s7Title": "7. Link esterni",
+      "s7Text": "Questo sito contiene link a servizi esterni (Spotify, Instagram, YouTube, GitHub, Songsterr). Quando visiti questi siti, si applicano le rispettive informative privacy. Non abbiamo alcun controllo sul trattamento dei dati da parte di tali fornitori terzi."
+    }
+  }
+}

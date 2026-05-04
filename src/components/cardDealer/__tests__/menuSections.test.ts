@@ -26,7 +26,7 @@ describe('menuSections', () => {
 
   it('matches accented localized titles without depending on exact diacritics', () => {
     const frenchSections = getNavigationSections('fr')
-    const portugueseSections = getNavigationSections('pt-BR')
+    const portugueseSections = getNavigationSections('br')
     const germanSections = getNavigationSections('de')
 
     expect(titleContainsSection('_À propos', 'about', frenchSections)).toBe(true)

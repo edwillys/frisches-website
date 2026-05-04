@@ -1,0 +1,205 @@
+{
+  "navigation": {
+    "home": {
+      "title": "Home",
+      "headerTitle": "_Home",
+      "matchTokens": ["home"]
+    },
+    "music": {
+      "title": "Musik",
+      "headerTitle": "_Musik",
+      "matchTokens": ["musik", "music"]
+    },
+    "about": {
+      "title": "Über uns",
+      "headerTitle": "_Über_Uns",
+      "matchTokens": ["about", "über"]
+    },
+    "gallery": {
+      "title": "Galerie",
+      "headerTitle": "_Galerie",
+      "matchTokens": ["galerie", "gallery"]
+    }
+  },
+  "gallery": {
+    "modePhotos": "Fotos",
+    "modeAlbums": "Alben",
+    "modeLabel": "Galeriemodus",
+    "collapseRail": "Seitenleiste ausblenden",
+    "expandRail": "Seitenleiste einblenden",
+    "collapseLibrary": "Bibliothek ausblenden",
+    "expandLibrary": "Bibliothek einblenden",
+    "filterPlaceholder": "Filter",
+    "filterSearchPlaceholder": "Suchen",
+    "clearFilters": "Zurücksetzen",
+    "displayOptions": "Anzeigeoptionen",
+    "squareThumbnails": "Quadratisch (1:1)",
+    "showTimeline": "Zeitstrahl anzeigen",
+    "photoCredit": "Bildnachweis",
+    "currentMonthLabel": "Aktueller Monat",
+    "photosCount": {
+      "one": "Foto",
+      "other": "Fotos"
+    },
+    "closeLightbox": "Schließen",
+    "prevImage": "Vorheriges Bild",
+    "nextImage": "Nächstes Bild",
+    "zoomIn": "Vergrößern",
+    "zoomOut": "Verkleinern",
+    "resetZoom": "Zoom zurücksetzen",
+    "zoomControls": "Zoom-Steuerung",
+    "zoomLevel": "Zoomstufe",
+    "filterPeople": "Personen",
+    "filterLocation": "Ort",
+    "filterTags": "Tags",
+    "filterDate": "Datum",
+    "albums": "Alben",
+    "albumNavLabel": "Albumnavigation"
+  },
+  "player": {
+    "enableShuffle": "Zufallswiedergabe aktivieren",
+    "disableShuffle": "Zufallswiedergabe deaktivieren",
+    "toggleShuffle": "Zufallswiedergabe umschalten",
+    "prevTrack": "Vorheriger Titel",
+    "nextTrack": "Nächster Titel",
+    "play": "Abspielen",
+    "pause": "Pause",
+    "enableRepeat": "Wiederholen aktivieren",
+    "repeatOne": "Einen Titel wiederholen",
+    "disableRepeat": "Wiederholen deaktivieren",
+    "toggleRepeat": "Wiederholen umschalten",
+    "seek": "Abspielposition",
+    "showLyrics": "Liedtext anzeigen",
+    "hideLyrics": "Liedtext ausblenden",
+    "noLyrics": "Kein Liedtext verfügbar",
+    "mute": "Stummschalten",
+    "unmute": "Stummschaltung aufheben",
+    "volume": "Lautstärke",
+    "closePlayer": "Player schließen"
+  },
+  "music": {
+    "albumsNavLabel": "Alben",
+    "albumLabel": "Album",
+    "songsCount": {
+      "one": "Titel",
+      "other": "Titel"
+    },
+    "albumItemLabel": {
+      "one": "Titel",
+      "other": "Titel"
+    },
+    "playAlbum": "Album abspielen",
+    "pauseAlbum": "Album pausieren",
+    "trackTitleHeader": "Titel",
+    "playTrackPrefix": "",
+    "resumeTrackPrefix": "",
+    "closeLyrics": "Liedtext schließen",
+    "lyricsLoading": "Liedtext wird geladen...",
+    "noLyricsForTrack": "Für diesen Titel ist kein Liedtext verfügbar"
+  },
+  "lyrics": {
+    "syncToCurrent": "Mit aktuellem Liedtext synchronisieren",
+    "sync": "Synchronisieren"
+  },
+  "about": {
+    "subHeaderTitle": "Hi, wir sind Frisches!",
+    "menuAriaLabel": "Über-Menü",
+    "storyButton": "Geschichte",
+    "membersButton": "Band",
+    "lyricsButton": "Texte",
+    "tabsButton": "Tabs",
+    "storyButtonAria": "Geschichte-Karte",
+    "membersButtonAria": "Bandkarten",
+    "lyricsButtonAria": "Textkarten",
+    "tabsButtonAria": "Tabs-Link",
+    "placeholderButtonAria": "Demnaechst"
+  },
+  "faders": {
+    "open": "Instrumentregler",
+    "close": "Instrumentregler schließen",
+    "groupLabel": "Instrumentregler",
+    "muteToggleSuffix": "stummschalten",
+    "instrumentVolumePrefix": "Lautstärke",
+    "unavailableSuffix": "(nicht verfügbar)"
+  },
+  "logo": {
+    "ariaLabel": "Frisches – Klicken, um das Menü zu öffnen",
+    "logoAriaLabel": "Frisches",
+    "socialLinks": "Social-Links"
+  },
+  "status": {
+    "loading": "Lädt..."
+  },
+  "credits": {
+    "text": "Credits",
+    "roles": {
+      "webDesign": "Webdesign",
+      "art": "Grafik",
+      "logoDesign": "Logo"
+    }
+  },
+  "languageSwitcher": {
+    "ariaLabel": "Sprachauswahl",
+    "floatingAriaLabel": "Schwebende Sprachauswahl",
+    "currentLocaleLabel": "Aktuelle Sprache",
+    "options": {
+      "en": { "label": "English", "acronym": "EN", "flag": "🇬🇧" },
+      "de": { "label": "Deutsch", "acronym": "DE", "flag": "🇩🇪" },
+      "fr": { "label": "Französisch", "acronym": "FR", "flag": "🇫🇷" },
+      "br": { "label": "Brasilianisches Portugiesisch", "acronym": "BR", "flag": "🇧🇷" },
+      "it": { "label": "Italienisch", "acronym": "IT", "flag": "🇮🇹" },
+      "ru": { "label": "Russisch", "acronym": "RU", "flag": "🇷🇺" }
+    }
+  },
+  "legal": {
+    "impressum": {
+      "title": "Impressum",
+      "subtitle": "Angaben gemäß § 5 TMG",
+      "contactTitle": "Kontakt",
+      "contactEmailLabel": "E-Mail",
+      "disclaimerTitle": "Haftungsausschluss",
+      "contentLiabilityTitle": "Haftung für Inhalte",
+      "contentLiabilityText": "Die Inhalte dieser Seiten wurden mit größter Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen.",
+      "linksLiabilityTitle": "Haftung für Links",
+      "linksLiabilityText": "Unser Angebot enthält Links zu externen Webseiten Dritter, auf deren Inhalte wir keinen Einfluss haben. Für die Inhalte der verlinkten Seiten ist stets der jeweilige Anbieter oder Betreiber verantwortlich.",
+      "copyrightTitle": "Urheberrecht",
+      "copyrightText": "Die durch die Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen dem deutschen Urheberrecht. Beiträge Dritter sind als solche gekennzeichnet.",
+      "musicTitle": "Musik",
+      "musicText": "Alle auf dieser Website zugänglichen Musikstücke sind Originalwerke der Mitglieder der Band Frisches und urheberrechtlich geschützt. Es werden weder Samples noch Coverversionen verwendet."
+    },
+    "privacy": {
+      "title": "Datenschutzerklärung",
+      "subtitle": "Stand: Mai 2026",
+      "s1Title": "1. Verantwortlicher",
+      "s1ContactLabel": "E-Mail",
+      "s2Title": "2. Welche Daten wir erheben",
+      "s2Intro": "Diese Website nutzt Umami Analytics, einen datenschutzfreundlichen Analysedienst. Umami setzt keine Analyse-Cookies und speichert keine personenbezogenen Daten auf Ihrem Endgerät. Beim Seitenaufruf werden folgende technische Daten anonymisiert erfasst:",
+      "s2Item1": "Aufgerufene Seite und Verweildauer",
+      "s2Item2": "Verweisende URL (Referrer)",
+      "s2Item3": "Gerätetyp, Betriebssystem und Browsertyp (User-Agent)",
+      "s2Item4": "Ungefähre Herkunft (Land), abgeleitet aus der IP-Adresse; die IP-Adresse selbst wird nicht gespeichert",
+      "s2Item5": "Spracheinstellung des Browsers",
+      "s2Outro": "Zusätzlich werden anonymisierte Interaktionsereignisse (z. B. Song abgespielt, Social-Link angeklickt) erfasst, um die Nutzung der Website zu verstehen. Damit Ihre gewählte Oberflächensprache über Besuche und Seitenaktualisierungen hinweg erhalten bleibt, speichert die Website außerdem ein First-Party-Cookie zur Sprachpräferenz sowie einen passenden localStorage-Eintrag.",
+      "s3Title": "3. Rechtsgrundlage",
+      "s3Text": "Die Verarbeitung erfolgt auf Grundlage unseres berechtigten Interesses an der Verbesserung und sicheren Bereitstellung der Website (Art. 6 Abs. 1 lit. f DSGVO). Das Sprachpräferenz-Cookie und der localStorage-Eintrag werden ausschließlich genutzt, um die vom Nutzer ausgewählte Sprache bereitzustellen, und gelten für diese Website-Funktion als technisch erforderlich.",
+      "s4Title": "4. Auftragsverarbeitung und Datentransfer",
+      "s4Text1": "Die Analysedaten werden von Umami Cloud (Umami Software, Inc., USA) verarbeitet. Die Übermittlung in die USA erfolgt auf Grundlage der EU-Standardvertragsklauseln (Art. 46 Abs. 2 lit. c DSGVO). Ein Auftragsverarbeitungsvertrag (DPA) mit Umami wurde abgeschlossen bzw. wird abgeschlossen.",
+      "s4Text2": "Die Website wird über Cloudflare Pages bereitgestellt. Cloudflare verarbeitet dabei technisch notwendige Verbindungsdaten zur Auslieferung der Seite. Weitere Informationen: Cloudflare Privacy Policy.",
+      "s5Title": "5. Speicherdauer",
+      "s5Text": "Anonymisierte Analysedaten werden für maximal 24 Monate gespeichert, danach automatisch gelöscht. Das Sprachpräferenz-Cookie und der localStorage-Eintrag bleiben erhalten, bis sie durch eine neue Auswahl ersetzt oder vom Nutzer gelöscht werden.",
+      "s6Title": "6. Ihre Rechte",
+      "s6Intro": "Sie haben gegenüber uns folgende Rechte:",
+      "s6Right1": "Recht auf Auskunft (Art. 15 DSGVO)",
+      "s6Right2": "Recht auf Berichtigung (Art. 16 DSGVO)",
+      "s6Right3": "Recht auf Löschung (Art. 17 DSGVO)",
+      "s6Right4": "Recht auf Einschränkung der Verarbeitung (Art. 18 DSGVO)",
+      "s6Right5": "Recht auf Datenübertragbarkeit (Art. 20 DSGVO)",
+      "s6Right6": "Widerspruchsrecht (Art. 21 DSGVO)",
+      "s6ContactText": "Zur Ausübung Ihrer Rechte wenden Sie sich bitte an",
+      "s6AuthorityText": "Sie haben außerdem das Recht, sich bei der zuständigen Aufsichtsbehörde zu beschweren. Zuständig für Bayern ist der",
+      "s6AuthorityName": "Landesbeauftragte für den Datenschutz Bayern (LDA)",
+      "s7Title": "7. Externe Links",
+      "s7Text": "Diese Website enthält Links zu externen Diensten (Spotify, Instagram, YouTube, GitHub, Songsterr). Beim Aufruf dieser Seiten gelten die jeweiligen Datenschutzerklärungen der Anbieter. Auf die Datenverarbeitung durch diese Drittanbieter haben wir keinen Einfluss."
+    }
+  }
+}

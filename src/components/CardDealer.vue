@@ -31,6 +31,7 @@ import LogoButton from './LogoButton.vue'
 import AudioPlayer from './AudioPlayer.vue'
 import AboutView from './AboutView.vue'
 import GalleryManager from './GalleryManager.vue'
+import LanguageSwitcher from './LanguageSwitcher.vue'
 import { useGSAP } from '../composables/useGSAP'
 import { useNavigationSections } from '../composables/useNavigationSections'
 import { useUiText } from '../composables/useUiText'
@@ -50,6 +51,8 @@ import instagramSvg from '@/assets/icons/social-instagram.svg?raw'
 import spotifySvg from '@/assets/icons/social-spotify.svg?raw'
 import youtubeSvg from '@/assets/icons/social-youtube.svg?raw'
 import githubSvg from '@/assets/icons/social-github.svg?raw'
+import type { SocialLinks } from '@/constants/links'
+import { FRISCHES_CONTACT_MAILTO } from '@/constants/links'
 import { trackEvent } from '@/analytics'
 import emailSvg from '@/assets/icons/email.svg?raw'
 import arrowLeftSvg from '@/assets/icons/arrow-left.svg?raw'
@@ -483,10 +486,12 @@ const deckLeadIndex = Math.floor(menuItems.length / 2)
 // Component props
 const props = withDefaults(
   defineProps<{
-    socialLinks?: { instagram?: string; spotify?: string; youtube?: string; github?: string }
+    socialLinks?: SocialLinks
+    showFloatingLanguageSwitcher?: boolean
   }>(),
   {
     socialLinks: () => ({}),
+    showFloatingLanguageSwitcher: true,
   }
 )
 
@@ -1969,7 +1974,7 @@ onBeforeUnmount(() => {
       </a>
 
       <a
-        href="mailto:contact@frisches.band"
+        :href="FRISCHES_CONTACT_MAILTO"
         class="card-dealer__social-link"
         aria-label="Email"
         @click="trackEvent('social-click', { platform: 'email' })"
@@ -2055,6 +2060,13 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="card-dealer__content">
+      <div
+        v-if="props.showFloatingLanguageSwitcher && currentView !== 'content'"
+        class="card-dealer__language-switcher-fixed"
+      >
+        <LanguageSwitcher variant="floating" />
+      </div>
+
       <!-- Logo button (initial view) -->
       <div v-if="currentView === 'logo'" class="card-dealer__logo-button-wrapper">
         <LogoButton
@@ -2260,7 +2272,7 @@ onBeforeUnmount(() => {
               <span aria-hidden="true" v-html="githubSvg" />
             </a>
             <a
-              href="mailto:contact@frisches.band"
+              :href="FRISCHES_CONTACT_MAILTO"
               class="card-dealer__social-link"
               aria-label="Email"
               @click="trackEvent('social-click', { platform: 'email' })"
@@ -2268,6 +2280,8 @@ onBeforeUnmount(() => {
               <span aria-hidden="true" v-html="emailSvg" />
             </a>
           </nav>
+
+          <LanguageSwitcher v-if="!isMobileNavMode" variant="header" />
 
           <button
             type="button"
@@ -2383,76 +2397,82 @@ onBeforeUnmount(() => {
           </template>
 
           <div class="card-dealer__header-drawer-social" :aria-label="t.logo.socialLinks">
-            <a
-              :href="props.socialLinks?.instagram || undefined"
-              class="card-dealer__social-link card-dealer__header-drawer-social-link"
-              :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.instagram }"
-              :aria-disabled="!props.socialLinks?.instagram || undefined"
-              :tabindex="props.socialLinks?.instagram ? undefined : -1"
-              aria-label="Instagram"
-              target="_blank"
-              rel="noopener noreferrer"
-              @click="
-                props.socialLinks?.instagram
-                  ? trackEvent('social-click', { platform: 'instagram' })
-                  : $event.preventDefault()
-              "
-            >
-              <span aria-hidden="true" v-html="instagramSvg" />
-            </a>
-            <a
-              :href="props.socialLinks?.spotify || undefined"
-              class="card-dealer__social-link card-dealer__header-drawer-social-link"
-              :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.spotify }"
-              :aria-disabled="!props.socialLinks?.spotify || undefined"
-              :tabindex="props.socialLinks?.spotify ? undefined : -1"
-              aria-label="Spotify"
-              target="_blank"
-              rel="noopener noreferrer"
-              @click="
-                props.socialLinks?.spotify
-                  ? trackEvent('social-click', { platform: 'spotify' })
-                  : $event.preventDefault()
-              "
-            >
-              <span aria-hidden="true" v-html="spotifySvg" />
-            </a>
-            <a
-              :href="props.socialLinks?.youtube || undefined"
-              class="card-dealer__social-link card-dealer__header-drawer-social-link"
-              :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.youtube }"
-              :aria-disabled="!props.socialLinks?.youtube || undefined"
-              :tabindex="props.socialLinks?.youtube ? undefined : -1"
-              aria-label="YouTube"
-              target="_blank"
-              rel="noopener noreferrer"
-              @click="
-                props.socialLinks?.youtube
-                  ? trackEvent('social-click', { platform: 'youtube' })
-                  : $event.preventDefault()
-              "
-            >
-              <span aria-hidden="true" v-html="youtubeSvg" />
-            </a>
-            <a
-              v-if="props.socialLinks?.github"
-              :href="props.socialLinks.github"
-              class="card-dealer__social-link card-dealer__header-drawer-social-link"
-              aria-label="GitHub"
-              target="_blank"
-              rel="noopener noreferrer"
-              @click="trackEvent('social-click', { platform: 'github' })"
-            >
-              <span aria-hidden="true" v-html="githubSvg" />
-            </a>
-            <a
-              href="mailto:contact@frisches.band"
-              class="card-dealer__social-link card-dealer__header-drawer-social-link"
-              aria-label="Email"
-              @click="trackEvent('social-click', { platform: 'email' })"
-            >
-              <span aria-hidden="true" v-html="emailSvg" />
-            </a>
+            <div class="card-dealer__header-drawer-social-icons">
+              <a
+                :href="props.socialLinks?.instagram || undefined"
+                class="card-dealer__social-link card-dealer__header-drawer-social-link"
+                :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.instagram }"
+                :aria-disabled="!props.socialLinks?.instagram || undefined"
+                :tabindex="props.socialLinks?.instagram ? undefined : -1"
+                aria-label="Instagram"
+                target="_blank"
+                rel="noopener noreferrer"
+                @click="
+                  props.socialLinks?.instagram
+                    ? trackEvent('social-click', { platform: 'instagram' })
+                    : $event.preventDefault()
+                "
+              >
+                <span aria-hidden="true" v-html="instagramSvg" />
+              </a>
+              <a
+                :href="props.socialLinks?.spotify || undefined"
+                class="card-dealer__social-link card-dealer__header-drawer-social-link"
+                :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.spotify }"
+                :aria-disabled="!props.socialLinks?.spotify || undefined"
+                :tabindex="props.socialLinks?.spotify ? undefined : -1"
+                aria-label="Spotify"
+                target="_blank"
+                rel="noopener noreferrer"
+                @click="
+                  props.socialLinks?.spotify
+                    ? trackEvent('social-click', { platform: 'spotify' })
+                    : $event.preventDefault()
+                "
+              >
+                <span aria-hidden="true" v-html="spotifySvg" />
+              </a>
+              <a
+                :href="props.socialLinks?.youtube || undefined"
+                class="card-dealer__social-link card-dealer__header-drawer-social-link"
+                :class="{ 'card-dealer__social-link--disabled': !props.socialLinks?.youtube }"
+                :aria-disabled="!props.socialLinks?.youtube || undefined"
+                :tabindex="props.socialLinks?.youtube ? undefined : -1"
+                aria-label="YouTube"
+                target="_blank"
+                rel="noopener noreferrer"
+                @click="
+                  props.socialLinks?.youtube
+                    ? trackEvent('social-click', { platform: 'youtube' })
+                    : $event.preventDefault()
+                "
+              >
+                <span aria-hidden="true" v-html="youtubeSvg" />
+              </a>
+              <a
+                v-if="props.socialLinks?.github"
+                :href="props.socialLinks.github"
+                class="card-dealer__social-link card-dealer__header-drawer-social-link"
+                aria-label="GitHub"
+                target="_blank"
+                rel="noopener noreferrer"
+                @click="trackEvent('social-click', { platform: 'github' })"
+              >
+                <span aria-hidden="true" v-html="githubSvg" />
+              </a>
+              <a
+                :href="FRISCHES_CONTACT_MAILTO"
+                class="card-dealer__social-link card-dealer__header-drawer-social-link"
+                aria-label="Email"
+                @click="trackEvent('social-click', { platform: 'email' })"
+              >
+                <span aria-hidden="true" v-html="emailSvg" />
+              </a>
+            </div>
+
+            <div class="card-dealer__header-drawer-language-switcher">
+              <LanguageSwitcher variant="drawer" />
+            </div>
           </div>
           <nav class="card-dealer__header-drawer-legal" :aria-label="legalT.impressum.title">
             <RouterLink

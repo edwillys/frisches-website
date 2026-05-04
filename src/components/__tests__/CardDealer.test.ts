@@ -5,6 +5,7 @@ import CardDealer from '../CardDealer.vue'
 import MenuCard from '../MenuCard.vue'
 import { createPinia, setActivePinia } from 'pinia'
 import { useAudioStore } from '@/stores/audio'
+import { SONGSTERR_TABS_URL } from '@/constants/links'
 
 // Mock @tresjs/cientos to avoid module resolution issues
 vi.mock('@tresjs/cientos', () => ({
@@ -673,6 +674,17 @@ describe('CardDealer', () => {
     expect(wrapper.find('[data-testid="audio-player-stub"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="about-view-stub"]').exists()).toBe(false)
 
+    const tabsSpy = vi.spyOn(window, 'open').mockReturnValue(null)
+    const desktopTabsButtons = wrapper.findAll('.card-dealer__about-dropdown-item')
+    const tabsButton = desktopTabsButtons[desktopTabsButtons.length - 1]
+    if (!tabsButton) {
+      throw new Error('Expected desktop Tabs submenu button to exist')
+    }
+
+    await tabsButton.trigger('click')
+    await nextTick()
+
+    expect(tabsSpy).toHaveBeenCalledWith(SONGSTERR_TABS_URL, '_blank', 'noopener,noreferrer')
     wrapper.unmount()
   })
 
@@ -785,6 +797,60 @@ describe('CardDealer', () => {
       await nextTick()
 
       expect(wrapper.find('.card-dealer__header-drawer-about-submenu').exists()).toBe(false)
+    } finally {
+      wrapper?.unmount()
+      matchMediaMock.restore()
+    }
+  })
+
+  it('opens Tabs from the mobile drawer submenu without navigating away', async () => {
+    const matchMediaMock = mockMobileMatchMedia()
+    let wrapper: ReturnType<typeof mount> | null = null
+
+    try {
+      wrapper = mount(CardDealer, {
+        attachTo: document.body,
+        global: {
+          stubs: {
+            AboutView: {
+              emits: ['state-change'],
+              template: '<div data-testid="about-view-stub" />',
+              mounted() {
+                this.$emit('state-change', { activeSubmenu: 'members', canGoBack: true })
+              },
+            },
+          },
+        },
+      })
+
+      await wrapper.find('.logo-button').trigger('click')
+      await vi.advanceTimersByTimeAsync(1000)
+      await nextTick()
+
+      const aboutCard = wrapper.findAllComponents(MenuCard)[1]
+      if (!aboutCard) {
+        throw new Error('Expected About menu card to exist')
+      }
+
+      await aboutCard.trigger('click')
+      await nextTick()
+
+      await wrapper.get('.card-dealer__mobile-nav-btn').trigger('click')
+      await nextTick()
+
+      const tabsSpy = vi.spyOn(window, 'open').mockReturnValue(null)
+      const mobileTabsButtons = wrapper.findAll('.card-dealer__header-drawer-item--about-submenu')
+      const tabsButton = mobileTabsButtons[mobileTabsButtons.length - 1]
+      if (!tabsButton) {
+        throw new Error('Expected mobile Tabs submenu button to exist')
+      }
+
+      await tabsButton.trigger('click')
+      await nextTick()
+
+      expect(tabsSpy).toHaveBeenCalledWith(SONGSTERR_TABS_URL, '_blank', 'noopener,noreferrer')
+      expect(wrapper.find('[data-testid="about-view-stub"]').exists()).toBe(true)
+      expect(wrapper.find('.card-dealer__header-drawer').exists()).toBe(false)
     } finally {
       wrapper?.unmount()
       matchMediaMock.restore()

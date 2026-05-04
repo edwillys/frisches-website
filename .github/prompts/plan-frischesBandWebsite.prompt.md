@@ -18,11 +18,11 @@ Build a Vue.js website for rock band Frisches with a card dealer-themed home scr
 
 7. **Write component tests with Vitest** - Create `tests/unit/components/CardDealer.test.js` and `MenuCard.test.js` testing mount behavior, prop handling, user interactions (click, hover), ensure components render correctly on different viewport sizes
 
-8. **Configure CI/CD with GitHub Actions** - Create `.github/workflows/ci.yml` for lint + Vitest on push/PR with coverage reports, create `.github/workflows/deploy.yml` for DigitalOcean deployment (build Vite production bundle, rsync/SCP to droplet, or use DigitalOcean App Platform), optionally add Netlify/Vercel for parallel testing environment
+8. **Configure CI/CD with GitHub Actions** - Create `.github/workflows/ci.yml` for lint + Vitest on push/PR with coverage reports, create `.github/workflows/deploy.yml` for DigitalOcean deployment (build Vite production bundle, rsync/SCP to droplet, or use DigitalOcean App Platform), and use Netlify preview deployments for review environments when needed
 
 ### Further Considerations
 
-1. **Testing environment strategy** - Use Netlify (free tier, automatic PR previews) or Vercel (optimized Vite builds) for parallel testing alongside DigitalOcean production? Both provide instant preview URLs for each commit.
+1. **Testing environment strategy** - Use Netlify preview deployments for parallel testing alongside DigitalOcean production so every change can be reviewed with a shareable preview URL.
 
 2. **DigitalOcean deployment method** - DigitalOcean App Platform (automated, git-connected, $5/month) or manual Droplet setup (more control, requires nginx config, SSL setup)? App Platform is simpler for CI/CD integration.
 
