@@ -481,7 +481,7 @@
 }
 
 .card-dealer__header-drawer-panel {
-  width: min(300px, 60vw);
+  width: min(300px, 65vw);
   height: 100dvh;
   max-height: 100dvh;
   background: rgba(0, 0, 0, 0.92);
