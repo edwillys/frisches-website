@@ -122,23 +122,23 @@ onBeforeUnmount(() => {
       <span class="language-switcher__acronym">{{ currentOption?.acronym }}</span>
     </button>
 
-    <div v-if="isOpen" class="language-switcher__dropdown" role="listbox">
-      <button
-        v-for="option in localeOptions"
-        :key="option.locale"
-        type="button"
-        class="language-switcher__option"
-        :class="{ 'is-active': currentAppLocale === option.locale }"
-        :aria-label="option.label"
-        :aria-pressed="currentAppLocale === option.locale"
-        :title="option.label"
-        :data-testid="`language-option-${option.locale}`"
-        @click="handleLocaleSelect(option.locale)"
-      >
-        <span class="language-switcher__flag" aria-hidden="true">{{ option.flag }}</span>
-        <span class="language-switcher__acronym">{{ option.acronym }}</span>
-      </button>
-    </div>
+    <ul v-if="isOpen" class="language-switcher__dropdown">
+      <li v-for="option in localeOptions" :key="option.locale" class="language-switcher__item">
+        <button
+          type="button"
+          class="language-switcher__option"
+          :class="{ 'is-active': currentAppLocale === option.locale }"
+          :aria-label="option.label"
+          :aria-pressed="currentAppLocale === option.locale"
+          :title="option.label"
+          :data-testid="`language-option-${option.locale}`"
+          @click="handleLocaleSelect(option.locale)"
+        >
+          <span class="language-switcher__flag" aria-hidden="true">{{ option.flag }}</span>
+          <span class="language-switcher__acronym">{{ option.acronym }}</span>
+        </button>
+      </li>
+    </ul>
   </nav>
 </template>
 
@@ -223,6 +223,8 @@ onBeforeUnmount(() => {
 }
 
 .language-switcher__dropdown {
+  list-style: none;
+  margin: 0;
   position: absolute;
   top: calc(100% - 1px);
   right: 0;
@@ -236,6 +238,11 @@ onBeforeUnmount(() => {
   backdrop-filter: blur(12px);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.36);
   z-index: calc(var(--language-switcher-overlay-z) + 1);
+}
+
+.language-switcher__item {
+  margin: 0;
+  padding: 0;
 }
 
 .language-switcher--drawer .language-switcher__dropdown {

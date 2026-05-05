@@ -142,7 +142,7 @@
 }
 
 .card-dealer__social-link :is(svg) {
-  width: 28x;
+  width: 28px;
   height: 28px;
   display: block;
 }

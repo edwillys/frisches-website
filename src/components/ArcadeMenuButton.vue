@@ -248,10 +248,11 @@ watch(
 }
 
 .arcade-menu-button__label.is-marquee .arcade-menu-button__label-text {
-  animation: marquee-overflow var(--arcade-button-marquee-duration) linear infinite;
+  animation: arcade-menu-button-marquee-overflow var(--arcade-button-marquee-duration) linear
+    infinite;
 }
 
-@keyframes marquee-overflow {
+@keyframes arcade-menu-button-marquee-overflow {
   0% {
     transform: translateX(0);
   }

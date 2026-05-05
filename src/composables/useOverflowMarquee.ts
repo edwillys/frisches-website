@@ -5,6 +5,38 @@ interface UseOverflowMarqueeOptions {
   overflowThresholdPx?: number
 }
 
+const windowOverflowSubscribers = new Set<() => void>()
+
+const notifyWindowOverflowSubscribers = () => {
+  windowOverflowSubscribers.forEach((callback) => {
+    callback()
+  })
+}
+
+const addWindowOverflowSubscriber = (callback: () => void) => {
+  if (typeof window === 'undefined') return
+
+  if (windowOverflowSubscribers.size === 0) {
+    window.addEventListener('resize', notifyWindowOverflowSubscribers, { passive: true })
+    window.addEventListener('orientationchange', notifyWindowOverflowSubscribers, {
+      passive: true,
+    })
+  }
+
+  windowOverflowSubscribers.add(callback)
+}
+
+const removeWindowOverflowSubscriber = (callback: () => void) => {
+  if (typeof window === 'undefined') return
+
+  windowOverflowSubscribers.delete(callback)
+
+  if (windowOverflowSubscribers.size === 0) {
+    window.removeEventListener('resize', notifyWindowOverflowSubscribers)
+    window.removeEventListener('orientationchange', notifyWindowOverflowSubscribers)
+  }
+}
+
 export const useOverflowMarquee = (
   containerRef: Ref<HTMLElement | null>,
   options: UseOverflowMarqueeOptions = {}
@@ -14,10 +46,19 @@ export const useOverflowMarquee = (
   const isOverflowing = ref(false)
   let resizeObserver: ResizeObserver | null = null
   let rafMeasureId = 0
-  let windowResizeHandler: (() => void) | null = null
 
   const getMeasureTarget = (container: HTMLElement) =>
     container.querySelector<HTMLElement>('[data-marquee-text]') ?? container.firstElementChild
+
+  const observeContainer = () => {
+    if (!resizeObserver) return
+
+    resizeObserver.disconnect()
+
+    if (containerRef.value) {
+      resizeObserver.observe(containerRef.value)
+    }
+  }
 
   const updateOverflow = () => {
     const container = containerRef.value
@@ -46,21 +87,13 @@ export const useOverflowMarquee = (
     scheduleOverflowUpdate()
 
     if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver?.disconnect()
       resizeObserver = new ResizeObserver(() => {
         scheduleOverflowUpdate()
       })
-
-      if (containerRef.value) {
-        resizeObserver.observe(containerRef.value)
-      }
+      observeContainer()
     }
 
-    windowResizeHandler = () => {
-      scheduleOverflowUpdate()
-    }
-    window.addEventListener('resize', windowResizeHandler, { passive: true })
-    window.addEventListener('orientationchange', windowResizeHandler, { passive: true })
+    addWindowOverflowSubscriber(scheduleOverflowUpdate)
   })
 
   onUnmounted(() => {
@@ -72,14 +105,11 @@ export const useOverflowMarquee = (
     resizeObserver?.disconnect()
     resizeObserver = null
 
-    if (windowResizeHandler) {
-      window.removeEventListener('resize', windowResizeHandler)
-      window.removeEventListener('orientationchange', windowResizeHandler)
-      windowResizeHandler = null
-    }
+    removeWindowOverflowSubscriber(scheduleOverflowUpdate)
   })
 
   watch(containerRef, () => {
+    observeContainer()
     scheduleOverflowUpdate()
   })
 

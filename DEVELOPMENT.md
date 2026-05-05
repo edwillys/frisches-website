@@ -71,7 +71,7 @@ npx playwright test e2e/user-flow.spec.ts --project=chromium
 ## Localization
 
 - Locale messages live in `src/locales/`
-- Supported locales: `en`, `de`, `fr`, `br`
+- Supported locales: `en`, `de`, `fr`, `br`, 'it', 'ru'
 - Locale state lives in `src/i18n/locale.ts`
 - Preference persistence uses both the `frisches_locale` cookie and `frisches:locale` in `localStorage`
 - Browser language is used when no stored preference exists; fallback is English
