@@ -66,6 +66,13 @@
   text-align: center;
 }
 
+.card-dealer__language-switcher-fixed {
+  position: fixed;
+  top: calc(var(--spacing-lg) / 2);
+  right: calc(var(--spacing-lg) / 2);
+  z-index: 12;
+}
+
 /* Cards container: horizontal layout by default */
 .card-dealer__cards {
   display: flex;
@@ -90,7 +97,7 @@
 /* Social links at top center */
 .card-dealer__social {
   position: fixed;
-  top: var(--spacing-lg);
+  top: calc(var(--spacing-lg) / 2);
   left: 50%;
   transform: translateX(-50%);
   z-index: 12;
@@ -106,7 +113,7 @@
   color: var(--color-text-secondary);
   opacity: 0.9;
   background: transparent;
-  padding: 0.625rem;
+  padding: 0.425rem;
   border-radius: 0.625rem;
   min-width: 44px;
   min-height: 44px;
@@ -135,8 +142,8 @@
 }
 
 .card-dealer__social-link :is(svg) {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   display: block;
 }
 
@@ -364,6 +371,22 @@
   gap: 0.75rem;
 }
 
+.card-dealer__header-right .card-dealer__header-social {
+  order: 1;
+}
+
+.card-dealer__header-right .language-switcher {
+  order: 2;
+}
+
+.card-dealer__header-right .card-dealer__header-menu-btn {
+  order: 3;
+}
+
+.card-dealer__header-drawer-language-switcher {
+  padding-top: 0.25rem;
+}
+
 /* Social links in the content-view header (smaller than the top-center ones) */
 .card-dealer__header-social {
   display: flex;
@@ -458,7 +481,7 @@
 }
 
 .card-dealer__header-drawer-panel {
-  width: min(300px, 60vw);
+  width: min(300px, 65vw);
   height: 100dvh;
   max-height: 100dvh;
   background: rgba(0, 0, 0, 0.92);
@@ -539,8 +562,8 @@
 }
 
 .card-dealer__back-button {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -974,6 +997,12 @@
   .card-dealer {
     --card-dealer-header-height: 0px;
   }
+
+  .card-dealer__language-switcher-fixed {
+    top: calc(var(--spacing-lg) / 2);
+    right: calc(var(--spacing-lg) / 2);
+  }
+
   .card-dealer__content {
     gap: var(--spacing-xl);
     padding: 0;

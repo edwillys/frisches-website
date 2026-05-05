@@ -4,6 +4,7 @@ import { nextTick } from 'vue'
 
 import AboutEntryCard from '../AboutEntryCard.vue'
 import ArcadeMenuButton from '../ArcadeMenuButton.vue'
+import { SONGSTERR_TABS_URL } from '@/constants/links'
 
 const CARD_RECT = {
   left: 0,
@@ -33,6 +34,7 @@ describe('AboutEntryCard', () => {
       configurable: true,
       value: originalRect,
     })
+    vi.restoreAllMocks()
   })
 
   it('shows a loading skeleton until the entry image resolves', async () => {
@@ -126,5 +128,18 @@ describe('AboutEntryCard', () => {
     expect(storyLink.attributes('data-tooltip-yt')).toBe('_rZYN5G6-gg')
     expect(storyLink.attributes('data-tooltip-card-title')).toContain('Witch Hunting')
     expect(storyLink.attributes('data-tooltip-card-meta-primary')).toBe('2023')
+  })
+
+  it('opens the Tabs link in a new tab', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null)
+    const wrapper = mount(AboutEntryCard)
+
+    const tabsButton = wrapper
+      .findAllComponents(ArcadeMenuButton)
+      .find((btn) => btn.props('buttonAriaLabel') === 'Tabs link')
+    tabsButton?.vm.$emit('press')
+    await nextTick()
+
+    expect(openSpy).toHaveBeenCalledWith(SONGSTERR_TABS_URL, '_blank', 'noopener,noreferrer')
   })
 })

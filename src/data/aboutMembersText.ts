@@ -46,28 +46,28 @@ export const aboutMembersText: Record<
       name: 'Edgar',
       badgeTitles: ['Gitarre', 'Begleitgesang'],
       descriptionLead:
-        'Spielt die Gitarre – und manchmal den Spaßvogel. Als Komponist verschachtelter Taktarten ist seine Lieblingsnote stets eine Wendung entfernt. Seine Leidenschaft für klassischen Rock fließt in jedes Frisches-Riff und -Solo. Mit Intros und Wortspielen ohne Ende findet seine liebste Geschichte ihren Weg zu',
+        'Spielt Gitarre – und bisweilen auch den Narren. Als Architekt krummer Takte liegt seine Lieblingsnote immer gleich hinter der nächsten Ecke. Seine Liebe zum Classic Rock steckt in jedem Frisches-Riff und jedem Solo. Mit Intros und Wortspielen im Gepäck landet seine liebste Geschichte bei',
     },
     cami: {
       name: 'Cami',
       badgeTitles: ['Gesang', 'Flöte'],
       descriptionLead:
-        'Flötistin und Sängerin – und ein bisschen Saxophonistin – ist Cami mit den Beatles aufgewachsen und liebt den Sound der 60er und 70er. Neben dem klassischen Studium der Querflöte haben Pop, Rock, Glamrock und Progressive Rock – Elton John, David Bowie, Pink Floyd, King Crimson, Jethro Tull, Led Zeppelin, Jimi Hendrix und Janis Joplin – ihre musikalische Entwicklung geprägt und begleiten sie noch täglich. Sie nennt',
+        'Flötistin, Sängerin und ein bisschen auch Saxophonistin: Cami ist mit den Beatles aufgewachsen und liebt den Sound der 60er und 70er. Neben ihrer klassischen Ausbildung an der Querflöte haben Pop, Rock, Glam Rock und Prog Rock – von Elton John über David Bowie, Pink Floyd und King Crimson bis hin zu Jethro Tull, Led Zeppelin, Jimi Hendrix und Janis Joplin – ihren musikalischen Weg geprägt und begleiten sie bis heute. Für sie ist',
       descriptionTail:
-        'den überzeugendsten Beweis, dass es sich immer lohnt, einem weißen Tiger nachzujagen.',
+        'der schönste Beweis dafür, dass es sich immer lohnt, einem weißen Tiger hinterherzujagen.',
     },
     steff: {
       name: 'Steff',
       badgeTitles: ['Schlagzeug'],
       descriptionLead:
-        'Steff hält den Rhythmus von Frisches fest im Griff – was auch immer vom Beat abweicht, hat keine Chance. Unverhandelbar bei den Dienstagabend-Proben: Pizza Funghi, kein Pesto. Regen auf dem Weg? Wird trotzdem gespielt. Das Double Bass steht als Nächstes auf dem Programm und soll das Herzstück unserer Songs füllen. Für sie groovt nichts härter als',
+        'Steff hält den Frisches-Groove eisern zusammen – alles, was neben dem Beat landet, hat bei ihr schlechte Karten. Unverhandelbar bei den Dienstagabend-Proben: Pizza Funghi, ohne Pesto. Regen auf dem Weg? Gespielt wird trotzdem. Das Doublebass-Pedal steht als Nächstes auf dem Zettel und soll Herz und Seele unserer Songs noch voller machen. Für sie groovt nichts härter als',
       descriptionTail: '!',
     },
     tobi: {
       name: 'Tobi',
       badgeTitles: ['Bass'],
       descriptionLead:
-        'Tobi dreht alles um den Bass – seinen Höhenanteil hat er längst abgegeben. Bei ihm hat man das Gefühl, der JBL-Bass-Boost wurde einfach angelassen: Er bringt groovige Linien, die das Fundament von Frisches tragen.',
+        'Bei Tobi dreht sich alles um den Bass – die Höhen hat er schon vor langer Zeit abgeschrieben. Mit ihm wirkt es, als wäre der JBL-Bass-Boost dauerhaft eingerastet: Er liefert groovige Linien, die das Fundament von Frisches tragen.',
     },
   },
   fr: {
@@ -75,49 +75,49 @@ export const aboutMembersText: Record<
       name: 'Edgar',
       badgeTitles: ['Guitare', 'Chœurs'],
       descriptionLead:
-        'Joue de la guitare et parfois le bouffon. Compositeur de signatures rythmiques trompeuses, sa note favorite se trouve toujours au prochain virage. Il apporte sa passion pour le rock classique dans chaque riff et solo de Frisches. Intros et jeux de mots en abondance, son conte préféré le mène à',
+        'Manie la guitare et, à l’occasion, fait aussi le clown. Compositeur de mesures retorses, sa note préférée se cache toujours juste après le prochain virage. Il injecte sa passion du rock classique dans chaque riff et chaque solo de Frisches. Entre intros à rallonge et jeux de mots douteux, son histoire préférée finit toujours par mener à',
     },
     cami: {
       name: 'Cami',
       badgeTitles: ['Chant', 'Flûte'],
       descriptionLead:
-        "Flûtiste et chanteuse – et un peu saxophoniste – Cami a grandi avec les Beatles et aime le son des années 60 et 70. En plus de sa formation classique à la flûte traversière, le pop, le rock, le glam rock et le rock progressif – Elton John, David Bowie, Pink Floyd, King Crimson, Jethro Tull, Led Zeppelin, Jimi Hendrix et Janis Joplin – ont façonné son parcours musical et l'accompagnent encore chaque jour. Elle dit de",
+        'Flûtiste, chanteuse et un peu saxophoniste sur les bords, Cami a grandi avec les Beatles et adore le son des années 60 et 70. En plus de sa formation classique à la flûte traversière, la pop, le rock, le glam rock et le rock progressif – d’Elton John à David Bowie, Pink Floyd, King Crimson, Jethro Tull, Led Zeppelin, Jimi Hendrix et Janis Joplin – ont façonné son parcours musical et l’accompagnent encore tous les jours. À ses yeux,',
       descriptionTail:
-        "que c'est la preuve la plus claire qu'il vaut toujours la peine de courir après un tigre blanc.",
+        'est la preuve la plus limpide qu’il faut parfois partir à la poursuite d’un tigre blanc.',
     },
     steff: {
       name: 'Steff',
       badgeTitles: ['Batterie'],
       descriptionLead:
-        "Steff tient le rythme de Frisches solidement en place — tout ce qui s'écarte du tempo n'a aucune chance. Incontournable lors des répétitions du mardi soir : Pizza Funghi, sans pesto. La pluie en chemin ? On joue quand même. La contrebasse est sur l'agenda, prête à combler le cœur et l'âme de nos chansons. Pour elle, rien ne groove plus fort que",
+        'Steff tient le rythme de Frisches d’une main de fer : tout ce qui dérape hors du tempo n’a pratiquement aucune chance. Incontournable aux répétitions du mardi soir : une Pizza Funghi, sans pesto. De la pluie sur le trajet ? On joue quand même. La double pédale est la prochaine sur la liste, prête à remplir encore un peu plus le cœur et l’âme de nos morceaux. Pour elle, rien n’a plus de groove que',
       descriptionTail: ' !',
     },
     tobi: {
       name: 'Tobi',
       badgeTitles: ['Basse'],
       descriptionLead:
-        "Tobi ne pense qu'aux basses et a perdu ses aigus depuis longtemps. Avec lui, on a l'impression que le boost de basses du JBL est resté enclenché : il apporte des lignes pleines de groove qui soutiennent les graves de Frisches.",
+        'Tobi ne jure que par les basses et a laissé tomber les aigus depuis belle lurette. Avec lui, on a l’impression que le bass boost de la JBL est resté enclenché en permanence : il amène des lignes pleines de groove qui tiennent tout le bas du spectre chez Frisches.',
     },
   },
-  'pt-BR': {
+  br: {
     edgar: {
       name: 'Edgar',
       badgeTitles: ['Guitarra', 'Backing Vocals'],
       descriptionLead:
-        'Toca a guitarra e às vezes não se toca. Compositor de fórmulas de compasso enganosas, sua nota favorita está sempre anotada. Ele traz sua paixão pelo rock clássico para cada riff e solo de Frisches. Introduzindo intros e trocadilhos, seu conto favorito o leva a',
+        'Toca a guitarra quando até mesmo nem se toca. Compositor de fórmulas de compasso enganosas, está sempre anotando sua nota predileta. Ele traz sua paixão pelo rock clássico para cada riff e solo dos Frisches. Introduzindo intros e trocadilhos, seu conto favorito o leva a',
     },
     cami: {
       name: 'Cami',
       badgeTitles: ['Voz', 'Flauta'],
       descriptionLead:
-        'Flautista e cantora – e um pouco saxofonista – Cami cresceu com os Beatles e ama o som dos anos 60 e 70. Além de sua formação clássica na flauta transversal, o pop, o rock, o glam rock e o rock progressivo – Elton John, David Bowie, Pink Floyd, King Crimson, Jethro Tull, Led Zeppelin, Jimi Hendrix e Janis Joplin – moldaram sua jornada musical e ainda a acompanham todos os dias. Ela chama',
-      descriptionTail: 'de a prova mais clara de que sempre vale a pena perseguir um tigre branco.',
+        'Flautista e cantora – e arranhando no saxofone – Cami cresceu ouvindo Beatles e ama o som dos anos 60 e 70. Além de sua formação clássica na flauta transversal, outras batidas moldaram sua jornada musical e ainda a acompanham todos os dias: pop, rock, glam rock e rock progressivo – leia-se Elton John, David Bowie, Pink Floyd, King Crimson, Jethro Tull, Led Zeppelin, Jimi Hendrix e Janis Joplin. Ela considera',
+      descriptionTail: ' a prova mais clara de que sempre vale a pena perseguir o "tigre branco".',
     },
     steff: {
       name: 'Steff',
       badgeTitles: ['Bateria'],
       descriptionLead:
-        'Steff mantém o ritmo do Frisches firme no lugar — qualquer coisa que saia do beat não tem a menor chance. Inegociável nos ensaios de terça à noite: Pizza Funghi, sem pesto. Chuva no caminho? A gente toca assim mesmo. O contrabaixo está na pauta, pronto para preencher o coração e a alma das nossas músicas. Para ela, nada groova mais forte do que',
+        'Steff mantém o ritmo do Frisches firme no lugar — qualquer coisa que saia do beat não tem a menor chance. Inegociável nos ensaios de terça à noite: Pizza Funghi, sem pesto. Chuva no caminho? A gente toca assim mesmo. O pedal duplo está na pauta, e em breve preencherá o coração e a alma das nossas músicas. Para ela, nada possui um groove mais forte do que',
       descriptionTail: '!',
     },
     tobi: {
@@ -125,6 +125,63 @@ export const aboutMembersText: Record<
       badgeTitles: ['Baixo'],
       descriptionLead:
         'Tobi sabe tudo do baixo e já deixou os agudos para trás faz tempo. Com ele, parece que o bass boost da JBL fica ligado o tempo todo: ele traz linhas cheias de groove que sustentam os graves do Frisches.',
+    },
+  },
+  it: {
+    edgar: {
+      name: 'Edgar',
+      badgeTitles: ['Chitarra', 'Cori'],
+      descriptionLead:
+        'Suona la chitarra e, quando capita, anche il buffone. Compositore di tempi sghembi, la sua nota preferita è sempre dietro l’angolo. Porta la sua passione per il rock classico in ogni riff e assolo dei Frisches. Fra intro e giochi di parole a non finire, il suo racconto preferito lo porta a',
+    },
+    cami: {
+      name: 'Cami',
+      badgeTitles: ['Voce', 'Flauto'],
+      descriptionLead:
+        'Flautista, cantante e, ogni tanto, anche sassofonista, Cami è cresciuta con i Beatles e ama il suono degli anni 60 e 70. Accanto alla formazione classica al flauto traverso, pop, rock, glam rock e progressive rock – da Elton John e David Bowie ai Pink Floyd, King Crimson, Jethro Tull, Led Zeppelin, Jimi Hendrix e Janis Joplin – hanno segnato il suo percorso musicale e la accompagnano ancora ogni giorno. Per lei',
+      descriptionTail: 'è la prova più limpida che vale sempre la pena inseguire una tigre bianca.',
+    },
+    steff: {
+      name: 'Steff',
+      badgeTitles: ['Batteria'],
+      descriptionLead:
+        'Steff tiene il ritmo dei Frisches ben saldo: tutto ciò che esce dal beat con lei non ha scampo. Irrinunciabile alle prove del martedì sera: Pizza Funghi, niente pesto. Piove lungo la strada? Si suona comunque. Il doppio pedale è il prossimo obiettivo, pronto a riempire ancora di più il cuore e l’anima delle nostre canzoni. Per lei, niente ha più groove di',
+      descriptionTail: '!',
+    },
+    tobi: {
+      name: 'Tobi',
+      badgeTitles: ['Basso'],
+      descriptionLead:
+        'Tobi vive di basse frequenze e gli acuti li ha lasciati indietro da un pezzo. Con lui sembra che il bass boost della JBL sia rimasto acceso per sempre: porta linee piene di groove che sorreggono il fondo dei Frisches.',
+    },
+  },
+  ru: {
+    edgar: {
+      name: 'Edgar',
+      badgeTitles: ['Гитара', 'Бэк-вокал'],
+      descriptionLead:
+        'Играет на гитаре и временами ещё и валяет дурака. Как автор ломаных размеров, свою любимую ноту он всегда прячет где-то за следующим поворотом. Любовь к классическому року он вплетает в каждый рифф и каждое соло Frisches. Интро и каламбуры у него никогда не заканчиваются, а любимая история неизменно приводит к',
+    },
+    cami: {
+      name: 'Cami',
+      badgeTitles: ['Вокал', 'Флейта'],
+      descriptionLead:
+        'Флейтистка, вокалистка и немного саксофонистка, Cami выросла на Beatles и любит звучание 60-х и 70-х. Наряду с классической школой флейты её музыкальный путь сформировали поп, рок, глэм-рок и прог-рок — от Elton John и David Bowie до Pink Floyd, King Crimson, Jethro Tull, Led Zeppelin, Jimi Hendrix и Janis Joplin — и они до сих пор сопровождают её каждый день. Для неё',
+      descriptionTail:
+        'это самое наглядное доказательство того, что за белым тигром иногда просто необходимо пуститься в погоню.',
+    },
+    steff: {
+      name: 'Steff',
+      badgeTitles: ['Ударные'],
+      descriptionLead:
+        'Steff держит ритм Frisches мёртвой хваткой: всё, что уходит мимо бита, у неё не выживает. Святое на репетициях по вторникам: Pizza Funghi, без песто. Дождь по дороге? Всё равно играем. Двойная бочка уже на очереди, чтобы ещё плотнее заполнить сердце и душу наших песен. Для неё нет ничего грувовее, чем',
+      descriptionTail: '!',
+    },
+    tobi: {
+      name: 'Tobi',
+      badgeTitles: ['Бас'],
+      descriptionLead:
+        'Tobi целиком про бас, а верхние частоты давно оставил в прошлом. Рядом с ним кажется, будто JBL Bass Boost так и не выключали: он приносит грувовые линии, которые держат весь низ Frisches.',
     },
   },
 }

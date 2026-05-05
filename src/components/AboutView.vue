@@ -115,6 +115,8 @@ const goBackOneStep = () => {
 }
 
 const navigateToSubmenu = (submenu: AboutSubmenuKey) => {
+  if (submenu === 'tabs') return
+
   if (submenu === 'members') {
     openMembers()
     return

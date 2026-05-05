@@ -11,7 +11,7 @@ describe('AudioPlayer i18n', () => {
 
   beforeEach(() => {
     setActivePinia(createPinia())
-    setCurrentAppLocale('pt-BR')
+    setCurrentAppLocale('br')
   })
 
   afterEach(() => {

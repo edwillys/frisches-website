@@ -4,6 +4,7 @@ import LegalPageFrame from '@/components/LegalPageFrame.vue'
 import { useLegalPageClose } from '@/composables/useLegalPageClose'
 import { currentAppLocale } from '@/i18n/locale'
 import { getLegalText } from '@/i18n/legalText'
+import { FRISCHES_CONTACT_EMAIL, FRISCHES_CONTACT_MAILTO } from '@/constants/links'
 
 const t = computed(() => getLegalText(currentAppLocale.value))
 const { closeLegalPage } = useLegalPageClose()
@@ -15,7 +16,7 @@ const { closeLegalPage } = useLegalPageClose()
       <h2>{{ t.privacy.s1Title }}</h2>
       <p>
         {{ t.privacy.s1ContactLabel }}:
-        <a href="mailto:contact@frisches.band">contact@frisches.band</a>
+        <a :href="FRISCHES_CONTACT_MAILTO">{{ FRISCHES_CONTACT_EMAIL }}</a>
       </p>
     </section>
 
@@ -71,7 +72,7 @@ const { closeLegalPage } = useLegalPageClose()
       </ul>
       <p>
         {{ t.privacy.s6ContactText }}
-        <a href="mailto:contact@frisches.band">contact@frisches.band</a>
+        <a :href="FRISCHES_CONTACT_MAILTO">{{ FRISCHES_CONTACT_EMAIL }}</a>
       </p>
       <p>
         {{ t.privacy.s6AuthorityText }}

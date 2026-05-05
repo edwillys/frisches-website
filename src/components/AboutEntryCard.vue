@@ -7,6 +7,7 @@ import { useTriggeredTypewriterText } from '@/composables/useTriggeredTypewriter
 import { getAboutStoryText } from '@/data/aboutStoryText'
 import { currentAppLocale } from '@/i18n/locale'
 import { useUiText } from '@/composables/useUiText'
+import { SONGSTERR_TABS_URL } from '@/constants/links'
 
 // @ts-expect-error - vite-imagetools generates these at build time
 import bandSmall from '@/assets/private/avatar/band.png?w=128&format=webp&quality=78'
@@ -139,6 +140,10 @@ const resolveEntryImageLoading = () => {
 const resolveHoverFrameLoading = () => {
   if (!hoverFrameSrc.value) return
   isHoverFrameLoaded.value = true
+}
+
+const openTabs = () => {
+  window.open(SONGSTERR_TABS_URL, '_blank', 'noopener,noreferrer')
 }
 
 const preloadBandFrames = () => {
@@ -388,7 +393,7 @@ onBeforeUnmount(() => {
           <ArcadeMenuButton
             :button-aria-label="t.about.membersButtonAria"
             :label="t.about.membersButton"
-            tone-contour="var(--color-neon-magenta)"
+            tone-contour="var(--color-neon-cyan)"
             inner-contour-only
             @click.stop
             @press="emit('open-members')"
@@ -396,10 +401,18 @@ onBeforeUnmount(() => {
           <ArcadeMenuButton
             :button-aria-label="t.about.lyricsButtonAria"
             :label="t.about.lyricsButton"
-            tone-contour="var(--lyrics-album-contour)"
+            tone-contour="var(--color-neon-cyan)"
             inner-contour-only
             @click.stop
             @press="emit('open-lyrics')"
+          />
+          <ArcadeMenuButton
+            :button-aria-label="t.about.tabsButtonAria"
+            :label="t.about.tabsButton"
+            tone-contour="var(--color-neon-cyan)"
+            inner-contour-only
+            @click.stop
+            @press="openTabs"
           />
         </div>
       </section>
@@ -434,7 +447,6 @@ onBeforeUnmount(() => {
                 :data-tooltip-yt="para.linkYtId"
                 :data-tooltip-card-title="para.linkPreviewTitle"
                 :data-tooltip-card-meta-primary="para.linkPreviewMetaPrimary"
-                :data-tooltip-card-meta-secondary="para.linkPreviewMetaSecondary"
                 target="_blank"
                 rel="noopener noreferrer"
                 >{{ para.linkText }}</a
@@ -535,6 +547,8 @@ onBeforeUnmount(() => {
   justify-content: center;
   align-items: center;
   width: 100%;
+  box-sizing: border-box;
+  padding-inline: 0.12em;
   text-align: center;
   color: var(--color-text);
   font-family: 'Space Mono', 'Courier New', monospace;
@@ -606,9 +620,11 @@ onBeforeUnmount(() => {
 .about-entry-card__actions {
   margin-top: auto;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.52rem;
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  justify-content: center;
   justify-items: center;
+  gap: 0.56rem;
 }
 
 .about-entry-card__back-header {

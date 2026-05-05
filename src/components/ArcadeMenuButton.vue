@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref } from 'vue'
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
+
+import { useOverflowMarquee } from '@/composables/useOverflowMarquee'
 
 interface Props {
   label?: string
@@ -10,7 +12,7 @@ interface Props {
   innerContourOnly?: boolean
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   label: '',
   isActive: false,
   isDisabled: false,
@@ -22,7 +24,10 @@ const emit = defineEmits<{
 }>()
 
 const isClickHighlighted = ref(false)
+const labelEl = ref<HTMLElement | null>(null)
 let clickHighlightTimeoutId: ReturnType<typeof setTimeout> | null = null
+const { isOverflowing: isLabelOverflowing, scheduleOverflowUpdate: scheduleLabelOverflowUpdate } =
+  useOverflowMarquee(labelEl)
 
 const clearClickHighlightTimeout = () => {
   if (clickHighlightTimeoutId === null) return
@@ -44,39 +49,64 @@ const handlePress = () => {
 onBeforeUnmount(() => {
   clearClickHighlightTimeout()
 })
+
+watch(labelEl, async () => {
+  await nextTick()
+  scheduleLabelOverflowUpdate()
+})
+
+watch(
+  () => props.label,
+  async () => {
+    await nextTick()
+    scheduleLabelOverflowUpdate()
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
   <button
     class="arcade-menu-button"
     :class="{
-      'arcade-menu-button--active': isActive,
+      'arcade-menu-button--active': props.isActive,
       'arcade-menu-button--click-highlighted': isClickHighlighted,
-      'arcade-menu-button--inner-only': innerContourOnly,
+      'arcade-menu-button--inner-only': props.innerContourOnly,
     }"
-    :aria-label="buttonAriaLabel"
-    :disabled="isDisabled"
+    :aria-label="props.buttonAriaLabel"
+    :disabled="props.isDisabled"
     :style="{
-      '--tone-contour': toneContour,
+      '--tone-contour': props.toneContour,
     }"
     type="button"
     @click="handlePress"
   >
     <span class="arcade-menu-button__inner">
-      <span class="arcade-menu-button__label">{{ label }}</span>
+      <span
+        ref="labelEl"
+        class="arcade-menu-button__label"
+        :class="{ 'is-marquee': isLabelOverflowing }"
+      >
+        <span class="arcade-menu-button__label-text">{{ props.label }}</span>
+      </span>
     </span>
   </button>
 </template>
 
 <style scoped>
 .arcade-menu-button {
-  --arcade-button-radius: 1rem;
-  --arcade-button-inner-radius: 0.9rem;
+  --arcade-button-radius: 0.6rem;
+  --arcade-button-inner-radius: 0.5rem;
   --arcade-button-size: clamp(2.75rem, 7vw, 3.85rem);
+  --arcade-button-aspect-ratio: 1.1;
+  --arcade-button-marquee-duration: 7.2s;
   --arcade-button-text-size: clamp(0.52rem, 1.15vw, 0.64rem);
   position: relative;
-  width: var(--arcade-button-size);
-  aspect-ratio: 1 / 1;
+  width: calc(var(--arcade-button-size) * var(--arcade-button-aspect-ratio));
+  min-width: calc(var(--arcade-button-size) * var(--arcade-button-aspect-ratio));
+  max-width: calc(var(--arcade-button-size) * var(--arcade-button-aspect-ratio));
+  height: var(--arcade-button-size);
+  flex: 0 0 calc(var(--arcade-button-size) * var(--arcade-button-aspect-ratio));
   border: 0;
   border-radius: var(--arcade-button-radius);
   padding: 0;
@@ -111,13 +141,13 @@ onBeforeUnmount(() => {
 
 .arcade-menu-button:hover:not(:disabled) {
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--tone-contour) 90%, #ffffff 10%),
-    0 0 14px color-mix(in srgb, var(--tone-contour) 40%, transparent 60%),
+    0 0 0 1px color-mix(in srgb, var(--tone-contour) 92%, #ffffff 8%),
+    0 0 20px color-mix(in srgb, var(--tone-contour) 58%, transparent 42%),
     0 10px 18px rgba(0, 0, 0, 0.26);
 }
 
 .arcade-menu-button:hover:not(:disabled)::after {
-  box-shadow: 0 0 14px 2px color-mix(in srgb, var(--tone-contour) 46%, transparent 54%);
+  box-shadow: 0 0 18px 3px color-mix(in srgb, var(--tone-contour) 62%, transparent 38%);
 }
 
 .arcade-menu-button:active:not(:disabled) {
@@ -131,14 +161,14 @@ onBeforeUnmount(() => {
 
 .arcade-menu-button--active {
   box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--tone-contour) 86%, #ffffff 14%),
-    inset 0 0 0 1px color-mix(in srgb, var(--tone-contour) 56%, transparent 44%),
-    0 0 14px color-mix(in srgb, var(--tone-contour) 44%, transparent 56%),
+    0 0 0 2px color-mix(in srgb, var(--tone-contour) 90%, #ffffff 10%),
+    inset 0 0 0 1px color-mix(in srgb, var(--tone-contour) 68%, transparent 32%),
+    0 0 18px color-mix(in srgb, var(--tone-contour) 56%, transparent 44%),
     0 10px 18px rgba(0, 0, 0, 0.28);
 }
 
 .arcade-menu-button--active::after {
-  box-shadow: 0 0 10px 1px color-mix(in srgb, var(--tone-contour) 34%, transparent 66%);
+  box-shadow: 0 0 14px 2px color-mix(in srgb, var(--tone-contour) 48%, transparent 52%);
 }
 
 .arcade-menu-button--click-highlighted,
@@ -167,8 +197,8 @@ onBeforeUnmount(() => {
 .arcade-menu-button--inner-only:hover:not(:disabled),
 .arcade-menu-button--inner-only.arcade-menu-button--active {
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--tone-contour) 90%, #ffffff 10%),
-    0 0 10px color-mix(in srgb, var(--tone-contour) 24%, transparent 76%),
+    0 0 0 1px color-mix(in srgb, var(--tone-contour) 94%, #ffffff 6%),
+    0 0 16px color-mix(in srgb, var(--tone-contour) 52%, transparent 48%),
     0 10px 18px rgba(0, 0, 0, 0.26);
 }
 
@@ -192,15 +222,54 @@ onBeforeUnmount(() => {
 }
 
 .arcade-menu-button__label {
+  --marquee-distance: 0px;
+  width: 90%;
   max-width: 90%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: block;
   color: var(--color-text);
   font-family: 'Space Mono', 'Courier New', monospace;
   font-size: var(--arcade-button-text-size);
   letter-spacing: 0.04em;
   font-weight: 700;
   text-shadow: none;
+}
+
+.arcade-menu-button__label.is-marquee {
+  text-overflow: clip;
+}
+
+.arcade-menu-button__label-text {
+  display: inline-block;
+  transform: translateX(0);
+  will-change: transform;
+}
+
+.arcade-menu-button__label.is-marquee .arcade-menu-button__label-text {
+  animation: arcade-menu-button-marquee-overflow var(--arcade-button-marquee-duration) linear
+    infinite;
+}
+
+@keyframes arcade-menu-button-marquee-overflow {
+  0% {
+    transform: translateX(0);
+  }
+  6% {
+    transform: translateX(0);
+  }
+  66% {
+    transform: translateX(calc(-1 * var(--marquee-distance)));
+  }
+  82% {
+    transform: translateX(calc(-1 * var(--marquee-distance)));
+  }
+  82.01% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 </style>

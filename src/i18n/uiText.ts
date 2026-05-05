@@ -1,7 +1,7 @@
+import { getAppMessages } from '@/i18n'
 import { DEFAULT_APP_LOCALE, type AppLocale } from '@/i18n/locale'
 
 export interface UiText {
-  // Gallery
   gallery: {
     modePhotos: string
     modeAlbums: string
@@ -19,7 +19,6 @@ export interface UiText {
     photoCredit: string
     currentMonthLabel: string
     photosCount: (n: number) => string
-    // Lightbox
     closeLightbox: string
     prevImage: string
     nextImage: string
@@ -28,16 +27,13 @@ export interface UiText {
     resetZoom: string
     zoomControls: string
     zoomLevel: string
-    // Filter tree roots
     filterPeople: string
     filterLocation: string
     filterTags: string
     filterDate: string
-    // Breadcrumb
     albums: string
     albumNavLabel: string
   }
-  // Audio player
   player: {
     enableShuffle: string
     disableShuffle: string
@@ -59,7 +55,6 @@ export interface UiText {
     volume: string
     closePlayer: string
   }
-  // Music view / full audio page
   music: {
     albumsNavLabel: string
     albumLabel: string
@@ -74,26 +69,23 @@ export interface UiText {
     lyricsLoading: string
     noLyricsForTrack: string
   }
-  // Lyrics display controls
   lyrics: {
     syncToCurrent: string
     sync: string
   }
-  // About view
   about: {
     subHeaderTitle: string
     menuAriaLabel: string
     storyButton: string
-    triviaButton: string
     membersButton: string
     lyricsButton: string
+    tabsButton: string
     storyButtonAria: string
-    triviaButtonAria: string
     membersButtonAria: string
     lyricsButtonAria: string
+    tabsButtonAria: string
     placeholderButtonAria: string
   }
-  // Instrument faders
   faders: {
     open: string
     close: string
@@ -102,7 +94,6 @@ export interface UiText {
     instrumentVolume: (instrument: string) => string
     unavailableSuffix: string
   }
-  // Logo / general
   logo: {
     ariaLabel: string
     logoAriaLabel: string
@@ -111,7 +102,6 @@ export interface UiText {
   status: {
     loading: string
   }
-  // Footer credits
   credits: {
     text: string
     roles: {
@@ -120,450 +110,185 @@ export interface UiText {
       logoDesign: string
     }
   }
+  languageSwitcher: {
+    ariaLabel: string
+    floatingAriaLabel: string
+    currentLocaleLabel: string
+    options: Record<AppLocale, { label: string; acronym: string; flag: string }>
+  }
+}
+
+const buildCountLabel = (count: number, one: string, other: string) =>
+  `${count} ${count === 1 ? one : other}`
+
+const buildInstrumentLabel = (
+  locale: AppLocale,
+  instrument: string,
+  word: string,
+  kind: 'mute' | 'volume'
+) => {
+  if (kind === 'mute') {
+    if (locale === 'fr' || locale === 'br' || locale === 'it' || locale === 'ru') {
+      return `${word} ${instrument}`
+    }
+
+    return `${instrument} ${word}`
+  }
+
+  if (locale === 'de' || locale === 'fr' || locale === 'br' || locale === 'it' || locale === 'ru') {
+    return `${word} ${instrument}`
+  }
+
+  return `${instrument} ${word}`
+}
+
+const buildUiText = (locale: AppLocale): UiText => {
+  const messages = getAppMessages(locale)
+
+  return {
+    gallery: {
+      modePhotos: messages.gallery.modePhotos,
+      modeAlbums: messages.gallery.modeAlbums,
+      modeLabel: messages.gallery.modeLabel,
+      collapseRail: messages.gallery.collapseRail,
+      expandRail: messages.gallery.expandRail,
+      collapseLibrary: messages.gallery.collapseLibrary,
+      expandLibrary: messages.gallery.expandLibrary,
+      filterPlaceholder: messages.gallery.filterPlaceholder,
+      filterSearchPlaceholder: messages.gallery.filterSearchPlaceholder,
+      clearFilters: messages.gallery.clearFilters,
+      displayOptions: messages.gallery.displayOptions,
+      squareThumbnails: messages.gallery.squareThumbnails,
+      showTimeline: messages.gallery.showTimeline,
+      photoCredit: messages.gallery.photoCredit,
+      currentMonthLabel: messages.gallery.currentMonthLabel,
+      photosCount: (count) =>
+        buildCountLabel(
+          count,
+          messages.gallery.photosCount.one,
+          messages.gallery.photosCount.other
+        ),
+      closeLightbox: messages.gallery.closeLightbox,
+      prevImage: messages.gallery.prevImage,
+      nextImage: messages.gallery.nextImage,
+      zoomIn: messages.gallery.zoomIn,
+      zoomOut: messages.gallery.zoomOut,
+      resetZoom: messages.gallery.resetZoom,
+      zoomControls: messages.gallery.zoomControls,
+      zoomLevel: messages.gallery.zoomLevel,
+      filterPeople: messages.gallery.filterPeople,
+      filterLocation: messages.gallery.filterLocation,
+      filterTags: messages.gallery.filterTags,
+      filterDate: messages.gallery.filterDate,
+      albums: messages.gallery.albums,
+      albumNavLabel: messages.gallery.albumNavLabel,
+    },
+    player: {
+      enableShuffle: messages.player.enableShuffle,
+      disableShuffle: messages.player.disableShuffle,
+      toggleShuffle: messages.player.toggleShuffle,
+      prevTrack: messages.player.prevTrack,
+      nextTrack: messages.player.nextTrack,
+      play: messages.player.play,
+      pause: messages.player.pause,
+      enableRepeat: messages.player.enableRepeat,
+      repeatOne: messages.player.repeatOne,
+      disableRepeat: messages.player.disableRepeat,
+      toggleRepeat: messages.player.toggleRepeat,
+      seek: messages.player.seek,
+      showLyrics: messages.player.showLyrics,
+      hideLyrics: messages.player.hideLyrics,
+      noLyrics: messages.player.noLyrics,
+      mute: messages.player.mute,
+      unmute: messages.player.unmute,
+      volume: messages.player.volume,
+      closePlayer: messages.player.closePlayer,
+    },
+    music: {
+      albumsNavLabel: messages.music.albumsNavLabel,
+      albumLabel: messages.music.albumLabel,
+      songsCount: (count) =>
+        buildCountLabel(count, messages.music.songsCount.one, messages.music.songsCount.other),
+      albumItemLabel: (title, count) =>
+        `${title} (${buildCountLabel(
+          count,
+          messages.music.albumItemLabel.one,
+          messages.music.albumItemLabel.other
+        )})`,
+      playAlbum: messages.music.playAlbum,
+      pauseAlbum: messages.music.pauseAlbum,
+      trackTitleHeader: messages.music.trackTitleHeader,
+      playTrack: (title) =>
+        locale === 'de'
+          ? `${title} ${messages.music.playTrackPrefix}`.trim()
+          : `${messages.music.playTrackPrefix} ${title}`.trim(),
+      resumeTrack: (title) =>
+        locale === 'de'
+          ? `${title} ${messages.music.resumeTrackPrefix}`.trim()
+          : `${messages.music.resumeTrackPrefix} ${title}`.trim(),
+      closeLyrics: messages.music.closeLyrics,
+      lyricsLoading: messages.music.lyricsLoading,
+      noLyricsForTrack: messages.music.noLyricsForTrack,
+    },
+    lyrics: {
+      syncToCurrent: messages.lyrics.syncToCurrent,
+      sync: messages.lyrics.sync,
+    },
+    about: {
+      subHeaderTitle: messages.about.subHeaderTitle,
+      menuAriaLabel: messages.about.menuAriaLabel,
+      storyButton: messages.about.storyButton,
+      membersButton: messages.about.membersButton,
+      lyricsButton: messages.about.lyricsButton,
+      tabsButton: messages.about.tabsButton,
+      storyButtonAria: messages.about.storyButtonAria,
+      membersButtonAria: messages.about.membersButtonAria,
+      lyricsButtonAria: messages.about.lyricsButtonAria,
+      tabsButtonAria: messages.about.tabsButtonAria,
+      placeholderButtonAria: messages.about.placeholderButtonAria,
+    },
+    faders: {
+      open: messages.faders.open,
+      close: messages.faders.close,
+      groupLabel: messages.faders.groupLabel,
+      muteToggle: (instrument) =>
+        buildInstrumentLabel(locale, instrument, messages.faders.muteToggleSuffix, 'mute'),
+      instrumentVolume: (instrument) =>
+        buildInstrumentLabel(locale, instrument, messages.faders.instrumentVolumePrefix, 'volume'),
+      unavailableSuffix: ` ${messages.faders.unavailableSuffix}`,
+    },
+    logo: {
+      ariaLabel: messages.logo.ariaLabel,
+      logoAriaLabel: messages.logo.logoAriaLabel,
+      socialLinks: messages.logo.socialLinks,
+    },
+    status: {
+      loading: messages.status.loading,
+    },
+    credits: {
+      text: messages.credits.text,
+      roles: {
+        webDesign: messages.credits.roles.webDesign,
+        art: messages.credits.roles.art,
+        logoDesign: messages.credits.roles.logoDesign,
+      },
+    },
+    languageSwitcher: {
+      ariaLabel: messages.languageSwitcher.ariaLabel,
+      floatingAriaLabel: messages.languageSwitcher.floatingAriaLabel,
+      currentLocaleLabel: messages.languageSwitcher.currentLocaleLabel,
+      options: messages.languageSwitcher.options,
+    },
+  }
 }
 
 export const uiText: Record<AppLocale, UiText> = {
-  en: {
-    gallery: {
-      modePhotos: 'Photos',
-      modeAlbums: 'Albums',
-      modeLabel: 'Gallery mode',
-      collapseRail: 'Collapse gallery sidebar',
-      expandRail: 'Expand gallery sidebar',
-      collapseLibrary: 'Collapse library',
-      expandLibrary: 'Expand library',
-      filterPlaceholder: 'Filter',
-      filterSearchPlaceholder: 'Search',
-      clearFilters: 'Clear',
-      displayOptions: 'Display options',
-      squareThumbnails: 'Square (1:1)',
-      showTimeline: 'Show Timeline',
-      photoCredit: 'Photo credit',
-      currentMonthLabel: 'Current month',
-      photosCount: (n) => `${n} ${n === 1 ? 'photo' : 'photos'}`,
-      closeLightbox: 'Close',
-      prevImage: 'Previous image',
-      nextImage: 'Next image',
-      zoomIn: 'Zoom in',
-      zoomOut: 'Zoom out',
-      resetZoom: 'Reset zoom',
-      zoomControls: 'Zoom controls',
-      zoomLevel: 'Zoom level',
-      filterPeople: 'People',
-      filterLocation: 'Location',
-      filterTags: 'Tags',
-      filterDate: 'Date',
-      albums: 'Albums',
-      albumNavLabel: 'Album navigation',
-    },
-    player: {
-      enableShuffle: 'Enable shuffle',
-      disableShuffle: 'Disable shuffle',
-      toggleShuffle: 'Toggle shuffle',
-      prevTrack: 'Previous track',
-      nextTrack: 'Next track',
-      play: 'Play',
-      pause: 'Pause',
-      enableRepeat: 'Enable repeat',
-      repeatOne: 'Repeat one',
-      disableRepeat: 'Disable repeat',
-      toggleRepeat: 'Toggle repeat',
-      seek: 'Seek',
-      showLyrics: 'Show lyrics',
-      hideLyrics: 'Hide lyrics',
-      noLyrics: 'No lyrics available',
-      mute: 'Mute',
-      unmute: 'Unmute',
-      volume: 'Volume',
-      closePlayer: 'Close player',
-    },
-    music: {
-      albumsNavLabel: 'Albums',
-      albumLabel: 'Album',
-      songsCount: (n) => `${n} ${n === 1 ? 'song' : 'songs'}`,
-      albumItemLabel: (title, count) => `${title} (${count} ${count === 1 ? 'song' : 'songs'})`,
-      playAlbum: 'Play album',
-      pauseAlbum: 'Pause album',
-      trackTitleHeader: 'Title',
-      playTrack: (title) => `Play ${title}`,
-      resumeTrack: (title) => `Resume ${title}`,
-      closeLyrics: 'Close lyrics',
-      lyricsLoading: 'Loading lyrics...',
-      noLyricsForTrack: 'No lyrics available for this track',
-    },
-    lyrics: {
-      syncToCurrent: 'Sync to current lyrics',
-      sync: 'Sync',
-    },
-    about: {
-      subHeaderTitle: "Hi, we're Frisches!",
-      menuAriaLabel: 'About menu',
-      storyButton: 'Story',
-      triviaButton: 'Trivia',
-      membersButton: 'Members',
-      lyricsButton: 'Lyrics',
-      storyButtonAria: 'Story card',
-      triviaButtonAria: 'Trivia cards',
-      membersButtonAria: 'Members cards',
-      lyricsButtonAria: 'Lyrics cards',
-      placeholderButtonAria: 'Coming soon',
-    },
-    faders: {
-      open: 'Instrument faders',
-      close: 'Close instrument faders',
-      groupLabel: 'Instrument faders',
-      muteToggle: (instrument) => `${instrument} mute toggle`,
-      instrumentVolume: (instrument) => `${instrument} volume`,
-      unavailableSuffix: ' (not available)',
-    },
-    logo: {
-      ariaLabel: 'Frisches - Click to reveal menu',
-      logoAriaLabel: 'Frisches',
-      socialLinks: 'Social links',
-    },
-    status: {
-      loading: 'Loading...',
-    },
-    credits: {
-      text: 'Credits',
-      roles: {
-        webDesign: 'Web Design',
-        art: 'Art',
-        logoDesign: 'Logo',
-      },
-    },
-  },
-  de: {
-    gallery: {
-      modePhotos: 'Fotos',
-      modeAlbums: 'Alben',
-      modeLabel: 'Galeriemodus',
-      collapseRail: 'Seitenleiste ausblenden',
-      expandRail: 'Seitenleiste einblenden',
-      collapseLibrary: 'Bibliothek ausblenden',
-      expandLibrary: 'Bibliothek einblenden',
-      filterPlaceholder: 'Filter',
-      filterSearchPlaceholder: 'Suchen',
-      clearFilters: 'Zurücksetzen',
-      displayOptions: 'Anzeigeoptionen',
-      squareThumbnails: 'Quadratisch (1:1)',
-      showTimeline: 'Zeitstrahl anzeigen',
-      photoCredit: 'Bildnachweis',
-      currentMonthLabel: 'Aktueller Monat',
-      photosCount: (n) => `${n} ${n === 1 ? 'Foto' : 'Fotos'}`,
-      closeLightbox: 'Schließen',
-      prevImage: 'Vorheriges Bild',
-      nextImage: 'Nächstes Bild',
-      zoomIn: 'Vergrößern',
-      zoomOut: 'Verkleinern',
-      resetZoom: 'Zoom zurücksetzen',
-      zoomControls: 'Zoom-Steuerung',
-      zoomLevel: 'Zoomstufe',
-      filterPeople: 'Personen',
-      filterLocation: 'Ort',
-      filterTags: 'Tags',
-      filterDate: 'Datum',
-      albums: 'Alben',
-      albumNavLabel: 'Albumnavigation',
-    },
-    player: {
-      enableShuffle: 'Zufallswiedergabe aktivieren',
-      disableShuffle: 'Zufallswiedergabe deaktivieren',
-      toggleShuffle: 'Zufallswiedergabe umschalten',
-      prevTrack: 'Vorheriger Titel',
-      nextTrack: 'Nächster Titel',
-      play: 'Abspielen',
-      pause: 'Pause',
-      enableRepeat: 'Wiederholen aktivieren',
-      repeatOne: 'Einen Titel wiederholen',
-      disableRepeat: 'Wiederholen deaktivieren',
-      toggleRepeat: 'Wiederholen umschalten',
-      seek: 'Abspielposition',
-      showLyrics: 'Liedtext anzeigen',
-      hideLyrics: 'Liedtext ausblenden',
-      noLyrics: 'Kein Liedtext verfügbar',
-      mute: 'Stummschalten',
-      unmute: 'Stummschaltung aufheben',
-      volume: 'Lautstärke',
-      closePlayer: 'Player schließen',
-    },
-    music: {
-      albumsNavLabel: 'Alben',
-      albumLabel: 'Album',
-      songsCount: (n) => `${n} Titel`,
-      albumItemLabel: (title, count) => `${title} (${count} Titel)`,
-      playAlbum: 'Album abspielen',
-      pauseAlbum: 'Album pausieren',
-      trackTitleHeader: 'Titel',
-      playTrack: (title) => `${title} abspielen`,
-      resumeTrack: (title) => `${title} fortsetzen`,
-      closeLyrics: 'Liedtext schließen',
-      lyricsLoading: 'Liedtext wird geladen...',
-      noLyricsForTrack: 'Für diesen Titel ist kein Liedtext verfügbar',
-    },
-    lyrics: {
-      syncToCurrent: 'Mit aktuellem Liedtext synchronisieren',
-      sync: 'Synchronisieren',
-    },
-    about: {
-      subHeaderTitle: 'Hi, wir sind Frisches!',
-      menuAriaLabel: 'Über-Menü',
-      storyButton: 'Story',
-      triviaButton: 'Trivia',
-      membersButton: 'Mitglieder',
-      lyricsButton: 'Liedtext',
-      storyButtonAria: 'Story-Karte',
-      triviaButtonAria: 'Trivia-Karten',
-      membersButtonAria: 'Mitgliederkarten',
-      lyricsButtonAria: 'Liedtextkarten',
-      placeholderButtonAria: 'Demnaechst',
-    },
-    faders: {
-      open: 'Instrumentregler',
-      close: 'Instrumentregler schließen',
-      groupLabel: 'Instrumentregler',
-      muteToggle: (instrument) => `${instrument} stummschalten`,
-      instrumentVolume: (instrument) => `${instrument} Lautstärke`,
-      unavailableSuffix: ' (nicht verfügbar)',
-    },
-    logo: {
-      ariaLabel: 'Frisches – Klicken, um das Menü zu öffnen',
-      logoAriaLabel: 'Frisches',
-      socialLinks: 'Social-Links',
-    },
-    status: {
-      loading: 'Lädt...',
-    },
-    credits: {
-      text: 'Credits',
-      roles: {
-        webDesign: 'Webdesign',
-        art: 'Grafik',
-        logoDesign: 'Logo',
-      },
-    },
-  },
-  fr: {
-    gallery: {
-      modePhotos: 'Photos',
-      modeAlbums: 'Albums',
-      modeLabel: 'Mode galerie',
-      collapseRail: 'Réduire la barre latérale',
-      expandRail: 'Développer la barre latérale',
-      collapseLibrary: 'Réduire la bibliothèque',
-      expandLibrary: 'Développer la bibliothèque',
-      filterPlaceholder: 'Filtrer',
-      filterSearchPlaceholder: 'Rechercher',
-      clearFilters: 'Effacer',
-      displayOptions: "Options d'affichage",
-      squareThumbnails: 'Carré (1:1)',
-      showTimeline: 'Afficher la chronologie',
-      photoCredit: 'Crédit photo',
-      currentMonthLabel: 'Mois en cours',
-      photosCount: (n) => `${n} ${n === 1 ? 'photo' : 'photos'}`,
-      closeLightbox: 'Fermer',
-      prevImage: 'Image précédente',
-      nextImage: 'Image suivante',
-      zoomIn: 'Zoom avant',
-      zoomOut: 'Zoom arrière',
-      resetZoom: 'Réinitialiser le zoom',
-      zoomControls: 'Commandes de zoom',
-      zoomLevel: 'Niveau de zoom',
-      filterPeople: 'Personnes',
-      filterLocation: 'Lieu',
-      filterTags: 'Tags',
-      filterDate: 'Date',
-      albums: 'Albums',
-      albumNavLabel: 'Navigation des albums',
-    },
-    player: {
-      enableShuffle: 'Activer la lecture aléatoire',
-      disableShuffle: 'Désactiver la lecture aléatoire',
-      toggleShuffle: 'Basculer la lecture aléatoire',
-      prevTrack: 'Piste précédente',
-      nextTrack: 'Piste suivante',
-      play: 'Lecture',
-      pause: 'Pause',
-      enableRepeat: 'Activer la répétition',
-      repeatOne: 'Répéter une piste',
-      disableRepeat: 'Désactiver la répétition',
-      toggleRepeat: 'Basculer la répétition',
-      seek: 'Position de lecture',
-      showLyrics: 'Afficher les paroles',
-      hideLyrics: 'Masquer les paroles',
-      noLyrics: 'Pas de paroles disponibles',
-      mute: 'Couper le son',
-      unmute: 'Rétablir le son',
-      volume: 'Volume',
-      closePlayer: 'Fermer le lecteur',
-    },
-    music: {
-      albumsNavLabel: 'Albums',
-      albumLabel: 'Album',
-      songsCount: (n) => `${n} ${n === 1 ? 'morceau' : 'morceaux'}`,
-      albumItemLabel: (title, count) =>
-        `${title} (${count} ${count === 1 ? 'morceau' : 'morceaux'})`,
-      playAlbum: "Lire l'album",
-      pauseAlbum: "Mettre l'album en pause",
-      trackTitleHeader: 'Titre',
-      playTrack: (title) => `Lire ${title}`,
-      resumeTrack: (title) => `Reprendre ${title}`,
-      closeLyrics: 'Fermer les paroles',
-      lyricsLoading: 'Chargement des paroles...',
-      noLyricsForTrack: 'Aucune parole disponible pour ce titre',
-    },
-    lyrics: {
-      syncToCurrent: 'Se resynchroniser sur les paroles en cours',
-      sync: 'Synchroniser',
-    },
-    about: {
-      subHeaderTitle: 'Salut, nous sommes Frisches!',
-      menuAriaLabel: 'Menu a propos',
-      storyButton: 'Histoire',
-      triviaButton: 'Trivia',
-      membersButton: 'Membres',
-      lyricsButton: 'Paroles',
-      storyButtonAria: 'Carte histoire',
-      triviaButtonAria: 'Cartes trivia',
-      membersButtonAria: 'Cartes membres',
-      lyricsButtonAria: 'Cartes paroles',
-      placeholderButtonAria: 'Bientot disponible',
-    },
-    faders: {
-      open: "Afficher les faders d'instruments",
-      close: "Fermer les faders d'instruments",
-      groupLabel: "Faders d'instruments",
-      muteToggle: (instrument) => `Couper ${instrument}`,
-      instrumentVolume: (instrument) => `Volume de ${instrument}`,
-      unavailableSuffix: ' (indisponible)',
-    },
-    logo: {
-      ariaLabel: 'Frisches – Cliquez pour afficher le menu',
-      logoAriaLabel: 'Frisches',
-      socialLinks: 'Réseaux sociaux',
-    },
-    status: {
-      loading: 'Chargement...',
-    },
-    credits: {
-      text: 'Crédits',
-      roles: {
-        webDesign: 'Design web',
-        art: 'Graphisme',
-        logoDesign: 'Logo',
-      },
-    },
-  },
-  'pt-BR': {
-    gallery: {
-      modePhotos: 'Fotos',
-      modeAlbums: 'Álbuns',
-      modeLabel: 'Modo da galeria',
-      collapseRail: 'Recolher barra lateral',
-      expandRail: 'Expandir barra lateral',
-      collapseLibrary: 'Recolher biblioteca',
-      expandLibrary: 'Expandir biblioteca',
-      filterPlaceholder: 'Filtrar',
-      filterSearchPlaceholder: 'Pesquisar',
-      clearFilters: 'Limpar',
-      displayOptions: 'Opções de exibição',
-      squareThumbnails: 'Quadrado (1:1)',
-      showTimeline: 'Mostrar linha do tempo',
-      photoCredit: 'Crédito da foto',
-      currentMonthLabel: 'Mês atual',
-      photosCount: (n) => `${n} ${n === 1 ? 'foto' : 'fotos'}`,
-      closeLightbox: 'Fechar',
-      prevImage: 'Imagem anterior',
-      nextImage: 'Próxima imagem',
-      zoomIn: 'Aumentar o zoom',
-      zoomOut: 'Diminuir o zoom',
-      resetZoom: 'Redefinir o zoom',
-      zoomControls: 'Controles de zoom',
-      zoomLevel: 'Nível de zoom',
-      filterPeople: 'Pessoas',
-      filterLocation: 'Local',
-      filterTags: 'Tags',
-      filterDate: 'Data',
-      albums: 'Álbuns',
-      albumNavLabel: 'Navegação de álbuns',
-    },
-    player: {
-      enableShuffle: 'Ativar modo aleatório',
-      disableShuffle: 'Desativar modo aleatório',
-      toggleShuffle: 'Alternar modo aleatório',
-      prevTrack: 'Faixa anterior',
-      nextTrack: 'Próxima faixa',
-      play: 'Reproduzir',
-      pause: 'Pausar',
-      enableRepeat: 'Ativar repetição',
-      repeatOne: 'Repetir uma faixa',
-      disableRepeat: 'Desativar repetição',
-      toggleRepeat: 'Alternar repetição',
-      seek: 'Posição de reprodução',
-      showLyrics: 'Mostrar letra',
-      hideLyrics: 'Ocultar letra',
-      noLyrics: 'Letra não disponível',
-      mute: 'Silenciar',
-      unmute: 'Ativar som',
-      volume: 'Volume',
-      closePlayer: 'Fechar player',
-    },
-    music: {
-      albumsNavLabel: 'Álbuns',
-      albumLabel: 'Álbum',
-      songsCount: (n) => `${n} ${n === 1 ? 'faixa' : 'faixas'}`,
-      albumItemLabel: (title, count) => `${title} (${count} ${count === 1 ? 'faixa' : 'faixas'})`,
-      playAlbum: 'Reproduzir álbum',
-      pauseAlbum: 'Pausar álbum',
-      trackTitleHeader: 'Título',
-      playTrack: (title) => `Reproduzir ${title}`,
-      resumeTrack: (title) => `Retomar ${title}`,
-      closeLyrics: 'Fechar letra',
-      lyricsLoading: 'Carregando letra...',
-      noLyricsForTrack: 'Nenhuma letra disponível para esta faixa',
-    },
-    lyrics: {
-      syncToCurrent: 'Sincronizar com a letra atual',
-      sync: 'Sincronizar',
-    },
-    about: {
-      subHeaderTitle: 'Olá, nós somos Frisches!',
-      menuAriaLabel: 'Menu sobre',
-      storyButton: 'História',
-      triviaButton: 'Trivia',
-      membersButton: 'Membros',
-      lyricsButton: 'Letra',
-      storyButtonAria: 'Cartão de história',
-      triviaButtonAria: 'Cartoes de trivia',
-      membersButtonAria: 'Cartoes de membros',
-      lyricsButtonAria: 'Cartoes de letra',
-      placeholderButtonAria: 'Em breve',
-    },
-    faders: {
-      open: 'Faders de instrumentos',
-      close: 'Fechar faders de instrumentos',
-      groupLabel: 'Faders de instrumentos',
-      muteToggle: (instrument) => `Silenciar ${instrument}`,
-      instrumentVolume: (instrument) => `Volume de ${instrument}`,
-      unavailableSuffix: ' (não disponível)',
-    },
-    logo: {
-      ariaLabel: 'Frisches – Clique para revelar o menu',
-      logoAriaLabel: 'Frisches',
-      socialLinks: 'Redes sociais',
-    },
-    status: {
-      loading: 'Carregando...',
-    },
-    credits: {
-      text: 'Créditos',
-      roles: {
-        webDesign: 'Web design',
-        art: 'Arte',
-        logoDesign: 'Logo',
-      },
-    },
-  },
+  en: buildUiText('en'),
+  de: buildUiText('de'),
+  fr: buildUiText('fr'),
+  br: buildUiText('br'),
+  it: buildUiText('it'),
+  ru: buildUiText('ru'),
 }
 
 export const getUiText = (locale: AppLocale): UiText => uiText[locale] ?? uiText[DEFAULT_APP_LOCALE]
