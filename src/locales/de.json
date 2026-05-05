@@ -1,9 +1,9 @@
 {
   "navigation": {
     "home": {
-      "title": "Home",
-      "headerTitle": "_Home",
-      "matchTokens": ["home"]
+      "title": "Start",
+      "headerTitle": "_Start",
+      "matchTokens": ["start", "home"]
     },
     "music": {
       "title": "Musik",
@@ -25,16 +25,16 @@
     "modePhotos": "Fotos",
     "modeAlbums": "Alben",
     "modeLabel": "Galeriemodus",
-    "collapseRail": "Ausblenden",
-    "expandRail": "Einblenden",
-    "collapseLibrary": "Ausblenden",
-    "expandLibrary": "Einblenden",
-    "filterPlaceholder": "Filter",
-    "filterSearchPlaceholder": "Suchen",
+    "collapseRail": "Einklappen",
+    "expandRail": "Ausklappen",
+    "collapseLibrary": "Einklappen",
+    "expandLibrary": "Ausklappen",
+    "filterPlaceholder": "Filtern",
+    "filterSearchPlaceholder": "Suche",
     "clearFilters": "Zurücksetzen",
     "displayOptions": "Anzeigeoptionen",
     "squareThumbnails": "Quadratisch (1:1)",
-    "showTimeline": "Zeitstrahl anzeigen",
+    "showTimeline": "Zeitleiste anzeigen",
     "photoCredit": "Bildnachweis",
     "currentMonthLabel": "Aktueller Monat",
     "photosCount": {
@@ -47,7 +47,7 @@
     "zoomIn": "Vergrößern",
     "zoomOut": "Verkleinern",
     "resetZoom": "Zoom zurücksetzen",
-    "zoomControls": "Zoom-Steuerung",
+    "zoomControls": "Zoomsteuerung",
     "zoomLevel": "Zoomstufe",
     "filterPeople": "Personen",
     "filterLocation": "Ort",
@@ -103,21 +103,21 @@
   },
   "about": {
     "subHeaderTitle": "Hi, wir sind Frisches!",
-    "menuAriaLabel": "Über-Menü",
-    "storyButton": "Geschichte",
+    "menuAriaLabel": "Über-uns-Menü",
+    "storyButton": "Story",
     "membersButton": "Band",
     "lyricsButton": "Texte",
     "tabsButton": "Tabs",
-    "storyButtonAria": "Geschichte-Karte",
-    "membersButtonAria": "Bandkarten",
-    "lyricsButtonAria": "Textkarten",
-    "tabsButtonAria": "Tabs-Link",
-    "placeholderButtonAria": "Demnaechst"
+    "storyButtonAria": "Story-Karte",
+    "membersButtonAria": "Band-Karten",
+    "lyricsButtonAria": "Text-Karten",
+    "tabsButtonAria": "Link zu den Tabs",
+    "placeholderButtonAria": "Bald verfügbar"
   },
   "faders": {
-    "open": "Instrumentregler",
-    "close": "Instrumentregler schließen",
-    "groupLabel": "Instrumentregler",
+    "open": "Instrumente mischen",
+    "close": "Instrumentenmixer schließen",
+    "groupLabel": "Instrumentenmixer",
     "muteToggleSuffix": "stummschalten",
     "instrumentVolumePrefix": "Lautstärke",
     "unavailableSuffix": "(nicht verfügbar)"
@@ -125,7 +125,7 @@
   "logo": {
     "ariaLabel": "Frisches – Klicken, um das Menü zu öffnen",
     "logoAriaLabel": "Frisches",
-    "socialLinks": "Social-Links"
+    "socialLinks": "Social Media"
   },
   "status": {
     "loading": "Lädt..."
@@ -168,7 +168,7 @@
       "musicText": "Alle auf dieser Website zugänglichen Musikstücke sind Originalwerke der Mitglieder der Band Frisches und urheberrechtlich geschützt. Es werden weder Samples noch Coverversionen verwendet."
     },
     "privacy": {
-      "title": "Datenschutz",
+      "title": "Datenschutzerklärung",
       "subtitle": "Stand: Mai 2026",
       "s1Title": "1. Verantwortlicher",
       "s1ContactLabel": "E-Mail",
@@ -197,7 +197,7 @@
       "s6Right6": "Widerspruchsrecht (Art. 21 DSGVO)",
       "s6ContactText": "Zur Ausübung Ihrer Rechte wenden Sie sich bitte an",
       "s6AuthorityText": "Sie haben außerdem das Recht, sich bei der zuständigen Aufsichtsbehörde zu beschweren. Zuständig für Bayern ist der",
-      "s6AuthorityName": "Landesbeauftragte für den Datenschutz Bayern (LDA)",
+      "s6AuthorityName": "Bayerisches Landesamt für Datenschutzaufsicht (BayLDA)",
       "s7Title": "7. Externe Links",
       "s7Text": "Diese Website enthält Links zu externen Diensten (Spotify, Instagram, YouTube, GitHub, Songsterr). Beim Aufruf dieser Seiten gelten die jeweiligen Datenschutzerklärungen der Anbieter. Auf die Datenverarbeitung durch diese Drittanbieter haben wir keinen Einfluss."
     }

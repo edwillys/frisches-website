@@ -2,7 +2,6 @@ import { getAppMessages } from '@/i18n'
 import { DEFAULT_APP_LOCALE, type AppLocale } from '@/i18n/locale'
 
 export interface UiText {
-  // Gallery
   gallery: {
     modePhotos: string
     modeAlbums: string
@@ -20,7 +19,6 @@ export interface UiText {
     photoCredit: string
     currentMonthLabel: string
     photosCount: (n: number) => string
-    // Lightbox
     closeLightbox: string
     prevImage: string
     nextImage: string
@@ -29,16 +27,13 @@ export interface UiText {
     resetZoom: string
     zoomControls: string
     zoomLevel: string
-    // Filter tree roots
     filterPeople: string
     filterLocation: string
     filterTags: string
     filterDate: string
-    // Breadcrumb
     albums: string
     albumNavLabel: string
   }
-  // Audio player
   player: {
     enableShuffle: string
     disableShuffle: string
@@ -60,7 +55,6 @@ export interface UiText {
     volume: string
     closePlayer: string
   }
-  // Music view / full audio page
   music: {
     albumsNavLabel: string
     albumLabel: string
@@ -75,12 +69,10 @@ export interface UiText {
     lyricsLoading: string
     noLyricsForTrack: string
   }
-  // Lyrics display controls
   lyrics: {
     syncToCurrent: string
     sync: string
   }
-  // About view
   about: {
     subHeaderTitle: string
     menuAriaLabel: string
@@ -94,7 +86,6 @@ export interface UiText {
     tabsButtonAria: string
     placeholderButtonAria: string
   }
-  // Instrument faders
   faders: {
     open: string
     close: string
@@ -103,7 +94,6 @@ export interface UiText {
     instrumentVolume: (instrument: string) => string
     unavailableSuffix: string
   }
-  // Logo / general
   logo: {
     ariaLabel: string
     logoAriaLabel: string
@@ -112,7 +102,6 @@ export interface UiText {
   status: {
     loading: string
   }
-  // Footer credits
   credits: {
     text: string
     roles: {
@@ -132,8 +121,24 @@ export interface UiText {
 const buildCountLabel = (count: number, one: string, other: string) =>
   `${count} ${count === 1 ? one : other}`
 
-const buildInstrumentLabel = (locale: AppLocale, instrument: string, word: string) => {
-  if (locale === 'fr' || locale === 'br') return `${word} ${instrument}`
+const buildInstrumentLabel = (
+  locale: AppLocale,
+  instrument: string,
+  word: string,
+  kind: 'mute' | 'volume'
+) => {
+  if (kind === 'mute') {
+    if (locale === 'fr' || locale === 'br' || locale === 'it' || locale === 'ru') {
+      return `${word} ${instrument}`
+    }
+
+    return `${instrument} ${word}`
+  }
+
+  if (locale === 'de' || locale === 'fr' || locale === 'br' || locale === 'it' || locale === 'ru') {
+    return `${word} ${instrument}`
+  }
+
   return `${instrument} ${word}`
 }
 
@@ -247,9 +252,9 @@ const buildUiText = (locale: AppLocale): UiText => {
       close: messages.faders.close,
       groupLabel: messages.faders.groupLabel,
       muteToggle: (instrument) =>
-        buildInstrumentLabel(locale, instrument, messages.faders.muteToggleSuffix),
+        buildInstrumentLabel(locale, instrument, messages.faders.muteToggleSuffix, 'mute'),
       instrumentVolume: (instrument) =>
-        buildInstrumentLabel(locale, instrument, messages.faders.instrumentVolumePrefix),
+        buildInstrumentLabel(locale, instrument, messages.faders.instrumentVolumePrefix, 'volume'),
       unavailableSuffix: ` ${messages.faders.unavailableSuffix}`,
     },
     logo: {

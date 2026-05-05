@@ -25,18 +25,18 @@
     "modePhotos": "Фото",
     "modeAlbums": "Альбомы",
     "modeLabel": "Режим галереи",
-    "collapseRail": "Свернуть боковую панель",
-    "expandRail": "Развернуть боковую панель",
-    "collapseLibrary": "Свернуть библиотеку",
-    "expandLibrary": "Развернуть библиотеку",
+    "collapseRail": "Свернуть панель",
+    "expandRail": "Развернуть панель",
+    "collapseLibrary": "Свернуть подборку",
+    "expandLibrary": "Развернуть подборку",
     "filterPlaceholder": "Фильтр",
     "filterSearchPlaceholder": "Поиск",
     "clearFilters": "Очистить",
-    "displayOptions": "Параметры отображения",
+    "displayOptions": "Параметры вида",
     "squareThumbnails": "Квадрат (1:1)",
     "showTimeline": "Показать хронологию",
     "photoCredit": "Автор фото",
-    "currentMonthLabel": "Текущий месяц",
+    "currentMonthLabel": "Этот месяц",
     "photosCount": {
       "one": "фото",
       "other": "фото"
@@ -57,9 +57,9 @@
     "albumNavLabel": "Навигация по альбомам"
   },
   "player": {
-    "enableShuffle": "Включить случайный порядок",
-    "disableShuffle": "Выключить случайный порядок",
-    "toggleShuffle": "Случайный порядок",
+    "enableShuffle": "Включить случайное воспроизведение",
+    "disableShuffle": "Выключить случайное воспроизведение",
+    "toggleShuffle": "Случайное воспроизведение",
     "prevTrack": "Предыдущий трек",
     "nextTrack": "Следующий трек",
     "play": "Воспроизвести",
@@ -71,7 +71,7 @@
     "seek": "Позиция воспроизведения",
     "showLyrics": "Показать текст",
     "hideLyrics": "Скрыть текст",
-    "noLyrics": "Текст недоступен",
+    "noLyrics": "Текст пока недоступен",
     "mute": "Выключить звук",
     "unmute": "Включить звук",
     "volume": "Громкость",
@@ -89,13 +89,13 @@
       "other": "треков"
     },
     "playAlbum": "Воспроизвести альбом",
-    "pauseAlbum": "Пауза альбома",
+    "pauseAlbum": "Поставить альбом на паузу",
     "trackTitleHeader": "Название",
     "playTrackPrefix": "Воспроизвести",
     "resumeTrackPrefix": "Продолжить",
     "closeLyrics": "Закрыть текст",
-    "lyricsLoading": "Загрузка текста...",
-    "noLyricsForTrack": "Для этого трека текст недоступен"
+    "lyricsLoading": "Загружаем текст...",
+    "noLyricsForTrack": "Для этого трека текст пока недоступен"
   },
   "lyrics": {
     "syncToCurrent": "Синхронизировать с текущим текстом",
@@ -105,27 +105,27 @@
     "subHeaderTitle": "Привет, мы Frisches!",
     "menuAriaLabel": "Меню о группе",
     "storyButton": "История",
-    "membersButton": "Участники",
+    "membersButton": "Состав",
     "lyricsButton": "Тексты",
-    "tabsButton": "Tabs",
+    "tabsButton": "Табы",
     "storyButtonAria": "Карточка истории",
-    "membersButtonAria": "Карточки участников",
+    "membersButtonAria": "Карточки состава",
     "lyricsButtonAria": "Карточки текстов",
-    "tabsButtonAria": "Ссылка tabs",
+    "tabsButtonAria": "Ссылка на табы",
     "placeholderButtonAria": "Скоро"
   },
   "faders": {
-    "open": "Фейдеры инструментов",
-    "close": "Закрыть фейдеры инструментов",
-    "groupLabel": "Фейдеры инструментов",
-    "muteToggleSuffix": "выкл. звук",
-    "instrumentVolumePrefix": "громкость",
+    "open": "Открыть микшер инструментов",
+    "close": "Закрыть микшер инструментов",
+    "groupLabel": "Микшер инструментов",
+    "muteToggleSuffix": "Приглушить",
+    "instrumentVolumePrefix": "Громкость",
     "unavailableSuffix": "(недоступно)"
   },
   "logo": {
     "ariaLabel": "Frisches - Нажмите, чтобы открыть меню",
     "logoAriaLabel": "Frisches",
-    "socialLinks": "Соцсети"
+    "socialLinks": "Ссылки на соцсети"
   },
   "status": {
     "loading": "Загрузка..."
@@ -135,12 +135,12 @@
     "roles": {
       "webDesign": "Веб-дизайн",
       "art": "Арт",
-      "logoDesign": "Logo"
+      "logoDesign": "Логотип"
     }
   },
   "languageSwitcher": {
     "ariaLabel": "Выбор языка",
-    "floatingAriaLabel": "Плавающий выбор языка",
+    "floatingAriaLabel": "Плавающий переключатель языка",
     "currentLocaleLabel": "Текущий язык",
     "options": {
       "en": { "label": "Английский", "acronym": "EN", "flag": "🇬🇧" },
@@ -153,7 +153,7 @@
   },
   "legal": {
     "impressum": {
-      "title": "Правовая информация",
+      "title": "Юридическая информация",
       "subtitle": "В соответствии с § 5 Закона Германии о телемедиа (TMG)",
       "contactTitle": "Контакты",
       "contactEmailLabel": "E-mail",
@@ -170,11 +170,11 @@
     "privacy": {
       "title": "Политика конфиденциальности",
       "subtitle": "Май 2026",
-      "s1Title": "1. Оператор",
+      "s1Title": "1. Ответственное лицо",
       "s1ContactLabel": "E-mail",
       "s2Title": "2. Какие данные мы собираем",
       "s2Intro": "Этот сайт использует Umami Analytics, сервис аналитики, ориентированный на конфиденциальность. Umami не устанавливает аналитические cookie и не хранит персональные данные на вашем устройстве. При каждом посещении страницы анонимно собираются следующие данные:",
-      "s2Item1": "Посещенная страница и время на странице",
+      "s2Item1": "Посещённая страница и время на ней",
       "s2Item2": "URL-адрес источника перехода (referrer)",
       "s2Item3": "Тип устройства, операционная система и тип браузера (User-Agent)",
       "s2Item4": "Приблизительное происхождение (страна), определяемое по IP-адресу; сам IP-адрес не сохраняется",

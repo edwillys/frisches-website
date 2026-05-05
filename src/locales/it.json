@@ -11,9 +11,9 @@
       "matchTokens": ["musica", "music"]
     },
     "about": {
-      "title": "Info",
-      "headerTitle": "_Info",
-      "matchTokens": ["info", "about"]
+      "title": "Chi siamo",
+      "headerTitle": "_Chi_Siamo",
+      "matchTokens": ["chi siamo", "info", "about"]
     },
     "gallery": {
       "title": "Galleria",
@@ -25,16 +25,16 @@
     "modePhotos": "Foto",
     "modeAlbums": "Album",
     "modeLabel": "Modalità galleria",
-    "collapseRail": "Comprimi barra laterale",
-    "expandRail": "Espandi barra laterale",
-    "collapseLibrary": "Comprimi libreria",
-    "expandLibrary": "Espandi libreria",
+    "collapseRail": "Chiudi pannello",
+    "expandRail": "Apri pannello",
+    "collapseLibrary": "Chiudi raccolta",
+    "expandLibrary": "Apri raccolta",
     "filterPlaceholder": "Filtra",
     "filterSearchPlaceholder": "Cerca",
-    "clearFilters": "Cancella",
+    "clearFilters": "Azzera",
     "displayOptions": "Opzioni di visualizzazione",
     "squareThumbnails": "Quadrato (1:1)",
-    "showTimeline": "Mostra cronologia",
+    "showTimeline": "Mostra timeline",
     "photoCredit": "Credito foto",
     "currentMonthLabel": "Mese corrente",
     "photosCount": {
@@ -54,24 +54,24 @@
     "filterTags": "Tag",
     "filterDate": "Data",
     "albums": "Album",
-    "albumNavLabel": "Navigazione album"
+    "albumNavLabel": "Navigazione degli album"
   },
   "player": {
-    "enableShuffle": "Attiva shuffle",
-    "disableShuffle": "Disattiva shuffle",
-    "toggleShuffle": "Attiva/disattiva shuffle",
+    "enableShuffle": "Attiva la riproduzione casuale",
+    "disableShuffle": "Disattiva la riproduzione casuale",
+    "toggleShuffle": "Attiva o disattiva la riproduzione casuale",
     "prevTrack": "Traccia precedente",
     "nextTrack": "Traccia successiva",
     "play": "Riproduci",
     "pause": "Pausa",
     "enableRepeat": "Attiva ripetizione",
-    "repeatOne": "Ripeti una traccia",
+    "repeatOne": "Ripeti il brano",
     "disableRepeat": "Disattiva ripetizione",
     "toggleRepeat": "Attiva/disattiva ripetizione",
     "seek": "Posizione di riproduzione",
-    "showLyrics": "Mostra testi",
-    "hideLyrics": "Nascondi testi",
-    "noLyrics": "Testi non disponibili",
+    "showLyrics": "Mostra il testo",
+    "hideLyrics": "Nascondi il testo",
+    "noLyrics": "Testo non disponibile",
     "mute": "Silenzia",
     "unmute": "Riattiva audio",
     "volume": "Volume",
@@ -89,21 +89,21 @@
       "other": "brani"
     },
     "playAlbum": "Riproduci album",
-    "pauseAlbum": "Metti in pausa album",
+    "pauseAlbum": "Metti in pausa l'album",
     "trackTitleHeader": "Titolo",
     "playTrackPrefix": "Riproduci",
     "resumeTrackPrefix": "Riprendi",
-    "closeLyrics": "Chiudi testi",
-    "lyricsLoading": "Caricamento testi...",
-    "noLyricsForTrack": "Nessun testo disponibile per questa traccia"
+    "closeLyrics": "Chiudi il testo",
+    "lyricsLoading": "Caricamento del testo...",
+    "noLyricsForTrack": "Nessun testo disponibile per questo brano"
   },
   "lyrics": {
     "syncToCurrent": "Sincronizza con i testi attuali",
     "sync": "Sincronizza"
   },
   "about": {
-    "subHeaderTitle": "Ciao, siamo i Frisches!",
-    "menuAriaLabel": "Menu info",
+    "subHeaderTitle": "Ciao, siamo Frisches!",
+    "menuAriaLabel": "Menu Chi siamo",
     "storyButton": "Storia",
     "membersButton": "Membri",
     "lyricsButton": "Testi",
@@ -111,21 +111,21 @@
     "storyButtonAria": "Scheda storia",
     "membersButtonAria": "Schede membri",
     "lyricsButtonAria": "Schede testi",
-    "tabsButtonAria": "Link tabs",
+    "tabsButtonAria": "Link alle tablature",
     "placeholderButtonAria": "Prossimamente"
   },
   "faders": {
-    "open": "Fader strumenti",
-    "close": "Chiudi fader strumenti",
-    "groupLabel": "Fader strumenti",
-    "muteToggleSuffix": "silenzia",
-    "instrumentVolumePrefix": "volume",
+    "open": "Apri il mixer strumenti",
+    "close": "Chiudi il mixer strumenti",
+    "groupLabel": "Mixer strumenti",
+    "muteToggleSuffix": "Silenzia",
+    "instrumentVolumePrefix": "Volume",
     "unavailableSuffix": "(non disponibile)"
   },
   "logo": {
     "ariaLabel": "Frisches - Clicca per mostrare il menu",
     "logoAriaLabel": "Frisches",
-    "socialLinks": "Social"
+    "socialLinks": "Link social"
   },
   "status": {
     "loading": "Caricamento..."
@@ -140,7 +140,7 @@
   },
   "languageSwitcher": {
     "ariaLabel": "Selettore lingua",
-    "floatingAriaLabel": "Selettore lingua mobile",
+    "floatingAriaLabel": "Selettore lingua flottante",
     "currentLocaleLabel": "Lingua corrente",
     "options": {
       "en": { "label": "Inglese", "acronym": "EN", "flag": "🇬🇧" },
@@ -165,7 +165,7 @@
       "copyrightTitle": "Diritto d'autore",
       "copyrightText": "I contenuti e le opere pubblicati su questo sito sono soggetti alla normativa tedesca sul diritto d'autore. I contributi di terzi sono identificati come tali.",
       "musicTitle": "Musica",
-      "musicText": "Tutte le tracce musicali presenti su questo sito sono composizioni originali dei membri dei Frisches e sono protette dal diritto d'autore. Non vengono utilizzati campioni né cover."
+      "musicText": "Tutti i brani presenti su questo sito sono composizioni originali dei membri di Frisches e sono protetti dal diritto d'autore. Non vengono utilizzati campionamenti né cover."
     },
     "privacy": {
       "title": "Informativa sulla privacy",
@@ -179,7 +179,7 @@
       "s2Item3": "Tipo di dispositivo, sistema operativo e tipo di browser (User-Agent)",
       "s2Item4": "Origine approssimativa (Paese) derivata dall'indirizzo IP; l'indirizzo IP non viene salvato",
       "s2Item5": "Impostazione della lingua del browser",
-      "s2Outro": "Inoltre vengono raccolti eventi di interazione anonimizzati (ad es. brano riprodotto, click su link social) per capire come viene utilizzato il sito. Per ricordare la lingua dell'interfaccia scelta tra visite e ricariche pagina, il sito salva anche un cookie proprietario di preferenza lingua e una voce corrispondente in localStorage.",
+      "s2Outro": "Inoltre vengono raccolti eventi di interazione anonimizzati (ad es. un brano riprodotto o un link social aperto) per capire come viene utilizzato il sito. Per ricordare la lingua dell'interfaccia scelta tra una visita e l'altra o dopo il ricaricamento della pagina, il sito salva anche un cookie proprietario per la preferenza linguistica e la corrispondente voce in localStorage.",
       "s3Title": "3. Base giuridica",
       "s3Text": "Il trattamento si basa sul nostro legittimo interesse a migliorare e fornire in modo sicuro il sito web (art. 6, par. 1, lett. f GDPR). Il cookie di preferenza lingua e la voce in localStorage sono usati esclusivamente per fornire la lingua selezionata dall'utente e sono considerati tecnicamente necessari per questa funzione.",
       "s4Title": "4. Responsabili del trattamento e trasferimenti internazionali",

@@ -25,18 +25,18 @@
     "modePhotos": "Photos",
     "modeAlbums": "Albums",
     "modeLabel": "Mode galerie",
-    "collapseRail": "Fermer",
-    "expandRail": "Ouvrir",
-    "collapseLibrary": "Fermer",
-    "expandLibrary": "Ouvrir",
+    "collapseRail": "Replier",
+    "expandRail": "Déplier",
+    "collapseLibrary": "Replier",
+    "expandLibrary": "Déplier",
     "filterPlaceholder": "Filtrer",
     "filterSearchPlaceholder": "Rechercher",
-    "clearFilters": "Effacer",
+    "clearFilters": "Réinitialiser",
     "displayOptions": "Options d'affichage",
     "squareThumbnails": "Carré (1:1)",
     "showTimeline": "Afficher la chronologie",
     "photoCredit": "Crédit photo",
-    "currentMonthLabel": "Mois en cours",
+    "currentMonthLabel": "Mois actuel",
     "photosCount": {
       "one": "photo",
       "other": "photos"
@@ -54,18 +54,18 @@
     "filterTags": "Tags",
     "filterDate": "Date",
     "albums": "Albums",
-    "albumNavLabel": "Navigation des albums"
+    "albumNavLabel": "Navigation dans les albums"
   },
   "player": {
     "enableShuffle": "Activer la lecture aléatoire",
     "disableShuffle": "Désactiver la lecture aléatoire",
     "toggleShuffle": "Basculer la lecture aléatoire",
-    "prevTrack": "Piste précédente",
-    "nextTrack": "Piste suivante",
-    "play": "Lecture",
+    "prevTrack": "Titre précédent",
+    "nextTrack": "Titre suivant",
+    "play": "Lire",
     "pause": "Pause",
     "enableRepeat": "Activer la répétition",
-    "repeatOne": "Répéter une piste",
+    "repeatOne": "Répéter le titre",
     "disableRepeat": "Désactiver la répétition",
     "toggleRepeat": "Basculer la répétition",
     "seek": "Position de lecture",
@@ -88,44 +88,44 @@
       "one": "morceau",
       "other": "morceaux"
     },
-    "playAlbum": "Lire l'album",
+    "playAlbum": "Lancer l'album",
     "pauseAlbum": "Mettre l'album en pause",
     "trackTitleHeader": "Titre",
     "playTrackPrefix": "Lire",
     "resumeTrackPrefix": "Reprendre",
     "closeLyrics": "Fermer les paroles",
     "lyricsLoading": "Chargement des paroles...",
-    "noLyricsForTrack": "Aucune parole disponible pour ce titre"
+    "noLyricsForTrack": "Aucune parole disponible pour ce morceau"
   },
   "lyrics": {
     "syncToCurrent": "Se resynchroniser sur les paroles en cours",
     "sync": "Synchroniser"
   },
   "about": {
-    "subHeaderTitle": "Salut, nous sommes Frisches!",
-    "menuAriaLabel": "Menu à propos",
+    "subHeaderTitle": "Salut, nous, c’est Frisches !",
+    "menuAriaLabel": "Menu À propos",
     "storyButton": "Histoire",
     "membersButton": "Membres",
     "lyricsButton": "Paroles",
     "tabsButton": "Tabs",
-    "storyButtonAria": "Carte histoire",
-    "membersButtonAria": "Carte membres du groupe",
-    "lyricsButtonAria": "Carte paroles",
-    "tabsButtonAria": "Lien tabs",
+    "storyButtonAria": "Carte Histoire",
+    "membersButtonAria": "Cartes Membres",
+    "lyricsButtonAria": "Cartes Paroles",
+    "tabsButtonAria": "Lien vers les tablatures",
     "placeholderButtonAria": "Bientôt disponible"
   },
   "faders": {
-    "open": "Afficher les faders d'instruments",
-    "close": "Fermer les faders d'instruments",
-    "groupLabel": "Faders d'instruments",
+    "open": "Ouvrir le mixeur d'instruments",
+    "close": "Fermer le mixeur d'instruments",
+    "groupLabel": "Mixeur d'instruments",
     "muteToggleSuffix": "Couper",
-    "instrumentVolumePrefix": "Volume de",
+    "instrumentVolumePrefix": "Volume",
     "unavailableSuffix": "(indisponible)"
   },
   "logo": {
     "ariaLabel": "Frisches – Cliquez pour afficher le menu",
     "logoAriaLabel": "Frisches",
-    "socialLinks": "Réseaux sociaux"
+    "socialLinks": "Liens sociaux"
   },
   "status": {
     "loading": "Chargement..."
@@ -168,8 +168,8 @@
       "musicText": "Tous les morceaux de musique présents sur ce site sont des compositions originales des membres du groupe Frisches et sont protégés par le droit d'auteur. Aucun sample ni reprise n'est utilisé."
     },
     "privacy": {
-      "title": "Confidentialité",
-      "subtitle": "mai 2026",
+      "title": "Politique de confidentialité",
+      "subtitle": "Mai 2026",
       "s1Title": "1. Responsable du traitement",
       "s1ContactLabel": "E-mail",
       "s2Title": "2. Données collectées",

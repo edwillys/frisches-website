@@ -204,7 +204,7 @@ describe('translation coverage', () => {
     ).toEqual({
       de: {
         faders: {
-          instrumentVolume: 'Drums Lautstärke',
+          instrumentVolume: 'Lautstärke Drums',
           muteToggle: 'Drums stummschalten',
         },
         gallery: {
@@ -252,7 +252,7 @@ describe('translation coverage', () => {
       },
       fr: {
         faders: {
-          instrumentVolume: 'Volume de Drums',
+          instrumentVolume: 'Volume Drums',
           muteToggle: 'Couper Drums',
         },
         gallery: {
@@ -300,8 +300,8 @@ describe('translation coverage', () => {
       },
       it: {
         faders: {
-          instrumentVolume: 'Drums volume',
-          muteToggle: 'Drums silenzia',
+          instrumentVolume: 'Volume Drums',
+          muteToggle: 'Silenzia Drums',
         },
         gallery: {
           photosCount1: '1 foto',
@@ -324,8 +324,8 @@ describe('translation coverage', () => {
       },
       ru: {
         faders: {
-          instrumentVolume: 'Drums громкость',
-          muteToggle: 'Drums выкл. звук',
+          instrumentVolume: 'Громкость Drums',
+          muteToggle: 'Приглушить Drums',
         },
         gallery: {
           photosCount1: '1 фото',
