@@ -376,6 +376,16 @@ function draw() {
 // ============================================
 // LIFECYCLE
 // ============================================
+function onVisibilityChange() {
+  console.log('Visibility changed:', document.visibilityState)
+  if (document.visibilityState === 'hidden') {
+    cancelAnimationFrame(rafId)
+    rafId = 0
+  } else if (!rafId) {
+    rafId = requestAnimationFrame(draw)
+  }
+}
+
 onMounted(() => {
   const el = canvasRef.value
   if (!el) return
@@ -385,6 +395,7 @@ onMounted(() => {
 
   window.addEventListener('resize', resize)
   window.addEventListener('mousemove', onMove)
+  document.addEventListener('visibilitychange', onVisibilityChange)
 
   rafId = requestAnimationFrame(draw)
 })
@@ -392,6 +403,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', resize)
   window.removeEventListener('mousemove', onMove)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
   cancelAnimationFrame(rafId)
 })
 

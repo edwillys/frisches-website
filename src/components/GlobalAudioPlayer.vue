@@ -269,6 +269,23 @@ function startWobbleTicker() {
   gsap.ticker.add(wobbleTickerFn)
 }
 
+function onPlayerVisibilityChange() {
+  if (document.visibilityState === 'hidden') {
+    stopWobbleTicker()
+    stopProgressTicker()
+  } else {
+    // Zero timestamps so the first resumed frame starts from a clean baseline
+    // (avoids a large dt spike after a long hidden period).
+    wobbleLastFrameMs = 0
+    progressLastFrameMs = 0
+    if (isMiniPlayerWobbleEnabled.value) {
+      startWobbleTicker()
+    } else if (shouldShowMiniPlayer.value && audioStore.isPlaying) {
+      startProgressTicker()
+    }
+  }
+}
+
 function stopWobbleTicker() {
   if (!wobbleTickerFn) return
   gsap.ticker.remove(wobbleTickerFn)
@@ -583,6 +600,7 @@ onMounted(() => {
   }
   window.addEventListener('resize', windowResizeHandler, { passive: true })
   window.addEventListener('orientationchange', windowResizeHandler, { passive: true })
+  document.addEventListener('visibilitychange', onPlayerVisibilityChange)
 
   nextTick(() => {
     scheduleOverflowUpdate()
@@ -598,6 +616,7 @@ onUnmounted(() => {
     windowResizeHandler = null
   }
 
+  document.removeEventListener('visibilitychange', onPlayerVisibilityChange)
   stopProgressTicker()
   stopWobbleTicker()
   wobbleWaves = []

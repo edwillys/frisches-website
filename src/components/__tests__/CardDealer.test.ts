@@ -856,4 +856,100 @@ describe('CardDealer', () => {
       matchMediaMock.restore()
     }
   })
+
+  it('positions the mobile cards viewport on the lead card without delayed recentering', async () => {
+    const matchMediaMock = mockMobileMatchMedia()
+    let wrapper: ReturnType<typeof mount> | null = null
+
+    const originalInnerWidth = window.innerWidth
+    const originalGetComputedStyle = window.getComputedStyle
+    const originalOffsetLeft = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetLeft')
+    const originalClientWidth = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      'clientWidth'
+    )
+    const originalScrollWidth = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      'scrollWidth'
+    )
+
+    try {
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        value: 375,
+      })
+
+      window.getComputedStyle = vi.fn((element: Element) => {
+        const style = originalGetComputedStyle.call(window, element)
+        return {
+          ...style,
+          paddingLeft: '90px',
+        } as CSSStyleDeclaration
+      })
+
+      Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+        configurable: true,
+        get() {
+          if ((this as HTMLElement).dataset.testid === 'card-dealer-cards-container') {
+            return 375
+          }
+
+          return originalClientWidth?.get?.call(this) ?? 0
+        },
+      })
+
+      Object.defineProperty(HTMLElement.prototype, 'scrollWidth', {
+        configurable: true,
+        get() {
+          if ((this as HTMLElement).dataset.testid === 'card-dealer-cards-container') {
+            return 720
+          }
+
+          return originalScrollWidth?.get?.call(this) ?? 0
+        },
+      })
+
+      Object.defineProperty(HTMLElement.prototype, 'offsetLeft', {
+        configurable: true,
+        get() {
+          const testId = (this as HTMLElement).dataset.testid
+          if (testId === 'card-music') return 90
+          if (testId === 'card-about') return 250
+          if (testId === 'card-gallery') return 410
+
+          return originalOffsetLeft?.get?.call(this) ?? 0
+        },
+      })
+
+      wrapper = mount(CardDealer, {
+        attachTo: document.body,
+      })
+
+      await wrapper.find('.logo-button').trigger('click')
+      await vi.advanceTimersByTimeAsync(1000)
+      await nextTick()
+
+      const cardsContainer = wrapper.get('[data-testid="card-dealer-cards-container"]')
+        .element as HTMLElement
+
+      expect(cardsContainer.scrollLeft).toBe(160)
+    } finally {
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        value: originalInnerWidth,
+      })
+      window.getComputedStyle = originalGetComputedStyle
+      if (originalClientWidth) {
+        Object.defineProperty(HTMLElement.prototype, 'clientWidth', originalClientWidth)
+      }
+      if (originalScrollWidth) {
+        Object.defineProperty(HTMLElement.prototype, 'scrollWidth', originalScrollWidth)
+      }
+      if (originalOffsetLeft) {
+        Object.defineProperty(HTMLElement.prototype, 'offsetLeft', originalOffsetLeft)
+      }
+      wrapper?.unmount()
+      matchMediaMock.restore()
+    }
+  })
 })

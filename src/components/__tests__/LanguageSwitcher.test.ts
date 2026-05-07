@@ -18,10 +18,22 @@ describe('LanguageSwitcher', () => {
   it('renders all supported locale buttons with translated acronyms', async () => {
     const wrapper = mount(LanguageSwitcher)
 
+    expect(wrapper.get('[data-testid="language-current"]').text()).toContain('EN')
+    expect(wrapper.find('[data-testid="language-current"] .language-switcher__flag').exists()).toBe(
+      false
+    )
+
     await wrapper.get('[data-testid="language-current"]').trigger('click')
 
     expect(wrapper.get('[data-testid="language-option-en"]').text()).toContain('EN')
+    const enFlag = wrapper.find('[data-testid="language-option-en"] img.language-switcher__flag')
+    expect(enFlag.exists()).toBe(true)
+    expect(enFlag.attributes('src')).toContain('1f1ec-1f1e7')
+
     expect(wrapper.get('[data-testid="language-option-de"]').text()).toContain('DE')
+    const deFlag = wrapper.find('[data-testid="language-option-de"] img.language-switcher__flag')
+    expect(deFlag.exists()).toBe(true)
+    expect(deFlag.attributes('src')).toContain('1f1e9-1f1ea')
     expect(wrapper.get('[data-testid="language-option-fr"]').text()).toContain('FR')
     expect(wrapper.get('[data-testid="language-option-br"]').text()).toContain('BR')
     expect(wrapper.get('[data-testid="language-option-it"]').text()).toContain('IT')

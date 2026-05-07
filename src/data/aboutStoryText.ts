@@ -88,11 +88,11 @@ const aboutStoryTextByLocale: Record<AppLocale, StoryText> = {
       },
       {
         id: 'founding',
-        text: `En 2019, le paysage musical a vu surgir une créature comme on n’en fait pas deux : Frisches. Nourri aux eaux dorées de l’Isar, quelque part entre une gorgée et la suivante, Frisches est arrivé avec une seule mission : garder le rock bien frais. Depuis, ses rythmes massifs, sa basse qui cogne et ses riffs rugueux viennent remuer les tripes.`,
+        text: `En 2019, le paysage musical a vu surgir une créature comme on n’en fait pas deux : Frisches. Abreuvé aux eaux houblonnées de l’Isar, quelque part entre une gorgée et la suivante, Frisches émergea avec une seule mission : garder le rock bien frais. Depuis lors, ses rythmes massifs, sa basse qui cogne et ses riffs rugueux viennent heurter les âmes sensibles.`,
       },
       {
         id: 'album',
-        text: `Le premier album, "Tales From The Cellar", est un recueil de poésie sonore façonné par quatre têtes créatives : Camilla (chant et flûte), Tobi (basse), Steff (batterie) et Edgar (guitare). Les morceaux ont pris forme dans leur repaire de répétition souterrain. En 2023, le groupe a encore épaissi son mythe avec le clip animé de `,
+        text: `Leur premier album, "Tales From The Cellar", est un recueil de poésie sonore ayant pris forme dans leur antre de répétition souterraine, façonné par quatre têtes créatives: Camilla (chant et flûte), Tobi (basse), Steff (batterie) et Edgar (guitare). En 2023, le groupe a étoffé son univers d’un clip animé, `,
         linkText: `"Witch Hunting"`,
         linkHref: 'https://www.youtube.com/watch?v=_rZYN5G6-gg',
         linkYtId: '_rZYN5G6-gg',

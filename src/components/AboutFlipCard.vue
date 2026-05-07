@@ -1022,7 +1022,7 @@ onBeforeUnmount(() => {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  color: var(--color-text-secondary);
+  color: var(--color-text);
   line-height: 1.48;
   font-size: var(--about-card-copy-font-size);
   text-align: left;

@@ -121,7 +121,12 @@ describe('AboutEntryCard', () => {
   it('passes the stored YouTube tooltip metadata to the story hyperlink card', async () => {
     const wrapper = mount(AboutEntryCard)
 
-    wrapper.findAllComponents(ArcadeMenuButton)[0]?.vm.$emit('press')
+    const storyButton = wrapper.findAllComponents(ArcadeMenuButton)[0]
+    if (!storyButton) {
+      throw new Error('Expected story arcade button to exist')
+    }
+
+    await storyButton.get('button').trigger('click')
     await nextTick()
 
     const storyLink = wrapper.find('.about-entry-card__story-link')
@@ -137,7 +142,12 @@ describe('AboutEntryCard', () => {
     const tabsButton = wrapper
       .findAllComponents(ArcadeMenuButton)
       .find((btn) => btn.props('buttonAriaLabel') === 'Tabs link')
-    tabsButton?.vm.$emit('press')
+
+    if (!tabsButton) {
+      throw new Error('Expected tabs arcade button to exist')
+    }
+
+    await tabsButton.get('button').trigger('click')
     await nextTick()
 
     expect(openSpy).toHaveBeenCalledWith(SONGSTERR_TABS_URL, '_blank', 'noopener,noreferrer')
