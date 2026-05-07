@@ -543,6 +543,9 @@ onMounted(() => {
     }
   }
 
+  const scope = rootRef.value
+  if (!scope) return
+
   ctx = gsap.context(() => {
     if (!innerRef.value) return
 
@@ -552,7 +555,7 @@ onMounted(() => {
     })
 
     gsap.set(floatingAvatarRef.value, { autoAlpha: 0 })
-  }, rootRef.value)
+  }, scope)
 
   if (props.isFlipped) {
     setFullBackText()
