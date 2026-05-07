@@ -71,11 +71,11 @@
     "seek": "Posição de reprodução",
     "showLyrics": "Mostrar letra",
     "hideLyrics": "Ocultar letra",
-    "noLyrics": "Letra não disponível",
+    "noLyrics": "Letra indisponível",
     "mute": "Silenciar",
     "unmute": "Ativar som",
     "volume": "Volume",
-    "closePlayer": "Fechar player"
+    "closePlayer": "Fechar"
   },
   "music": {
     "albumsNavLabel": "Álbuns",
@@ -95,7 +95,7 @@
     "resumeTrackPrefix": "Retomar",
     "closeLyrics": "Fechar letra",
     "lyricsLoading": "Carregando letra...",
-    "noLyricsForTrack": "Nenhuma letra disponível para esta faixa"
+    "noLyricsForTrack": "Letra indisponível para esta faixa"
   },
   "lyrics": {
     "syncToCurrent": "Sincronizar com a letra atual",
@@ -120,7 +120,7 @@
     "groupLabel": "Faders de instrumentos",
     "muteToggleSuffix": "Silenciar",
     "instrumentVolumePrefix": "Volume de",
-    "unavailableSuffix": "(não disponível)"
+    "unavailableSuffix": "(indisponível)"
   },
   "logo": {
     "ariaLabel": "Frisches – Clique para revelar o menu",

@@ -552,7 +552,7 @@ onMounted(() => {
     })
 
     gsap.set(floatingAvatarRef.value, { autoAlpha: 0 })
-  }, rootRef)
+  }, rootRef.value)
 
   if (props.isFlipped) {
     setFullBackText()
