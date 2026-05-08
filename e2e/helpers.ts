@@ -106,3 +106,16 @@ export async function waitForMiniPlayerWobbleState(page: Page, timeout = 5000): 
     { timeout, polling: 100 }
   )
 }
+
+/**
+ * Waits for the about section's target element to become visible.
+ * This is needed because the about section uses independent GSAP animations not tracked by the CardDealer.
+ */
+export async function waitForAboutSectionAnimation(
+  page: Page,
+  testId: string,
+  timeout = 15000
+): Promise<void> {
+  // Wait for the section to become visible (display != none and has dimensions)
+  await page.locator(`[data-testid="${testId}"]`).waitFor({ state: 'visible', timeout })
+}

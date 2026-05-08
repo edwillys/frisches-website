@@ -71,11 +71,11 @@
     "seek": "Posizione di riproduzione",
     "showLyrics": "Mostra il testo",
     "hideLyrics": "Nascondi il testo",
-    "noLyrics": "Testo non disponibile",
+    "noLyrics": "Testo indisponibile",
     "mute": "Silenzia",
     "unmute": "Riattiva audio",
     "volume": "Volume",
-    "closePlayer": "Chiudi lettore"
+    "closePlayer": "Chiudi"
   },
   "music": {
     "albumsNavLabel": "Album",
@@ -95,7 +95,7 @@
     "resumeTrackPrefix": "Riprendi",
     "closeLyrics": "Chiudi il testo",
     "lyricsLoading": "Caricamento del testo...",
-    "noLyricsForTrack": "Nessun testo disponibile per questo brano"
+    "noLyricsForTrack": "Testo indisponibile per questo brano"
   },
   "lyrics": {
     "syncToCurrent": "Sincronizza con i testi attuali",

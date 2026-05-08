@@ -291,6 +291,7 @@ function toggleFaderEditing() {
   left: 50%;
   bottom: calc(100% + 10px);
   transform: translateX(-50%);
+  max-width: min(92vw, 38rem);
   padding: 10px 10px 10px;
   background: rgba(0, 0, 0, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -383,6 +384,15 @@ function toggleFaderEditing() {
   display: flex;
   gap: 8px;
   align-items: flex-end;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.stems__grid::-webkit-scrollbar {
+  display: none;
 }
 
 .stems__grid--disabled {
@@ -507,5 +517,19 @@ function toggleFaderEditing() {
   height: 0;
   opacity: 0;
   border: none;
+}
+
+@media (max-width: 900px) {
+  .stems__overlay {
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+
+  .stems__overlay::after {
+    left: auto;
+    right: 14px;
+    transform: rotate(45deg);
+  }
 }
 </style>

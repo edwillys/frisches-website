@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test'
-import { waitForAnimations, clickAndWaitForAnimations } from './helpers.js'
+import {
+  waitForAnimations,
+  clickAndWaitForAnimations,
+  waitForAboutSectionAnimation,
+} from './helpers.js'
 
 test.describe('Persistent mini-player (Phase 1)', () => {
   test.beforeEach(async ({ page }) => {
@@ -84,9 +88,10 @@ test.describe('Persistent mini-player (Phase 1)', () => {
     // About now opens to the entry section; navigate into Members
     const membersBtn = page.getByRole('button', { name: 'Members cards' })
     await expect(membersBtn).toBeVisible({ timeout: 15000 })
-    await membersBtn.click()
+    await membersBtn.dispatchEvent('click')
+    await waitForAboutSectionAnimation(page, 'about-members-view')
     await expect(page.locator('[data-testid="about-members-view"]')).toBeVisible({
-      timeout: 15000,
+      timeout: 10000,
     })
 
     // Flip Edgar's card to expose the favorite-song chip

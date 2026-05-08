@@ -79,6 +79,7 @@ watch(
       '--tone-contour': props.toneContour,
     }"
     type="button"
+    @pointerdown.stop
     @click="handlePress"
   >
     <span class="arcade-menu-button__inner">
@@ -115,6 +116,10 @@ watch(
     0 0 0 1px color-mix(in srgb, var(--tone-contour) 74%, #000000 26%),
     0 10px 18px rgba(0, 0, 0, 0.24);
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
   transition: box-shadow 0.2s ease;
 }
 

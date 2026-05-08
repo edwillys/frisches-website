@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test'
-import { waitForAnimations, clickAndWaitForAnimations } from './helpers.js'
+import {
+  waitForAnimations,
+  clickAndWaitForAnimations,
+  waitForAboutSectionAnimation,
+} from './helpers.js'
 
 test.describe('Frisches Website - Critical Flows', () => {
   test.beforeEach(async ({ page }) => {
@@ -130,10 +134,11 @@ test.describe('Frisches Website - Critical Flows', () => {
     // About now opens to the entry section; navigate into Members
     const membersBtn = page.getByRole('button', { name: 'Members cards' })
     await expect(membersBtn).toBeVisible({ timeout: 15000 })
-    await membersBtn.click()
+    await membersBtn.dispatchEvent('click')
+    await waitForAboutSectionAnimation(page, 'about-members-view')
 
     const aboutMembersView = page.locator('[data-testid="about-members-view"]')
-    await expect(aboutMembersView).toBeVisible({ timeout: 15000 })
+    await expect(aboutMembersView).toBeVisible({ timeout: 10000 })
 
     const memberCards = page.locator('[data-member-card="true"]')
     await expect(memberCards).toHaveCount(4, { timeout: 20000 })
@@ -158,10 +163,11 @@ test.describe('Frisches Website - Critical Flows', () => {
     // About now opens to the entry section; navigate into Members
     const membersBtn = page.getByRole('button', { name: 'Members cards' })
     await expect(membersBtn).toBeVisible({ timeout: 15000 })
-    await membersBtn.click()
+    await membersBtn.dispatchEvent('click')
+    await waitForAboutSectionAnimation(page, 'about-members-view')
 
     const aboutMembersView = page.locator('[data-testid="about-members-view"]')
-    await expect(aboutMembersView).toBeVisible({ timeout: 15000 })
+    await expect(aboutMembersView).toBeVisible({ timeout: 10000 })
 
     const characters = page.locator('[data-member-card="true"]')
     await expect(characters).toHaveCount(4, { timeout: 20000 })

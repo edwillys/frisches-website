@@ -4,6 +4,17 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { currentAppLocale, setCurrentAppLocale, appLocales, type AppLocale } from '@/i18n/locale'
 import { useUiText } from '@/composables/useUiText'
 
+/**
+ * Converts a flag emoji to its Twemoji CDN SVG URL.
+ * Twemoji is the open-source emoji set bundled inside Firefox, so this works
+ * on Chrome/Windows where the OS ships no flag-capable emoji font.
+ * Example: '🇬🇧' → 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ec-1f1e7.svg'
+ */
+function flagEmojiUrl(emoji: string): string {
+  const codePoints = [...emoji].map((char) => char.codePointAt(0)!.toString(16)).join('-')
+  return `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${codePoints}.svg`
+}
+
 interface Props {
   variant?: 'default' | 'header' | 'drawer' | 'floating'
 }
@@ -114,12 +125,12 @@ onBeforeUnmount(() => {
       data-testid="language-current"
       @click="toggleDropdown"
     >
+      <span class="language-switcher__acronym">{{ currentOption?.acronym }}</span>
       <span
         class="language-switcher__arrow"
         :class="{ 'language-switcher__arrow--open': isOpen }"
         aria-hidden="true"
       ></span>
-      <span class="language-switcher__acronym">{{ currentOption?.acronym }}</span>
     </button>
 
     <ul v-if="isOpen" class="language-switcher__dropdown">
@@ -134,7 +145,14 @@ onBeforeUnmount(() => {
           :data-testid="`language-option-${option.locale}`"
           @click="handleLocaleSelect(option.locale)"
         >
-          <span class="language-switcher__flag" aria-hidden="true">{{ option.flag }}</span>
+          <img
+            class="language-switcher__flag"
+            :src="flagEmojiUrl(option.flag)"
+            alt=""
+            width="20"
+            height="15"
+            aria-hidden="true"
+          />
           <span class="language-switcher__acronym">{{ option.acronym }}</span>
         </button>
       </li>
@@ -289,8 +307,13 @@ onBeforeUnmount(() => {
 }
 
 .language-switcher__flag {
-  font-size: 0.95rem;
-  line-height: 1;
+  display: inline-block;
+  width: 1.25rem;
+  height: 0.94rem;
+  flex: 0 0 auto;
+  object-fit: contain;
+  border-radius: 0.1rem;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .language-switcher__acronym {

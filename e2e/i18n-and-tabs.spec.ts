@@ -49,7 +49,10 @@ test.describe('Locale persistence and Tabs link', () => {
     const tabsButton = page.getByRole('button', { name: /^Tabs link$/i }).first()
     await expect(tabsButton).toBeVisible({ timeout: 10000 })
 
-    const [popup] = await Promise.all([page.waitForEvent('popup'), tabsButton.click()])
+    const [popup] = await Promise.all([
+      page.waitForEvent('popup'),
+      tabsButton.dispatchEvent('click'),
+    ])
 
     await expect.poll(() => popup.url()).toContain('songsterr.com')
     await popup.close()

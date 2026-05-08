@@ -231,12 +231,13 @@ watch(
   --about-members-carousel-gap: var(--about-card-gap);
   --about-members-carousel-scroll-padding: var(--about-track-inline-padding);
   --about-members-carousel-inline-padding: 0.1rem;
+  --about-members-carousel-min-height: 300px;
   display: flex;
   align-items: flex-start;
   justify-content: center;
   width: 100%;
   height: 100%;
-  min-height: 0;
+  min-height: auto;
   margin: 0 auto;
   padding: var(--about-members-padding-block) var(--about-members-padding-inline);
   box-sizing: border-box;
@@ -250,7 +251,7 @@ watch(
   gap: var(--about-members-carousel-gap);
   width: 100%;
   height: 100%;
-  min-height: 0;
+  min-height: var(--about-members-carousel-min-height);
   overflow-x: auto;
   overflow-y: auto;
   scroll-snap-type: x mandatory;
@@ -285,7 +286,6 @@ watch(
   flex: 0 0 min(var(--about-members-card-width), var(--about-members-cell-max-width));
   width: min(var(--about-members-card-width), var(--about-members-cell-max-width));
   margin-block: auto;
-  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;

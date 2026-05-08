@@ -170,18 +170,15 @@ const positionCardsViewportOnIndex = (cardIndex: number) => {
 
   if (!container || !card) return
 
-  const alignToRenderedCenter = () => {
-    const containerRect = container.getBoundingClientRect()
-    const cardRect = card.getBoundingClientRect()
-    const delta =
-      cardRect.left + cardRect.width / 2 - (containerRect.left + containerRect.width / 2)
-    const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth)
+  const computedStyle = window.getComputedStyle(container)
+  const paddingInlineStart = Number.parseFloat(computedStyle.paddingLeft || '0')
+  const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth)
+  const targetScrollLeft = Math.min(
+    Math.max(0, card.offsetLeft - paddingInlineStart),
+    maxScrollLeft
+  )
 
-    container.scrollLeft = Math.min(Math.max(0, container.scrollLeft + delta), maxScrollLeft)
-  }
-
-  alignToRenderedCenter()
-  window.requestAnimationFrame(alignToRenderedCenter)
+  container.scrollLeft = targetScrollLeft
 }
 
 // Small safety net: if a GSAP timeline never fires onComplete (rare in headless/FF),
@@ -741,6 +738,13 @@ const syncCardsVisibilityForView = () => {
 
 watch([() => currentView.value, () => isAnimating.value], () => {
   syncCardsVisibilityForView()
+
+  if (currentView.value !== 'cards' || isAnimating.value) return
+
+  const centerIndex = contentReturnSelectedCard.value ?? deckLeadIndex
+  void nextTick(() => {
+    positionCardsViewportOnIndex(centerIndex)
+  })
 })
 
 const {

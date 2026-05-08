@@ -17,10 +17,19 @@ const collectAnimatedCards = (sectionRoot: HTMLElement) =>
   Array.from(sectionRoot.querySelectorAll<HTMLElement>('[data-about-card]'))
 
 const animateSectionOut = async (sectionRoot: HTMLElement) => {
-  if (prefersReducedMotion()) return
-
   const cards = collectAnimatedCards(sectionRoot)
   const targets = cards.length ? cards : [sectionRoot]
+
+  if (prefersReducedMotion()) {
+    // Ensure final styles are set when animations are disabled
+    gsap.set(targets, {
+      scale: 0.86,
+      y: 20,
+      opacity: 0,
+    })
+    return
+  }
+
   const staggerMs = cards.length > 1 ? (cards.length - 1) * 30 : 0
   const fallbackMs = 220 + staggerMs + 150
 
@@ -42,10 +51,19 @@ const animateSectionOut = async (sectionRoot: HTMLElement) => {
 }
 
 const animateSectionIn = async (sectionRoot: HTMLElement) => {
-  if (prefersReducedMotion()) return
-
   const cards = collectAnimatedCards(sectionRoot)
   const targets = cards.length ? cards : [sectionRoot]
+
+  if (prefersReducedMotion()) {
+    // Ensure final styles are set when animations are disabled
+    gsap.set(targets, {
+      scale: 1,
+      y: 0,
+      opacity: 1,
+    })
+    return
+  }
+
   const staggerMs = cards.length > 1 ? (cards.length - 1) * 30 : 0
   const fallbackMs = 280 + staggerMs + 150
 

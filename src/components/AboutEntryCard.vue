@@ -272,7 +272,7 @@ watch(
   }
 )
 
-watch([displayedTitleText, titleText], () => {
+watch(titleText, () => {
   void nextTick(() => {
     scheduleTitleFit()
   })
@@ -557,6 +557,7 @@ onBeforeUnmount(() => {
   letter-spacing: clamp(0.03em, 0.24cqi, 0.08em);
   white-space: nowrap;
   overflow: hidden;
+  text-transform: uppercase;
 }
 
 .about-entry-card__cursor-indicator {
@@ -655,7 +656,7 @@ onBeforeUnmount(() => {
   line-height: 1.36;
   font-family: 'Space Mono', 'Courier New', monospace;
   font-size: 0.72rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text);
 }
 
 .about-entry-card__story-copy--dict strong {

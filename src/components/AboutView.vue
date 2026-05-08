@@ -315,7 +315,6 @@ defineExpose({
 .about-view {
   width: 100%;
   height: 100%;
-  min-height: 0;
   overflow-x: clip;
   overflow-y: auto;
 }
@@ -324,7 +323,6 @@ defineExpose({
   width: min(100%, var(--about-track-max-width));
   margin-inline: auto;
   height: 100%;
-  min-height: 0;
   position: relative;
   overflow-y: auto;
   overflow-x: hidden;
@@ -334,7 +332,6 @@ defineExpose({
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 0;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -347,7 +344,6 @@ defineExpose({
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 0;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -356,7 +352,6 @@ defineExpose({
 .about-view__carousel {
   width: 100%;
   height: 100%;
-  min-height: 0;
   display: flex;
   align-items: flex-start;
   justify-content: center;

@@ -75,7 +75,7 @@ export const aboutMembersText: Record<
       name: 'Edgar',
       badgeTitles: ['Guitare', 'Chœurs'],
       descriptionLead:
-        'Manie la guitare et, à l’occasion, fait aussi le clown. Compositeur de mesures retorses, sa note préférée se cache toujours juste après le prochain virage. Il injecte sa passion du rock classique dans chaque riff et chaque solo de Frisches. Entre intros à rallonge et jeux de mots douteux, son histoire préférée finit toujours par mener à',
+        'Manie la guitare et, à l’occasion, amuse la galerie. Adepte des métriques sinueuses, sa note de prédilection nous tire toujours au détour du prochain virage. Il injecte sa passion du rock classique dans chaque riff et chaque solo de Frisches. Entre intros à rallonge et jeux de mots douteux, son conte préféré finit toujours par mener à ',
     },
     cami: {
       name: 'Cami',
@@ -89,7 +89,7 @@ export const aboutMembersText: Record<
       name: 'Steff',
       badgeTitles: ['Batterie'],
       descriptionLead:
-        'Steff tient le rythme de Frisches d’une main de fer : tout ce qui dérape hors du tempo n’a pratiquement aucune chance. Incontournable aux répétitions du mardi soir : une Pizza Funghi, sans pesto. De la pluie sur le trajet ? On joue quand même. La double pédale est la prochaine sur la liste, prête à remplir encore un peu plus le cœur et l’âme de nos morceaux. Pour elle, rien n’a plus de groove que',
+        'Véritable métronome de Frisches, Steff tient le tempo d’une main de maître: ici, comme le dit Ringo, le f*ing clic, c’est elle. Qu’il neige ou qu’il vente, rien ne l’arrête. Le rituel du mardi est sacré : Pizza Funghi, sans pesto. Prochain rajout à ses atouts ? La double pédale, pour rajouter encore un peu plus de coffre à sa grosse caisse et à l’âme de nos morceaux. Pour elle, rien ne groove plus qu’',
       descriptionTail: ' !',
     },
     tobi: {
