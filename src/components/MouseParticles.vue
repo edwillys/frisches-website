@@ -377,7 +377,6 @@ function draw() {
 // LIFECYCLE
 // ============================================
 function onVisibilityChange() {
-  console.log('Visibility changed:', document.visibilityState)
   if (document.visibilityState === 'hidden') {
     cancelAnimationFrame(rafId)
     rafId = 0

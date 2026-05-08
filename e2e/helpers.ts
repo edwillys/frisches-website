@@ -108,7 +108,7 @@ export async function waitForMiniPlayerWobbleState(page: Page, timeout = 5000): 
 }
 
 /**
- * Waits for the about section animation to complete and the target element to become visible.
+ * Waits for the about section's target element to become visible.
  * This is needed because the about section uses independent GSAP animations not tracked by the CardDealer.
  */
 export async function waitForAboutSectionAnimation(

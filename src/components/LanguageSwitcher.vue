@@ -148,7 +148,7 @@ onBeforeUnmount(() => {
           <img
             class="language-switcher__flag"
             :src="flagEmojiUrl(option.flag)"
-            :alt="option.label"
+            alt=""
             width="20"
             height="15"
             aria-hidden="true"
