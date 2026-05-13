@@ -3,7 +3,13 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import gsap from 'gsap'
 import { useAudioStore, type AudioStemName } from '@/stores/audio'
 import { getAlbumById } from '@/data/albums'
-import { resolveStemAvailability } from '@/data/stems'
+import {
+  resolveStemAvailability,
+  resolveStemGroupItems,
+  resolveStemAudioSources,
+} from '@/data/stems'
+import { resolveStemLimiterParams } from '@/data/stemLimiter'
+import { useStemPlayback } from '@/composables/useStemPlayback'
 import { useReducedMotion } from '@/composables/useMediaHelpers'
 import { useOverflowMarquee } from '@/composables/useOverflowMarquee'
 import { useUiText } from '@/composables/useUiText'
@@ -35,6 +41,24 @@ import volumeMidSvg from '@/assets/icons/volume-mid.svg?raw'
 import volumeHighSvg from '@/assets/icons/volume-high.svg?raw'
 import { MINI_PLAYER_OPEN_LYRICS_EVENT } from '@/constants/events'
 
+type E2eAudioProbe = {
+  readMasterLevel: () => number
+  readStemLevel: () => number
+  readCombinedLevel: () => number
+  readState: () => {
+    masterLevel: number
+    stemLevel: number
+    combinedLevel: number
+    stemsActive: boolean
+  }
+}
+
+type TimeDomainBuffer = Parameters<AnalyserNode['getFloatTimeDomainData']>[0]
+type CaptureStreamAudioEl = HTMLAudioElement & {
+  captureStream?: () => MediaStream
+  mozCaptureStream?: () => MediaStream
+}
+
 const props = withDefaults(
   defineProps<{
     enableMiniProgressWobble?: boolean
@@ -65,6 +89,11 @@ let wobbleTickerFn: (() => void) | null = null
 let wobbleWaves: TravelingWaveState[] = []
 let wobbleLastFrameMs = 0
 let windowResizeHandler: (() => void) | null = null
+let masterMeterCtx: AudioContext | null = null
+let masterMeterAnalyser: AnalyserNode | null = null
+let masterMeterSource: MediaStreamAudioSourceNode | null = null
+let masterMeterSink: GainNode | null = null
+let masterMeterBuffer: TimeDomainBuffer | null = null
 
 const showStemFaders = ref(false)
 const t = useUiText()
@@ -92,6 +121,214 @@ const currentTrackHasLyrics = computed(() => {
 })
 
 const currentStemAvailability = computed(() => resolveStemAvailability(audioStore.currentTrackId))
+const currentStemGroupItems = computed(() => resolveStemGroupItems(audioStore.currentTrackId))
+const currentStemAudioSources = computed(() => resolveStemAudioSources(audioStore.currentTrackId))
+const currentStemLimiterParams = computed(() => resolveStemLimiterParams(audioStore.currentTrackId))
+const currentTrackHasStemsAvailable = computed(() =>
+  Object.values(currentStemAvailability.value).some(Boolean)
+)
+
+const stemPlayback = useStemPlayback(
+  audioEl,
+  computed(() => audioStore.stemGains),
+  computed(() => audioStore.stemGroupGains)
+)
+
+function sampleAnalyserRms(analyser: AnalyserNode | null, buffer: TimeDomainBuffer | null) {
+  if (!analyser || !buffer) return 0
+  analyser.getFloatTimeDomainData(buffer)
+
+  let sumSquares = 0
+  for (const sample of buffer) {
+    sumSquares += sample * sample
+  }
+
+  return Math.sqrt(sumSquares / buffer.length)
+}
+
+function readMasterOutputLevel() {
+  return sampleAnalyserRms(masterMeterAnalyser, masterMeterBuffer)
+}
+
+function installE2eAudioProbe() {
+  if (typeof window === 'undefined' || !import.meta.env.DEV) return
+
+  const runtimeWindow = window as Window & { __FRISCHES_E2E_AUDIO__?: E2eAudioProbe }
+  runtimeWindow.__FRISCHES_E2E_AUDIO__ = {
+    readMasterLevel: () => readMasterOutputLevel(),
+    readStemLevel: () => stemPlayback.getOutputLevel(),
+    readCombinedLevel: () => Math.max(readMasterOutputLevel(), stemPlayback.getOutputLevel()),
+    readState: () => {
+      const masterLevel = readMasterOutputLevel()
+      const stemLevel = stemPlayback.getOutputLevel()
+      return {
+        masterLevel,
+        stemLevel,
+        combinedLevel: Math.max(masterLevel, stemLevel),
+        stemsActive: stemPlayback.isActive.value,
+      }
+    },
+  }
+}
+
+function disposeMasterOutputProbe() {
+  try {
+    masterMeterSource?.disconnect()
+  } catch {
+    /* ignore */
+  }
+  masterMeterSource = null
+
+  try {
+    masterMeterAnalyser?.disconnect()
+  } catch {
+    /* ignore */
+  }
+  masterMeterAnalyser = null
+  masterMeterBuffer = null
+
+  try {
+    masterMeterSink?.disconnect()
+  } catch {
+    /* ignore */
+  }
+  masterMeterSink = null
+
+  try {
+    void masterMeterCtx?.close()
+  } catch {
+    /* ignore */
+  }
+  masterMeterCtx = null
+}
+
+function setupMasterOutputProbe() {
+  if (typeof window === 'undefined' || !import.meta.env.DEV) return
+  if (masterMeterCtx) return
+
+  const el = audioEl.value
+  if (!el) return
+
+  const mediaEl = el as CaptureStreamAudioEl
+  const capture =
+    typeof mediaEl.captureStream === 'function'
+      ? () => mediaEl.captureStream!()
+      : typeof mediaEl.mozCaptureStream === 'function'
+        ? () => mediaEl.mozCaptureStream!()
+        : null
+  if (!capture) return
+
+  try {
+    const ctx = new AudioContext()
+    const analyser = ctx.createAnalyser()
+    analyser.fftSize = 2048
+    analyser.smoothingTimeConstant = 0
+
+    const sink = ctx.createGain()
+    sink.gain.value = 0
+
+    const source = ctx.createMediaStreamSource(capture())
+    source.connect(analyser)
+    analyser.connect(sink)
+    sink.connect(ctx.destination)
+
+    masterMeterCtx = ctx
+    masterMeterSource = source
+    masterMeterAnalyser = analyser
+    masterMeterSink = sink
+    masterMeterBuffer = new Float32Array(analyser.fftSize) as TimeDomainBuffer
+    installE2eAudioProbe()
+  } catch {
+    disposeMasterOutputProbe()
+  }
+}
+
+function syncStemPlaybackMixFromStore() {
+  if (!stemPlayback.isActive.value) return
+
+  for (const [stem, gain] of Object.entries(audioStore.stemGains) as [AudioStemName, number][]) {
+    stemPlayback.updateStemGain(stem, gain)
+  }
+
+  for (const [stem, items] of Object.entries(currentStemGroupItems.value) as [
+    AudioStemName,
+    (typeof currentStemGroupItems.value)[AudioStemName],
+  ][]) {
+    items?.forEach((_, index) => {
+      stemPlayback.updateGroupItemGain(
+        stem,
+        index,
+        audioStore.stemGroupGains[`${stem}-${index}`] ?? 1
+      )
+    })
+  }
+}
+
+watch(
+  () => audioStore.currentTrackId,
+  () => {
+    stemPlayback.setSources(currentStemAudioSources.value)
+    stemPlayback.setLimiterParams(currentStemLimiterParams.value)
+    void syncStemPlaybackState()
+  },
+  { immediate: true }
+)
+
+async function syncStemPlaybackState() {
+  const el = audioEl.value
+  if (!el) return
+
+  const stemsRequested =
+    audioStore.stemMixEnabled &&
+    currentTrackHasStemsAvailable.value &&
+    audioStore.hasUserStartedPlayback &&
+    !audioStore.isStopped
+
+  if (stemsRequested) {
+    if (stemPlayback.isActive.value) {
+      el.volume = 0
+      return
+    }
+
+    // While paused, keep stem mixing armed but do not start the stem graph.
+    if (!audioStore.isPlaying) {
+      el.volume = audioStore.volume
+      return
+    }
+
+    await stemPlayback.activate(audioStore.currentTime)
+
+    // Activation failed (e.g. no stem assets) — keep master audible.
+    if (!stemPlayback.isActive.value) {
+      el.volume = audioStore.volume
+    } else {
+      syncStemPlaybackMixFromStore()
+    }
+    // On success the crossfade inside activate() handles volume.
+    return
+  }
+
+  if (stemPlayback.isActive.value) {
+    // Deactivate and let the internal crossfade restore master volume.
+    await stemPlayback.deactivateWithOptions({ restoreMasterVolume: true })
+    return
+  }
+
+  // Stems not active and shouldn't be — ensure master volume is correct.
+  el.volume = audioStore.volume
+}
+
+watch([() => audioStore.stemGains, () => audioStore.stemGroupGains, currentStemGroupItems], () => {
+  syncStemPlaybackMixFromStore()
+})
+
+watch(
+  () => stemPlayback.isStemsPrebuffered.value,
+  (prebuffered) => {
+    if (!prebuffered) return
+    void syncStemPlaybackState()
+  }
+)
 
 const currentAlbumId = computed(() => audioStore.currentTrackId?.split(':')[0] ?? null)
 const currentAlbum = computed(() =>
@@ -405,6 +642,12 @@ function onTimeUpdate() {
   audioStore.updateFromAudioTime(el.currentTime)
 }
 
+function onSeeked() {
+  const el = audioEl.value
+  if (!el || !stemPlayback.isActive.value) return
+  stemPlayback.seek(el.currentTime)
+}
+
 function onEnded() {
   const el = audioEl.value
   if (!el) return
@@ -446,6 +689,8 @@ watch(
     if (audioStore.isPlaying && audioStore.hasUserStartedPlayback && !audioStore.isStopped) {
       await safePlay()
     }
+
+    await syncStemPlaybackState()
   },
   { immediate: true }
 )
@@ -457,8 +702,17 @@ watch(
     if (!el) return
 
     if (playing && audioStore.hasUserStartedPlayback && !audioStore.isStopped) {
+      void masterMeterCtx?.resume()
+      // Resume the AudioContext before playing so stems stay in sync with master.
+      stemPlayback.resume()
       await safePlay()
+      await syncStemPlaybackState()
+      // Pre-warm stems pipeline in the background so enabling stems is instant.
+      void stemPlayback.warmUp()
     } else {
+      // Suspend the AudioContext so stems freeze in step with the paused master.
+      stemPlayback.suspend()
+      await syncStemPlaybackState()
       safePause()
     }
   }
@@ -469,7 +723,10 @@ watch(
   (vol) => {
     const el = audioEl.value
     if (!el) return
-    el.volume = vol
+    // Don't clobber master-mute when stems are active; the crossfade owns volume.
+    if (!stemPlayback.isActive.value) {
+      el.volume = vol
+    }
   },
   { immediate: true }
 )
@@ -580,6 +837,8 @@ onMounted(() => {
   if (!el) return
   el.preload = 'metadata'
   el.volume = audioStore.volume
+  setupMasterOutputProbe()
+  installE2eAudioProbe()
 
   // Ensure src is applied after the ref is mounted (the immediate watch can run before audioEl exists).
   if (currentUrl.value) {
@@ -589,7 +848,10 @@ onMounted(() => {
 
   if (audioStore.isPlaying && audioStore.hasUserStartedPlayback && !audioStore.isStopped) {
     void safePlay()
+    void stemPlayback.warmUp()
   }
+
+  void syncStemPlaybackState()
 
   window.addEventListener('keydown', handleGlobalKeydown)
 
@@ -608,6 +870,11 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  stemPlayback.dispose()
+  disposeMasterOutputProbe()
+  if (typeof window !== 'undefined' && import.meta.env.DEV) {
+    delete (window as Window & { __FRISCHES_E2E_AUDIO__?: E2eAudioProbe }).__FRISCHES_E2E_AUDIO__
+  }
   window.removeEventListener('keydown', handleGlobalKeydown)
 
   if (windowResizeHandler) {
@@ -657,6 +924,40 @@ function onSeek(e: Event) {
 
 function onStemGain(stem: AudioStemName, value: number) {
   audioStore.setStemGain(stem, value)
+  stemPlayback.updateStemGain(stem, value)
+}
+
+function onSetGroupGain(stem: AudioStemName, index: number, value: number) {
+  audioStore.setStemGroupGain(stem, index, value)
+  stemPlayback.updateGroupItemGain(stem, index, value)
+}
+
+function onEnableStems() {
+  audioStore.setStemMixEnabled(true)
+  void syncStemPlaybackState()
+}
+
+function onDisableStems() {
+  audioStore.setStemMixEnabled(false)
+  void syncStemPlaybackState()
+}
+
+function onResetGains() {
+  audioStore.resetAllStemGains()
+  if (stemPlayback.isActive.value) {
+    for (const [stem, gain] of Object.entries(audioStore.stemGains) as [AudioStemName, number][]) {
+      stemPlayback.updateStemGain(stem, gain)
+    }
+
+    for (const [stem, items] of Object.entries(currentStemGroupItems.value) as [
+      AudioStemName,
+      (typeof currentStemGroupItems.value)[AudioStemName],
+    ][]) {
+      items?.forEach((_, index) => {
+        stemPlayback.updateGroupItemGain(stem, index, 1)
+      })
+    }
+  }
 }
 
 function onLyricsButtonClick() {
@@ -672,11 +973,17 @@ function onLyricsButtonClick() {
 </script>
 
 <template>
-  <div class="global-audio-player" data-testid="global-audio-player">
+  <div
+    class="global-audio-player"
+    data-testid="global-audio-player"
+    :data-stems-active="stemPlayback.isActive.value ? 'true' : 'false'"
+    :data-stems-prebuffered="stemPlayback.isStemsPrebuffered.value ? 'true' : 'false'"
+  >
     <audio
       ref="audioEl"
       @loadedmetadata="onLoadedMetadata"
       @timeupdate="onTimeUpdate"
+      @seeked="onSeeked"
       @ended="onEnded"
     />
 
@@ -857,9 +1164,17 @@ function onLyricsButtonClick() {
         <div class="mini-player__actions">
           <InstrumentFaders
             v-model="showStemFaders"
+            :stems-enabled="audioStore.stemMixEnabled"
             :gains="audioStore.stemGains"
             :availability="currentStemAvailability"
+            :group-items="currentStemGroupItems"
+            :group-gains="audioStore.stemGroupGains"
+            :stems-mode-available="currentTrackHasStemsAvailable"
             @setGain="onStemGain"
+            @set-group-gain="onSetGroupGain"
+            @reset-gains="onResetGains"
+            @enable-stems="onEnableStems"
+            @disable-stems="onDisableStems"
           />
 
           <button

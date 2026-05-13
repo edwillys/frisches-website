@@ -49,6 +49,28 @@
       }
     },
     {
+      "label": "Generate limiter metadata for all songs",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "limiter:metadata:all"],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Generate limiter metadata + verify all songs",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "limiter:metadata:all:verify"],
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
       "label": "Sync private assets → R2 upload",
       "type": "shell",
       "command": "npm",

@@ -14,6 +14,82 @@ export type AudioStemName =
   | 'brass'
   | 'percussion'
   | 'keyboard'
+  | 'strings'
+
+// ─── Stem gain persistence ───────────────────────────────────────────────────
+
+const AUDIO_STEMS_STORAGE_KEY = 'frisches:audio:stems:v1'
+
+const DEFAULT_STEM_GAINS: Record<AudioStemName, number> = {
+  drums: 1,
+  guitar: 1,
+  bass: 1,
+  vocals: 1,
+  flute: 1,
+  brass: 1,
+  percussion: 1,
+  keyboard: 1,
+  strings: 1,
+}
+
+interface PersistedStemState {
+  m?: unknown
+  sg?: Record<string, unknown>
+  sgg?: Record<string, unknown>
+  tracks?: Record<
+    string,
+    {
+      sg?: Record<string, unknown>
+      sgg?: Record<string, unknown>
+    }
+  >
+}
+
+function readPersistedStemState(): PersistedStemState | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(AUDIO_STEMS_STORAGE_KEY) ?? null
+    if (!raw) return null
+    const parsed: unknown = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') return null
+    return parsed as PersistedStemState
+  } catch {
+    return null
+  }
+}
+
+function clampGainValue(v: unknown): number {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return 1
+  return Math.min(1, Math.max(0, v))
+}
+
+function createDefaultStemGains(): Record<AudioStemName, number> {
+  return { ...DEFAULT_STEM_GAINS }
+}
+
+function normalizeStemGains(value: unknown): Record<AudioStemName, number> | null {
+  if (!value || typeof value !== 'object') return null
+
+  const next = createDefaultStemGains()
+  for (const stem of Object.keys(next) as AudioStemName[]) {
+    if (stem in (value as Record<string, unknown>)) {
+      next[stem] = clampGainValue((value as Record<string, unknown>)[stem])
+    }
+  }
+
+  return next
+}
+
+function normalizeStemGroupGains(value: unknown): Record<string, number> | null {
+  if (!value || typeof value !== 'object') return null
+
+  const next: Record<string, number> = {}
+  for (const [key, rawValue] of Object.entries(value as Record<string, unknown>)) {
+    next[key] = clampGainValue(rawValue)
+  }
+
+  return next
+}
 
 export const useAudioStore = defineStore('audio', () => {
   const persistAcrossPages = true as const
@@ -40,16 +116,78 @@ export const useAudioStore = defineStore('audio', () => {
   // Lyrics display state
   const showLyrics = ref(false)
 
-  // Stem mixing (future: parallel stem playback)
-  const stemGains = ref<Record<AudioStemName, number>>({
-    drums: 1,
-    guitar: 1,
-    bass: 1,
-    vocals: 1,
-    flute: 1,
-    brass: 1,
-    percussion: 1,
-    keyboard: 1,
+  const stemMixEnabled = ref(false)
+  const legacyStemGains = ref<Record<AudioStemName, number> | null>(null)
+  const legacyStemGroupGains = ref<Record<string, number> | null>(null)
+  const stemGainsByTrackId = ref<Record<string, Record<AudioStemName, number>>>({})
+  const stemGroupGainsByTrackId = ref<Record<string, Record<string, number>>>({})
+
+  // Hydrate persisted state once on store creation
+  ;(() => {
+    const persisted = readPersistedStemState()
+    if (!persisted) return
+
+    stemMixEnabled.value = persisted.m === true
+
+    const normalizedLegacyStemGains = normalizeStemGains(persisted.sg)
+    if (normalizedLegacyStemGains) {
+      legacyStemGains.value = normalizedLegacyStemGains
+    }
+
+    const normalizedLegacyStemGroupGains = normalizeStemGroupGains(persisted.sgg)
+    if (normalizedLegacyStemGroupGains) {
+      legacyStemGroupGains.value = normalizedLegacyStemGroupGains
+    }
+
+    if (persisted.tracks && typeof persisted.tracks === 'object') {
+      const nextStemGainsByTrackId: Record<string, Record<AudioStemName, number>> = {}
+      const nextStemGroupGainsByTrackId: Record<string, Record<string, number>> = {}
+
+      for (const [trackId, trackState] of Object.entries(persisted.tracks)) {
+        if (!trackState || typeof trackState !== 'object') continue
+
+        const normalizedTrackStemGains = normalizeStemGains(trackState.sg)
+        if (normalizedTrackStemGains) {
+          nextStemGainsByTrackId[trackId] = normalizedTrackStemGains
+        }
+
+        const normalizedTrackStemGroupGains = normalizeStemGroupGains(trackState.sgg)
+        if (normalizedTrackStemGroupGains) {
+          nextStemGroupGainsByTrackId[trackId] = normalizedTrackStemGroupGains
+        }
+      }
+
+      stemGainsByTrackId.value = nextStemGainsByTrackId
+      stemGroupGainsByTrackId.value = nextStemGroupGainsByTrackId
+    }
+  })()
+
+  function resolveStemGainsForTrack(
+    trackId: string | null | undefined
+  ): Record<AudioStemName, number> {
+    if (trackId && stemGainsByTrackId.value[trackId]) {
+      return stemGainsByTrackId.value[trackId]!
+    }
+
+    return legacyStemGains.value ?? DEFAULT_STEM_GAINS
+  }
+
+  function resolveStemGroupGainsForTrack(
+    trackId: string | null | undefined
+  ): Record<string, number> {
+    if (trackId && stemGroupGainsByTrackId.value[trackId]) {
+      return stemGroupGainsByTrackId.value[trackId]!
+    }
+
+    return legacyStemGroupGains.value ?? {}
+  }
+
+  const stemGains = computed<Record<AudioStemName, number>>(() => {
+    return resolveStemGainsForTrack(currentTrackId.value)
+  })
+
+  const stemGroupGains = computed<Record<string, number>>(() => {
+    return resolveStemGroupGainsForTrack(currentTrackId.value)
   })
 
   const currentTrack = computed<Track | null>(() => {
@@ -261,9 +399,87 @@ export const useAudioStore = defineStore('audio', () => {
     showLyrics.value = false
   }
 
+  function persistStemState() {
+    if (typeof window === 'undefined') return
+    try {
+      const tracksPayload: NonNullable<PersistedStemState['tracks']> = {}
+      const trackIds = new Set([
+        ...Object.keys(stemGainsByTrackId.value),
+        ...Object.keys(stemGroupGainsByTrackId.value),
+      ])
+
+      for (const trackId of trackIds) {
+        tracksPayload[trackId] = {
+          sg: stemGainsByTrackId.value[trackId],
+          sgg: stemGroupGainsByTrackId.value[trackId],
+        }
+      }
+
+      const payload = JSON.stringify({
+        m: stemMixEnabled.value,
+        sg: legacyStemGains.value ?? undefined,
+        sgg: legacyStemGroupGains.value ?? undefined,
+        tracks: Object.keys(tracksPayload).length > 0 ? tracksPayload : undefined,
+      })
+      window.localStorage.setItem(AUDIO_STEMS_STORAGE_KEY, payload)
+    } catch {
+      // storage unavailable
+    }
+  }
+
+  function setStemMixEnabled(nextEnabled: boolean) {
+    stemMixEnabled.value = nextEnabled
+    persistStemState()
+  }
+
   function setStemGain(stem: AudioStemName, nextGain: number) {
+    const trackId = currentTrackId.value
+    if (!trackId) return
+
     const clamped = Math.max(0, Math.min(1, nextGain))
-    stemGains.value = { ...stemGains.value, [stem]: clamped }
+    stemGainsByTrackId.value = {
+      ...stemGainsByTrackId.value,
+      [trackId]: {
+        ...resolveStemGainsForTrack(trackId),
+        [stem]: clamped,
+      },
+    }
+    persistStemState()
+  }
+
+  function setStemGroupGain(stem: AudioStemName, index: number, nextGain: number) {
+    const trackId = currentTrackId.value
+    if (!trackId) return
+
+    const key = `${stem}-${index}`
+    const clamped = Math.max(0, Math.min(1, nextGain))
+    stemGroupGainsByTrackId.value = {
+      ...stemGroupGainsByTrackId.value,
+      [trackId]: {
+        ...resolveStemGroupGainsForTrack(trackId),
+        [key]: clamped,
+      },
+    }
+    persistStemState()
+  }
+
+  function resetAllStemGains() {
+    const trackId = currentTrackId.value
+    if (!trackId) return
+
+    const reset = createDefaultStemGains()
+    for (const k of Object.keys(reset) as AudioStemName[]) {
+      reset[k] = 1
+    }
+    stemGainsByTrackId.value = {
+      ...stemGainsByTrackId.value,
+      [trackId]: reset,
+    }
+    stemGroupGainsByTrackId.value = {
+      ...stemGroupGainsByTrackId.value,
+      [trackId]: {},
+    }
+    persistStemState()
   }
 
   return {
@@ -281,11 +497,16 @@ export const useAudioStore = defineStore('audio', () => {
     hasUserStartedPlayback,
     isStopped,
     showLyrics,
+    stemMixEnabled,
     stemGains,
+    stemGroupGains,
     setCurrentTrack,
     setPlaylistByTrackIds,
     setVolume,
+    setStemMixEnabled,
     setStemGain,
+    setStemGroupGain,
+    resetAllStemGains,
     seek,
     updateFromAudioTime,
     updateFromAudioDuration,

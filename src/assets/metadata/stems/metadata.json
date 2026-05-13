@@ -1,0 +1,146 @@
+{
+  "stems": {
+    "tftc": {
+      "stemRoot": "TalesFromTheCellar/stems",
+      "songs": {
+        "00-intro": {
+          "drums": { "path": "./00-intro/drums.wav", "force": "auto" },
+          "guitar": { "path": "./00-intro/guitar.wav", "force": "auto" },
+          "bass": { "path": "./00-intro/bass.wav", "force": "auto" },
+          "vocals": { "path": "./00-intro/vocals.wav", "force": "auto" },
+          "flute": { "path": "./00-intro/flute.wav", "force": "auto" }
+        },
+        "01-misled": {
+          "drums": { "path": "./01-misled/drums.wav", "force": "auto" },
+          "guitar": { "path": "./01-misled/guitar.wav", "force": "auto" },
+          "bass": { "path": "./01-misled/bass.wav", "force": "auto" },
+          "vocals": { "path": "./01-misled/vocals.wav", "force": "auto" },
+          "flute": { "path": "./01-misled/flute.wav", "force": "auto" },
+          "percussion": { "path": "./01-misled/percussion.wav", "force": "auto" },
+          "keyboard": { "path": "./01-misled/keyboard.wav", "force": "auto" }
+        },
+        "02-tojd": {
+          "drums": { "path": "./02 - TOJD/TOJD - Drums.mp3" },
+          "guitar": [
+            {
+              "label": "Guitar PRS",
+              "shortLabel": "1",
+              "role": "base",
+              "type": "electric",
+              "path": "./02 - TOJD/TOJD - Guitar Base - PRS.mp3"
+            },
+            {
+              "label": "Guitar MM",
+              "shortLabel": "2",
+              "role": "base",
+              "type": "electric",
+              "path": "./02 - TOJD/TOJD - Guitar Base - MM.mp3"
+            },
+            {
+              "label": "Guitar AS93",
+              "shortLabel": "3",
+              "role": "base",
+              "type": "electric",
+              "path": "./02 - TOJD/TOJD - Guitar Base - AS93.mp3"
+            },
+            {
+              "label": "Guitar AS93 2",
+              "shortLabel": "4",
+              "role": "base",
+              "type": "electric",
+              "path": "./02 - TOJD/TOJD - Guitar Base - AS93_2.mp3"
+            },
+            {
+              "label": "Guitar Maton",
+              "shortLabel": "5",
+              "role": "base",
+              "type": "acoustic",
+              "path": "./02 - TOJD/TOJD - Guitar Base - Maton.mp3"
+            },
+            {
+              "label": "Guitar Solo",
+              "shortLabel": "SOLO",
+              "role": "solo",
+              "type": "electric",
+              "path": "./02 - TOJD/TOJD - Guitar Solo.mp3"
+            }
+          ],
+          "bass": { "path": "./02 - TOJD/TOJD - Bass.mp3" },
+          "vocals": [
+            {
+              "label": "Vocals Main",
+              "shortLabel": "1",
+              "role": "main",
+              "path": "./02 - TOJD/TOJD - Vox Main.mp3"
+            },
+            {
+              "label": "Vocals Backing",
+              "shortLabel": "2",
+              "role": "backing",
+              "path": "./02 - TOJD/TOJD - Vox Backing.mp3"
+            }
+          ],
+          "strings": {
+            "path": "./02 - TOJD/TOJD - Orchestra.mp3"
+          },
+          "percussion": {
+            "path": "./02 - TOJD/TOJD - Percussion.mp3"
+          }
+        },
+        "03-etiquette": {
+          "drums": { "path": "./03-etiquette/drums.wav", "force": "auto" },
+          "guitar": { "path": "./03-etiquette/guitar.wav", "force": "auto" },
+          "bass": { "path": "./03-etiquette/bass.wav", "force": "auto" },
+          "vocals": { "path": "./03-etiquette/vocals.wav", "force": "auto" },
+          "flute": { "path": "./03-etiquette/flute.wav", "force": "auto" },
+          "brass": { "path": "./03-etiquette/brass.wav", "force": "auto" },
+          "percussion": { "path": "./03-etiquette/percussion.wav", "force": "auto" },
+          "keyboard": { "path": "./03-etiquette/keyboard.wav", "force": "auto" }
+        },
+        "04-mr-red-jacket": {
+          "drums": { "path": "./04-mr-red-jacket/drums.wav", "force": "auto" },
+          "guitar": { "path": "./04-mr-red-jacket/guitar.wav", "force": "auto" },
+          "bass": { "path": "./04-mr-red-jacket/bass.wav", "force": "auto" },
+          "vocals": { "path": "./04-mr-red-jacket/vocals.wav", "force": "auto" },
+          "flute": { "path": "./04-mr-red-jacket/flute.wav", "force": "auto" },
+          "brass": { "path": "./04-mr-red-jacket/brass.wav", "force": "auto" },
+          "percussion": { "path": "./04-mr-red-jacket/percussion.wav", "force": "auto" },
+          "keyboard": { "path": "./04-mr-red-jacket/keyboard.wav", "force": "auto" }
+        },
+        "05-witch-hunting": {
+          "drums": { "path": "./05-witch-hunting/drums.wav", "force": "auto" },
+          "guitar": { "path": "./05-witch-hunting/guitar.wav", "force": "auto" },
+          "bass": { "path": "./05-witch-hunting/bass.wav", "force": "auto" },
+          "vocals": { "path": "./05-witch-hunting/vocals.wav", "force": "auto" },
+          "flute": { "path": "./05-witch-hunting/flute.wav", "force": "auto" },
+          "brass": { "path": "./05-witch-hunting/brass.wav", "force": "auto" },
+          "percussion": { "path": "./05-witch-hunting/percussion.wav", "force": "auto" },
+          "keyboard": { "path": "./05-witch-hunting/keyboard.wav", "force": "auto" }
+        },
+        "06-suits": {
+          "drums": { "path": "./06-suits/drums.wav", "force": "auto" },
+          "guitar": { "path": "./06-suits/guitar.wav", "force": "auto" },
+          "bass": { "path": "./06-suits/bass.wav", "force": "auto" },
+          "vocals": { "path": "./06-suits/vocals.wav", "force": "auto" },
+          "flute": { "path": "./06-suits/flute.wav", "force": "auto" },
+          "brass": { "path": "./06-suits/brass.wav", "force": "auto" },
+          "percussion": { "path": "./06-suits/percussion.wav", "force": "auto" },
+          "keyboard": { "path": "./06-suits/keyboard.wav", "force": "auto" }
+        },
+        "07-ordinary-suspects": {
+          "drums": { "path": "./07-ordinary-suspects/drums.wav", "force": "auto" },
+          "guitar": { "path": "./07-ordinary-suspects/guitar.wav", "force": "auto" },
+          "bass": { "path": "./07-ordinary-suspects/bass.wav", "force": "auto" },
+          "vocals": { "path": "./07-ordinary-suspects/vocals.wav", "force": "auto" },
+          "flute": { "path": "./07-ordinary-suspects/flute.wav", "force": "auto" },
+          "brass": { "path": "./07-ordinary-suspects/brass.wav", "force": "auto" },
+          "percussion": { "path": "./07-ordinary-suspects/percussion.wav", "force": "auto" },
+          "keyboard": { "path": "./07-ordinary-suspects/keyboard.wav", "force": "auto" }
+        },
+        "08-solitude-etude": {
+          "guitar": { "path": "./08-solitude-etude/guitar.wav", "force": "auto" }
+        }
+      }
+    }
+  }
+}

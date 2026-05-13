@@ -1,17 +1,91 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import gsap from 'gsap'
 import GlobalAudioPlayer from '../GlobalAudioPlayer.vue'
 import { useAudioStore } from '@/stores/audio'
 
-const { resolveStemAvailabilityMock } = vi.hoisted(() => ({
+const {
+  resolveStemAvailabilityMock,
+  resolveStemGroupItemsMock,
+  resolveStemAudioSourcesMock,
+  resolveStemLimiterParamsMock,
+  stemPlaybackMock,
+} = vi.hoisted(() => ({
+  makeMockRef: <T>(value: T) => ({ value }),
   resolveStemAvailabilityMock: vi.fn(),
+  resolveStemGroupItemsMock: vi.fn(),
+  resolveStemAudioSourcesMock: vi.fn(),
+  resolveStemLimiterParamsMock: vi.fn(),
+  stemPlaybackMock: {
+    lastStemGainsRef: null as unknown,
+    lastGroupGainsRef: null as unknown,
+    isActive: { value: false },
+    isStemsPrebuffered: { value: false },
+    activate: vi.fn(async () => {
+      stemPlaybackMock.isActive.value = true
+    }),
+    deactivate: vi.fn(async () => {
+      stemPlaybackMock.isActive.value = false
+    }),
+    deactivateWithOptions: vi.fn(async () => {
+      stemPlaybackMock.isActive.value = false
+    }),
+    seek: vi.fn(),
+    suspend: vi.fn(),
+    resume: vi.fn(),
+    warmUp: vi.fn().mockResolvedValue(undefined),
+    setSources: vi.fn(),
+    setLimiterParams: vi.fn(),
+    updateStemGain: vi.fn(),
+    updateGroupItemGain: vi.fn(),
+    dispose: vi.fn(() => {
+      stemPlaybackMock.isActive.value = false
+    }),
+  },
 }))
 
 vi.mock('@/data/stems', () => ({
   resolveStemAvailability: resolveStemAvailabilityMock,
+  resolveStemGroupItems: resolveStemGroupItemsMock,
+  resolveStemAudioSources: resolveStemAudioSourcesMock,
 }))
+
+vi.mock('@/data/stemLimiter', () => ({
+  resolveStemLimiterParams: resolveStemLimiterParamsMock,
+}))
+
+vi.mock('@/composables/useStemPlayback', () => ({
+  useStemPlayback: vi.fn((_audioEl, stemGains, groupGains) => {
+    stemPlaybackMock.lastStemGainsRef = stemGains
+    stemPlaybackMock.lastGroupGainsRef = groupGains
+    return stemPlaybackMock
+  }),
+}))
+
+const allStemAvailability = {
+  drums: true,
+  guitar: true,
+  bass: true,
+  vocals: true,
+  flute: true,
+  brass: true,
+  percussion: true,
+  keyboard: true,
+  strings: true,
+}
+
+const noStemAvailability = {
+  drums: false,
+  guitar: false,
+  bass: false,
+  vocals: false,
+  flute: false,
+  brass: false,
+  percussion: false,
+  keyboard: false,
+  strings: false,
+}
 
 describe('GlobalAudioPlayer', () => {
   const originalMatchMedia = window.matchMedia
@@ -19,16 +93,35 @@ describe('GlobalAudioPlayer', () => {
   let reduceMotion = false
 
   beforeEach(() => {
+    window.localStorage.clear()
     setActivePinia(createPinia())
-    resolveStemAvailabilityMock.mockReturnValue({
-      drums: true,
-      guitar: true,
-      bass: true,
-      vocals: true,
-      flute: true,
-      brass: true,
-      percussion: true,
-      keyboard: true,
+    stemPlaybackMock.lastStemGainsRef = null
+    stemPlaybackMock.lastGroupGainsRef = null
+    stemPlaybackMock.isActive.value = false
+    stemPlaybackMock.activate.mockClear()
+    stemPlaybackMock.deactivate.mockClear()
+    stemPlaybackMock.deactivateWithOptions.mockClear()
+    stemPlaybackMock.seek.mockClear()
+    stemPlaybackMock.setSources.mockClear()
+    stemPlaybackMock.setLimiterParams.mockClear()
+    stemPlaybackMock.updateStemGain.mockClear()
+    stemPlaybackMock.updateGroupItemGain.mockClear()
+    stemPlaybackMock.suspend.mockClear()
+    stemPlaybackMock.resume.mockClear()
+    stemPlaybackMock.warmUp.mockClear()
+    stemPlaybackMock.dispose.mockClear()
+    resolveStemAvailabilityMock.mockReturnValue(allStemAvailability)
+    resolveStemGroupItemsMock.mockReturnValue({})
+    resolveStemAudioSourcesMock.mockReturnValue({
+      guitar: ['/src/assets/private/audio/test/stem.mp3'],
+    })
+    resolveStemLimiterParamsMock.mockReturnValue({
+      preGainDb: 0.07,
+      threshold: -0.1,
+      knee: 0,
+      ratio: 20,
+      attack: 0.003,
+      release: 0.1,
     })
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       matches: query === '(prefers-reduced-motion: reduce)' ? reduceMotion : false,
@@ -43,6 +136,7 @@ describe('GlobalAudioPlayer', () => {
   })
 
   afterEach(() => {
+    window.localStorage.clear()
     reduceMotion = false
     window.matchMedia = originalMatchMedia
     Object.defineProperty(window, 'innerWidth', {
@@ -331,6 +425,67 @@ describe('GlobalAudioPlayer', () => {
     expect(audioEl.volume).toBe(1)
   })
 
+  it('arming stem mixing while paused does not resume playback', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+    audio.togglePlayPause()
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+    await wrapper.find('[data-testid="mini-stems"]').trigger('click')
+    await wrapper.vm.$nextTick()
+    await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
+
+    expect(audio.isPlaying).toBe(false)
+    expect(stemPlaybackMock.activate).not.toHaveBeenCalled()
+  })
+
+  it('pausing and seeking while stem mixing is armed follows the master player transport', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+    await wrapper.find('[data-testid="mini-stems"]').trigger('click')
+    await wrapper.vm.$nextTick()
+    await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(stemPlaybackMock.activate).toHaveBeenCalled()
+
+    audio.togglePlayPause()
+    await wrapper.vm.$nextTick()
+
+    expect(audio.isPlaying).toBe(false)
+    // On pause the composable suspends the AudioContext rather than deactivating,
+    // so stems stay loaded and resume from the same position when unpaused.
+    expect(stemPlaybackMock.suspend).toHaveBeenCalled()
+
+    stemPlaybackMock.isActive.value = true
+    const audioEl = wrapper.find('audio').element as HTMLAudioElement
+    Object.defineProperty(audioEl, 'currentTime', { value: 21.5, configurable: true })
+    audioEl.dispatchEvent(new Event('seeked'))
+
+    expect(stemPlaybackMock.seek).toHaveBeenCalledWith(21.5)
+  })
+
   it('toggles instrument faders overlay and updates stem gain', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
@@ -399,7 +554,54 @@ describe('GlobalAudioPlayer', () => {
     expect(stemsBtn.classes()).not.toContain('is-active')
   })
 
-  it('disables unavailable stem controls for the current track', async () => {
+  it('resetting gains while stems are active also restores grouped stem item gains', async () => {
+    resolveStemGroupItemsMock.mockReturnValue({
+      guitar: [
+        { label: 'Guitar PRS', shortLabel: '1', role: 'base', type: 'electric', isAvailable: true },
+      ],
+    })
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+    await wrapper.find('[data-testid="mini-stems"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    const overlay = wrapper.find('[data-testid="stems-overlay"]')
+    await overlay.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await wrapper.vm.$nextTick()
+    await overlay.find('[data-testid="stem-guitar-expand"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    const groupSlider = overlay.find('[data-testid="stem-guitar-item-0"] input[type="range"]')
+    await groupSlider.setValue('0.35')
+
+    expect(audio.stemGroupGains['guitar-0']).toBeCloseTo(0.35)
+    expect(stemPlaybackMock.updateGroupItemGain).toHaveBeenLastCalledWith('guitar', 0, 0.35)
+
+    stemPlaybackMock.updateStemGain.mockClear()
+    stemPlaybackMock.updateGroupItemGain.mockClear()
+
+    await overlay.find('[data-testid="stems-reset"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(audio.stemGains.guitar).toBe(1)
+    expect(audio.stemGroupGains['guitar-0']).toBeUndefined()
+    expect(stemPlaybackMock.updateStemGain).toHaveBeenCalledWith('guitar', 1)
+    expect(stemPlaybackMock.updateGroupItemGain).toHaveBeenCalledWith('guitar', 0, 1)
+  })
+
+  it('hides unavailable stem controls for the current track when other stems remain available', async () => {
     resolveStemAvailabilityMock.mockReturnValue({
       drums: false,
       guitar: true,
@@ -431,8 +633,398 @@ describe('GlobalAudioPlayer', () => {
     const overlay = wrapper.find('[data-testid="stems-overlay"]')
     await overlay.find('[data-testid="stems-enable-toggle"]').trigger('click')
 
-    expect(overlay.find('[data-testid="stem-drums-mute"]').attributes('disabled')).toBeDefined()
-    expect(overlay.find('input[aria-label="Drums volume"]').attributes('disabled')).toBeDefined()
+    expect(overlay.find('[data-testid="stem-drums-mute"]').exists()).toBe(false)
+    expect(overlay.find('input[aria-label="Drums volume"]').exists()).toBe(false)
+  })
+
+  it('restores the persisted stem mode and track-specific gains after remounting the player', async () => {
+    let pinia = createPinia()
+    setActivePinia(pinia)
+
+    let audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+
+    const firstWrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await firstWrapper.vm.$nextTick()
+    await firstWrapper.find('[data-testid="mini-stems"]').trigger('click')
+    await firstWrapper.vm.$nextTick()
+
+    const firstOverlay = firstWrapper.find('[data-testid="stems-overlay"]')
+    await firstOverlay.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await firstWrapper.vm.$nextTick()
+    await firstOverlay.find('[data-testid="stem-guitar-mute"]').trigger('click')
+
+    expect(audio.stemGains.guitar).toBe(0)
+
+    firstWrapper.unmount()
+
+    stemPlaybackMock.activate.mockClear()
+    pinia = createPinia()
+    setActivePinia(pinia)
+    audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+
+    const restoredWrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await flushPromises()
+
+    expect(audio.stemMixEnabled).toBe(true)
+    expect(audio.stemGains.guitar).toBe(0)
+    expect(stemPlaybackMock.activate).toHaveBeenCalled()
+    expect(
+      (stemPlaybackMock.lastStemGainsRef as { value: Record<string, number> }).value.guitar
+    ).toBe(0)
+    expect(restoredWrapper.find('[data-testid="mini-stems"]').classes()).toContain('is-active')
+  })
+
+  it('persisted group item gain is passed to composable with correct value on restore', async () => {
+    resolveStemGroupItemsMock.mockReturnValue({
+      guitar: [
+        { label: 'Guitar PRS', shortLabel: '1', role: 'base', type: 'electric', isAvailable: true },
+      ],
+    })
+
+    let pinia = createPinia()
+    setActivePinia(pinia)
+
+    let audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+
+    const firstWrapper = mount(GlobalAudioPlayer, {
+      global: { plugins: [pinia] },
+    })
+
+    await firstWrapper.vm.$nextTick()
+    await firstWrapper.find('[data-testid="mini-stems"]').trigger('click')
+    await firstWrapper.vm.$nextTick()
+
+    const firstOverlay = firstWrapper.find('[data-testid="stems-overlay"]')
+    await firstOverlay.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await firstWrapper.vm.$nextTick()
+    await firstOverlay.find('[data-testid="stem-guitar-expand"]').trigger('click')
+    await firstWrapper.vm.$nextTick()
+
+    const groupSlider = firstOverlay.find('[data-testid="stem-guitar-item-0"] input[type="range"]')
+    await groupSlider.setValue('0')
+
+    expect(audio.stemGroupGains['guitar-0']).toBe(0)
+
+    firstWrapper.unmount()
+
+    stemPlaybackMock.activate.mockClear()
+    pinia = createPinia()
+    setActivePinia(pinia)
+    audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+
+    mount(GlobalAudioPlayer, {
+      global: { plugins: [pinia] },
+    })
+
+    await flushPromises()
+
+    expect(audio.stemMixEnabled).toBe(true)
+    expect(audio.stemGroupGains['guitar-0']).toBe(0)
+    expect(stemPlaybackMock.activate).toHaveBeenCalled()
+    expect(
+      (stemPlaybackMock.lastGroupGainsRef as { value: Record<string, number> }).value['guitar-0']
+    ).toBe(0)
+  })
+
+  it('fresh playback start after restore activates stems with the saved gains', async () => {
+    // Simulate the real browser flow: persist state, then reload page (fresh hasUserStartedPlayback=false),
+    // then user clicks play. This is different from the "restore" test where startFromMusic is called
+    // before mounting.
+    let pinia = createPinia()
+    setActivePinia(pinia)
+
+    let audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+
+    const firstWrapper = mount(GlobalAudioPlayer, {
+      global: { plugins: [pinia] },
+    })
+
+    await firstWrapper.vm.$nextTick()
+    await firstWrapper.find('[data-testid="mini-stems"]').trigger('click')
+    await firstWrapper.vm.$nextTick()
+    await firstWrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await firstWrapper.vm.$nextTick()
+    await firstWrapper.find('[data-testid="stem-guitar-mute"]').trigger('click')
+
+    expect(audio.stemGains.guitar).toBe(0)
+    firstWrapper.unmount()
+
+    // Simulate page reload: fresh pinia, hasUserStartedPlayback = false
+    stemPlaybackMock.activate.mockClear()
+    pinia = createPinia()
+    setActivePinia(pinia)
+    audio = useAudioStore()
+    // NOTE: do NOT call startFromMusic yet — user hasn't clicked play
+
+    mount(GlobalAudioPlayer, {
+      global: { plugins: [pinia] },
+    })
+
+    await flushPromises()
+
+    // Stems should NOT activate yet — user hasn't started playback
+    expect(stemPlaybackMock.activate).not.toHaveBeenCalled()
+
+    // User navigates to music and clicks play on TOJD
+    audio.startFromMusic('tftc:02-tojd')
+    await flushPromises()
+
+    // Now stems should activate with the persisted muted guitar gain
+    expect(stemPlaybackMock.activate).toHaveBeenCalled()
+    expect(
+      (stemPlaybackMock.lastStemGainsRef as { value: Record<string, number> }).value.guitar
+    ).toBe(0)
+  })
+
+  it('reapplies restored stem gains into the live graph right after activation', async () => {
+    let pinia = createPinia()
+    setActivePinia(pinia)
+
+    let audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+
+    const firstWrapper = mount(GlobalAudioPlayer, {
+      global: { plugins: [pinia] },
+    })
+
+    await firstWrapper.vm.$nextTick()
+    await firstWrapper.find('[data-testid="mini-stems"]').trigger('click')
+    await firstWrapper.vm.$nextTick()
+    await firstWrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await firstWrapper.vm.$nextTick()
+    await firstWrapper.find('[data-testid="stem-guitar-mute"]').trigger('click')
+
+    expect(audio.stemGains.guitar).toBe(0)
+    firstWrapper.unmount()
+
+    stemPlaybackMock.activate.mockClear()
+    stemPlaybackMock.updateStemGain.mockClear()
+
+    pinia = createPinia()
+    setActivePinia(pinia)
+    audio = useAudioStore()
+
+    mount(GlobalAudioPlayer, {
+      global: { plugins: [pinia] },
+    })
+
+    await flushPromises()
+
+    audio.startFromMusic('tftc:02-tojd')
+    await flushPromises()
+
+    expect(stemPlaybackMock.activate).toHaveBeenCalled()
+    expect(stemPlaybackMock.updateStemGain).toHaveBeenCalledWith('guitar', 0)
+  })
+
+  it('reapplies restored group item gains into the live graph right after activation', async () => {
+    resolveStemGroupItemsMock.mockReturnValue({
+      guitar: [{ label: 'PRS', role: 'base', type: 'electric', isAvailable: true }],
+    })
+
+    let pinia = createPinia()
+    setActivePinia(pinia)
+
+    let audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+
+    const firstWrapper = mount(GlobalAudioPlayer, {
+      global: { plugins: [pinia] },
+    })
+
+    await firstWrapper.vm.$nextTick()
+    await firstWrapper.find('[data-testid="mini-stems"]').trigger('click')
+    await firstWrapper.vm.$nextTick()
+    await firstWrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await firstWrapper.vm.$nextTick()
+    await firstWrapper.find('[data-testid="stem-guitar-expand"]').trigger('click')
+    await firstWrapper.vm.$nextTick()
+    await firstWrapper.find('[data-testid="stem-guitar-item-0-mute"]').trigger('click')
+
+    expect(audio.stemGroupGains['guitar-0']).toBe(0)
+    firstWrapper.unmount()
+
+    stemPlaybackMock.activate.mockClear()
+    stemPlaybackMock.updateGroupItemGain.mockClear()
+
+    pinia = createPinia()
+    setActivePinia(pinia)
+    audio = useAudioStore()
+
+    mount(GlobalAudioPlayer, {
+      global: { plugins: [pinia] },
+    })
+
+    await flushPromises()
+
+    audio.startFromMusic('tftc:02-tojd')
+    await flushPromises()
+
+    expect(stemPlaybackMock.activate).toHaveBeenCalled()
+    expect(stemPlaybackMock.updateGroupItemGain).toHaveBeenCalledWith('guitar', 0, 0)
+  })
+
+  it('activates persisted stems when playback starts on a later track after booting on a non-stem track', async () => {
+    resolveStemAvailabilityMock.mockImplementation((trackId: string) => {
+      return trackId === 'tftc:02-tojd' ? allStemAvailability : noStemAvailability
+    })
+    resolveStemAudioSourcesMock.mockImplementation((trackId: string) => {
+      return trackId === 'tftc:02-tojd'
+        ? { guitar: ['/src/assets/private/audio/test/stem.mp3'] }
+        : {}
+    })
+
+    window.localStorage.setItem(
+      'frisches:audio:stems:v1',
+      JSON.stringify({
+        m: true,
+        tracks: {
+          'tftc:02-tojd': {
+            sg: { guitar: 0 },
+            sgg: {},
+          },
+        },
+      })
+    )
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const audio = useAudioStore()
+
+    mount(GlobalAudioPlayer, {
+      global: { plugins: [pinia] },
+    })
+
+    await flushPromises()
+
+    expect(audio.currentTrackId).toBe('tftc:00-intro')
+    expect(audio.stemMixEnabled).toBe(true)
+    expect(stemPlaybackMock.activate).not.toHaveBeenCalled()
+
+    audio.startFromMusic('tftc:02-tojd')
+    await flushPromises()
+
+    expect(stemPlaybackMock.activate).toHaveBeenCalled()
+    expect(stemPlaybackMock.updateStemGain).toHaveBeenCalledWith('guitar', 0)
+  })
+
+  it('re-enabling stems after toggling off uses the persisted muted gain', async () => {
+    let pinia = createPinia()
+    setActivePinia(pinia)
+
+    let audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+
+    const firstWrapper = mount(GlobalAudioPlayer, {
+      global: { plugins: [pinia] },
+    })
+
+    await firstWrapper.vm.$nextTick()
+    await firstWrapper.find('[data-testid="mini-stems"]').trigger('click')
+    await firstWrapper.vm.$nextTick()
+    await firstWrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await firstWrapper.vm.$nextTick()
+    await firstWrapper.find('[data-testid="stem-guitar-mute"]').trigger('click')
+
+    expect(audio.stemGains.guitar).toBe(0)
+    firstWrapper.unmount()
+
+    stemPlaybackMock.activate.mockClear()
+    pinia = createPinia()
+    setActivePinia(pinia)
+    audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+
+    const restoredWrapper = mount(GlobalAudioPlayer, {
+      global: { plugins: [pinia] },
+    })
+
+    await flushPromises()
+    expect(stemPlaybackMock.activate).toHaveBeenCalled()
+
+    // Simulate the user toggling stems off then on again
+    stemPlaybackMock.activate.mockClear()
+    await restoredWrapper.find('[data-testid="mini-stems"]').trigger('click')
+    await restoredWrapper.vm.$nextTick()
+
+    const overlay = restoredWrapper.find('[data-testid="stems-overlay"]')
+    // Click toggle to disable
+    await overlay.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
+
+    expect(audio.stemMixEnabled).toBe(false)
+
+    // Click toggle to re-enable
+    await overlay.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
+
+    expect(audio.stemMixEnabled).toBe(true)
+    expect(stemPlaybackMock.activate).toHaveBeenCalled()
+    // The persisted muted guitar gain must still be applied on re-enable
+    expect(
+      (stemPlaybackMock.lastStemGainsRef as { value: Record<string, number> }).value.guitar
+    ).toBe(0)
+  })
+
+  it('keeps the last requested stem mode across tracks without stems and reactivates on return', async () => {
+    resolveStemAvailabilityMock.mockImplementation((trackId: string) => {
+      return trackId === 'tftc:02-tojd' ? allStemAvailability : noStemAvailability
+    })
+    resolveStemAudioSourcesMock.mockImplementation((trackId: string) => {
+      return trackId === 'tftc:02-tojd'
+        ? { guitar: ['/src/assets/private/audio/test/stem.mp3'] }
+        : {}
+    })
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+    await wrapper.find('[data-testid="mini-stems"]').trigger('click')
+    await wrapper.vm.$nextTick()
+    await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
+
+    expect(audio.stemMixEnabled).toBe(true)
+    expect(wrapper.find('[data-testid="mini-stems"]').classes()).toContain('is-active')
+
+    audio.startFromMusic('tftc:01-misled')
+    await flushPromises()
+
+    expect(audio.stemMixEnabled).toBe(true)
+    expect(wrapper.find('[data-testid="mini-stems"]').classes()).not.toContain('is-active')
+
+    stemPlaybackMock.activate.mockClear()
+    audio.startFromMusic('tftc:02-tojd')
+    await flushPromises()
+
+    expect(audio.stemMixEnabled).toBe(true)
+    expect(stemPlaybackMock.activate).toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="mini-stems"]').classes()).toContain('is-active')
   })
 
   it('enables wobble in compact mode by default', async () => {
