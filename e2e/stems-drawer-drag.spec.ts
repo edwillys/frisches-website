@@ -28,9 +28,8 @@ async function openStemsOverlayOnTojd(page: Page): Promise<Locator> {
 
   const stemsEnableToggle = page.locator('[data-testid="stems-enable-toggle"]')
   await stemsEnableToggle.waitFor({ state: 'visible', timeout: 15000 })
-  if (await stemsEnableToggle.isEnabled()) {
-    await stemsEnableToggle.click()
-  }
+  await expect(stemsEnableToggle).toBeEnabled()
+  await stemsEnableToggle.click()
 
   return page.locator('[data-testid="stem-guitar-expand"]')
 }
@@ -47,10 +46,10 @@ test.describe('Stems drawer drag', () => {
     await expect(handle).toBeVisible({ timeout: 15000 })
 
     const box = await handle.boundingBox()
-    if (!box) throw new Error('Handle bounding box unavailable before drag')
+    expect(box, 'Handle bounding box unavailable before drag').not.toBeNull()
 
-    const startX = box.x + box.width / 2
-    const startY = box.y + box.height / 2
+    const startX = box!.x + box!.width / 2
+    const startY = box!.y + box!.height / 2
     const targetX = startX + 36
 
     await page.mouse.move(startX, startY)

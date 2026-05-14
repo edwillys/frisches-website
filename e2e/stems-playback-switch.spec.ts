@@ -44,7 +44,14 @@ async function waitForStemsActive(page: Page): Promise<void> {
     'true',
     { timeout: 15000 }
   )
-  await page.waitForTimeout(450)
+  await page.waitForFunction(
+    () => {
+      const audio = document.querySelector('audio') as HTMLAudioElement | null
+      return Boolean(audio && audio.volume <= 0.05)
+    },
+    null,
+    { timeout: 5000, polling: 100 }
+  )
 }
 
 async function seekToKnownHotspot(page: Page, seconds = 32): Promise<void> {
@@ -56,13 +63,11 @@ async function seekToKnownHotspot(page: Page, seconds = 32): Promise<void> {
   await page.waitForFunction(
     (targetSeconds: number) => {
       const audio = document.querySelector('audio') as HTMLAudioElement | null
-      return Boolean(audio && Math.abs(audio.currentTime - targetSeconds) < 0.4)
+      return Boolean(audio && !audio.seeking && Math.abs(audio.currentTime - targetSeconds) < 0.4)
     },
     seconds,
     { timeout: 10000, polling: 100 }
   )
-
-  await page.waitForTimeout(250)
 }
 
 async function setStemSlider(page: Page, stem: StemName, value: number): Promise<void> {
@@ -147,7 +152,6 @@ async function expectAudibleOutput(page: Page, reason: string): Promise<void> {
 }
 
 async function expectSilentOutput(page: Page, reason: string): Promise<void> {
-  await page.waitForTimeout(150)
   const stats = await sampleOutputLevels(page, 900, 100)
   expect(
     stats.maxCombinedLevel,
@@ -157,7 +161,14 @@ async function expectSilentOutput(page: Page, reason: string): Promise<void> {
 
 async function expectMasterPlaybackHealthyAfterDisable(page: Page, reason: string): Promise<void> {
   const before = await capturePlaybackSnapshot(page)
-  await page.waitForTimeout(700)
+  await page.waitForFunction(
+    (startTime: number) => {
+      const audio = document.querySelector('audio') as HTMLAudioElement | null
+      return Boolean(audio && !audio.paused && audio.currentTime > startTime + 0.35)
+    },
+    before.audioCurrentTime ?? 0,
+    { timeout: 7000, polling: 100 }
+  )
   const after = await capturePlaybackSnapshot(page)
 
   expect(after.audioPaused, `${reason} (audio should keep playing)`).toBe(false)
@@ -231,6 +242,7 @@ test.describe('Stems playback switching', () => {
     page,
   }) => {
     const stemsEnableToggle = await openStemsOverlayOnTojd(page)
+    const player = page.locator('[data-testid="global-audio-player"]')
 
     const beforeEnable = await capturePlaybackSnapshot(page)
     expect(beforeEnable.audioPaused).toBe(false)
@@ -240,7 +252,7 @@ test.describe('Stems playback switching', () => {
     expect(beforeEnable.audioVolume).toBeGreaterThan(0.1)
 
     await stemsEnableToggle.click()
-    await page.waitForTimeout(150)
+    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 7000 })
 
     const shortlyAfterEnable = await capturePlaybackSnapshot(page)
     expect(shortlyAfterEnable.audioPaused).toBe(false)
@@ -249,11 +261,18 @@ test.describe('Stems playback switching', () => {
     expect(shortlyAfterEnable.storeCurrentTime).toBeGreaterThan(beforeEnable.storeCurrentTime)
     expect(shortlyAfterEnable.audioVolume).toBeGreaterThan(0.1)
 
-    await page.waitForTimeout(1200)
+    await page.waitForFunction(
+      (startTime: number) => {
+        const audio = document.querySelector('audio') as HTMLAudioElement | null
+        return Boolean(audio && audio.currentTime > startTime + 1)
+      },
+      shortlyAfterEnable.audioCurrentTime ?? 0,
+      { timeout: 7000, polling: 100 }
+    )
     const whileEnabled = await capturePlaybackSnapshot(page)
 
     await stemsEnableToggle.click()
-    await page.waitForTimeout(250)
+    await expect(player).toHaveAttribute('data-stems-active', 'false', { timeout: 7000 })
 
     const afterDisable = await capturePlaybackSnapshot(page)
     expect(afterDisable.audioPaused).toBe(false)
@@ -287,7 +306,14 @@ test.describe('Stems playback switching', () => {
     expect(activationMs).toBeLessThan(300)
 
     // After the 300ms crossfade the master must be fully muted.
-    await page.waitForTimeout(400)
+    await page.waitForFunction(
+      () => {
+        const audio = document.querySelector('audio') as HTMLAudioElement | null
+        return Boolean(audio && audio.volume <= 0.05)
+      },
+      null,
+      { timeout: 2000, polling: 50 }
+    )
     const volAfterFade = await page.evaluate(() => {
       const audio = document.querySelector('audio') as HTMLAudioElement | null
       return audio?.volume ?? 1
@@ -304,7 +330,7 @@ test.describe('Stems playback switching', () => {
     await page.waitForLoadState('load')
     await page.evaluate(() => localStorage.clear())
 
-    const stemsEnableToggle = await openStemsOverlayOnTojd(page)
+    await openStemsOverlayOnTojd(page)
     await ensureStemMixEditingEnabled(page)
 
     // Start from a known full-volume stem mix and verify audible output at the actual output.
@@ -426,12 +452,26 @@ test.describe('Stems playback switching', () => {
     await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 7000 })
 
     // Wait for crossfade to complete so master is fully muted
-    await page.waitForTimeout(400)
+    await page.waitForFunction(
+      () => {
+        const audio = document.querySelector('audio') as HTMLAudioElement | null
+        return Boolean(audio && audio.volume <= 0.05)
+      },
+      null,
+      { timeout: 2000, polling: 50 }
+    )
 
     // Pause playback
     const playPauseBtn = page.locator('[data-testid="mini-play-pause"]')
     await playPauseBtn.click()
-    await page.waitForTimeout(200)
+    await page.waitForFunction(
+      () => {
+        const audio = document.querySelector('audio') as HTMLAudioElement | null
+        return Boolean(audio && audio.paused)
+      },
+      null,
+      { timeout: 5000, polling: 100 }
+    )
 
     // CRITICAL: stems must stay active while paused — no deactivate on pause
     await expect(player).toHaveAttribute('data-stems-active', 'true')
@@ -443,7 +483,14 @@ test.describe('Stems playback switching', () => {
     await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 300 })
 
     // Master must still be muted (stems are producing the sound)
-    await page.waitForTimeout(100)
+    await page.waitForFunction(
+      () => {
+        const audio = document.querySelector('audio') as HTMLAudioElement | null
+        return Boolean(audio && audio.volume <= 0.05)
+      },
+      null,
+      { timeout: 2000, polling: 50 }
+    )
     const volAfterResume = await page.evaluate(() => {
       const audio = document.querySelector('audio') as HTMLAudioElement | null
       return audio?.volume ?? 1
@@ -456,7 +503,7 @@ test.describe('Stems playback switching', () => {
   }) => {
     test.setTimeout(120000)
 
-    const stemsEnableToggle = await openStemsOverlayOnTojd(page)
+    await openStemsOverlayOnTojd(page)
     const player = page.locator('[data-testid="global-audio-player"]')
 
     for (let cycle = 1; cycle <= 5; cycle += 1) {
