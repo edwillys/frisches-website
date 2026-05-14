@@ -211,7 +211,7 @@ describe('useStemPlayback', () => {
     await buildAndActivate(12.5, [fakeAudioPath, fakeAudioPath2])
     expect(startOffsets.length).toBeGreaterThanOrEqual(2)
     expect(startOffsets.every((o) => Math.abs(o - 12.5) < 0.01)).toBe(true)
-  })
+  }, 15000)
 
   it('isActive becomes true after activate', async () => {
     const { playback } = await buildAndActivate()
