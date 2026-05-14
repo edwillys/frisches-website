@@ -24,6 +24,10 @@ import {
   type TravelingWaveState,
 } from './miniPlayerWobble'
 import AudioDebugHud from './AudioDebugHud.vue'
+import {
+  buildCurrentMasterResourceDebug,
+  getMasterSessionTransferredBytes,
+} from './audioDebugMetrics'
 import InstrumentFaders from './InstrumentFaders.vue'
 
 // Icon imports
@@ -171,6 +175,9 @@ const shouldShowAudioDebugHud =
   import.meta.env.DEV && import.meta.env.VITE_AUDIO_DEBUG_HUD === 'true'
 const audioDebugTick = ref(0)
 let audioDebugHudTimer: ReturnType<typeof setInterval> | null = null
+const masterContentLengthBySrc = new Map<string, number>()
+const masterObservedTransferredBySrc = new Map<string, number>()
+const masterContentLengthPending = new Set<string>()
 
 function getSoloTargets(): StemSoloTarget[] {
   return stemSoloState.value?.targets ?? []
@@ -330,45 +337,108 @@ function buildMobileTransferEstimates(totalBytes: number) {
   }))
 }
 
-function getCurrentMasterResourceTiming() {
-  if (typeof performance === 'undefined' || typeof performance.getEntriesByName !== 'function') {
-    return null
-  }
-  const src = audioEl.value?.currentSrc || currentUrl.value
-  if (!src) return null
+async function ensureMasterContentLength(src: string): Promise<void> {
+  if (!src || typeof fetch !== 'function') return
+  if (masterContentLengthBySrc.has(src) || masterContentLengthPending.has(src)) return
 
-  const entries = performance.getEntriesByName(src)
-  const resourceEntries = entries.filter(
-    (entry): entry is PerformanceResourceTiming =>
-      typeof (entry as PerformanceResourceTiming).transferSize === 'number'
-  )
-  if (resourceEntries.length === 0) return null
+  masterContentLengthPending.add(src)
+  try {
+    const readContentLength = (response: Response): number | null => {
+      const contentRange = response.headers.get('content-range')
+      if (contentRange) {
+        const totalMatch = /\/(\d+)$/.exec(contentRange)
+        if (totalMatch) {
+          const totalBytes = Number(totalMatch[1])
+          if (Number.isFinite(totalBytes) && totalBytes > 0) {
+            return totalBytes
+          }
+        }
+      }
 
-  const entry = resourceEntries[resourceEntries.length - 1]!
-  return {
-    src,
-    transferBytes: entry.transferSize || entry.encodedBodySize || 0,
-    encodedBodyBytes: entry.encodedBodySize || 0,
-    decodedBodyBytes: entry.decodedBodySize || 0,
-    durationMs: Math.round(entry.duration),
+      const contentLengthHeader = response.headers.get('content-length')
+      const contentLength = Number(contentLengthHeader)
+      if (Number.isFinite(contentLength) && contentLength > 0) {
+        return contentLength
+      }
+
+      return null
+    }
+
+    let contentLength: number | null = null
+
+    try {
+      const headResponse = await fetch(src, { method: 'HEAD' })
+      if (headResponse.ok) {
+        contentLength = readContentLength(headResponse)
+      }
+    } catch {
+      // Fall back to a one-byte range probe below.
+    }
+
+    if (!contentLength) {
+      const rangeResponse = await fetch(src, {
+        headers: {
+          Range: 'bytes=0-0',
+        },
+      })
+      if (rangeResponse.ok) {
+        contentLength = readContentLength(rangeResponse)
+      }
+    }
+
+    if (contentLength) {
+      masterContentLengthBySrc.set(src, contentLength)
+    }
+  } catch {
+    // Best-effort debug probe only.
+  } finally {
+    masterContentLengthPending.delete(src)
   }
 }
 
-function getAllMasterTransferredBytes(): number {
+function getAudioResourceEntries(): PerformanceResourceTiming[] {
   if (typeof performance === 'undefined' || typeof performance.getEntriesByType !== 'function') {
-    return 0
+    return []
   }
-  let total = 0
-  for (const entry of performance.getEntriesByType('resource') as PerformanceResourceTiming[]) {
-    if (!entry.name.startsWith('blob:') && /\.(mp3|wav|ogg|aac)(\?|$)/i.test(entry.name)) {
-      total += entry.transferSize || entry.encodedBodySize || 0
-    }
-  }
-  return total
+
+  return performance
+    .getEntriesByType('resource')
+    .filter(
+      (entry): entry is PerformanceResourceTiming =>
+        typeof (entry as PerformanceResourceTiming).transferSize === 'number'
+    )
+}
+
+function getCurrentMasterResourceTiming() {
+  const src = audioEl.value?.currentSrc || currentUrl.value
+  if (!src) return null
+
+  return buildCurrentMasterResourceDebug({
+    src,
+    resourceEntries: getAudioResourceEntries(),
+    contentLengthBytes: masterContentLengthBySrc.get(src) ?? null,
+    bufferedRatio: bufferedProgressRatio.value,
+  })
+}
+
+function getAllMasterTransferredBytes(): number {
+  return getMasterSessionTransferredBytes({
+    resourceEntries: getAudioResourceEntries(),
+    observedBytesBySrc: masterObservedTransferredBySrc,
+  })
 }
 
 function getAudioDebugSnapshot() {
   const masterResource = getCurrentMasterResourceTiming()
+  if (masterResource && masterResource.transferBytes > 0) {
+    masterObservedTransferredBySrc.set(
+      masterResource.src,
+      Math.max(
+        masterObservedTransferredBySrc.get(masterResource.src) ?? 0,
+        masterResource.transferBytes
+      )
+    )
+  }
   const stemStats = stemPlayback.getDebugSnapshot()
   const currentTrackTransferBytes =
     (masterResource?.transferBytes ?? 0) + stemStats.currentTrackTransferredBytes
@@ -1007,6 +1077,7 @@ function safePause() {
 function onLoadedMetadata() {
   const el = audioEl.value
   if (!el) return
+  void ensureMasterContentLength(el.currentSrc || currentUrl.value)
   audioStore.updateFromAudioDuration(el.duration)
   updateBufferedProgressRatio()
   markPlaybackProgress()
@@ -1101,6 +1172,7 @@ watch(
     }
 
     el.src = nextUrl
+    void ensureMasterContentLength(nextUrl)
     safeLoad()
     bufferedProgressRatio.value = 0
     resetPlaybackLoadingFlags()

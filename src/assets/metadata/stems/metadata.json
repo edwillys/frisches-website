@@ -24,42 +24,35 @@
           "guitar": [
             {
               "label": "Guitar PRS",
-              "shortLabel": "1",
+              "shortLabel": "Riff1",
               "role": "base",
               "type": "electric",
               "path": "./02 - TOJD/TOJD - Guitar Base - PRS.mp3"
             },
             {
               "label": "Guitar MM",
-              "shortLabel": "2",
+              "shortLabel": "Riff2",
               "role": "base",
               "type": "electric",
               "path": "./02 - TOJD/TOJD - Guitar Base - MM.mp3"
             },
             {
               "label": "Guitar AS93",
-              "shortLabel": "3",
+              "shortLabel": "ODub",
               "role": "base",
               "type": "electric",
               "path": "./02 - TOJD/TOJD - Guitar Base - AS93.mp3"
             },
             {
-              "label": "Guitar AS93 2",
-              "shortLabel": "4",
-              "role": "base",
-              "type": "electric",
-              "path": "./02 - TOJD/TOJD - Guitar Base - AS93_2.mp3"
-            },
-            {
               "label": "Guitar Maton",
-              "shortLabel": "5",
+              "shortLabel": "Support",
               "role": "base",
               "type": "acoustic",
               "path": "./02 - TOJD/TOJD - Guitar Base - Maton.mp3"
             },
             {
               "label": "Guitar Solo",
-              "shortLabel": "SOLO",
+              "shortLabel": "Solo",
               "role": "solo",
               "type": "electric",
               "path": "./02 - TOJD/TOJD - Guitar Solo.mp3"
@@ -69,13 +62,13 @@
           "vocals": [
             {
               "label": "Vocals Main",
-              "shortLabel": "1",
+              "shortLabel": "Lead",
               "role": "main",
               "path": "./02 - TOJD/TOJD - Vox Main.mp3"
             },
             {
               "label": "Vocals Backing",
-              "shortLabel": "2",
+              "shortLabel": "Choir",
               "role": "backing",
               "path": "./02 - TOJD/TOJD - Vox Backing.mp3"
             }
