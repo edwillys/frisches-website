@@ -120,6 +120,15 @@
     "groupLabel": "Mixeur d'instruments",
     "muteToggleSuffix": "Couper",
     "instrumentVolumePrefix": "Volume",
+    "contextMenuMute": "Couper",
+    "contextMenuSolo": "Solo",
+    "contextMenuUnsolo": "Retirer le solo",
+    "contextMenuSoloInGroup": "Solo dans le groupe",
+    "contextMenuUnsoloInGroup": "Retirer le solo du groupe",
+    "muteAll": "Couper tout",
+    "unmuteAll": "Rétablir tout",
+    "soloAll": "Solo tout",
+    "unsoloAll": "Retirer tous les solos",
     "unavailableSuffix": "(indisponible)"
   },
   "logo": {

@@ -136,6 +136,12 @@ Suppress tooltips by adding the class `tooltip-suppressed` to the target element
 
 `GlobalAudioPlayer` persists across navigation. Tracks have optional per-stem fader support via `InstrumentFaders`. Theme colour for the player UI is derived per-track via `usePlayerThemeStyle`.
 
+- Stem assets are now only handed to `useStemPlayback` while stem mode is enabled. When stems are enabled, activation waits only for currently audible stem paths; muted paths keep prebuffering in the background and join later when unmuted.
+- The mini-player play button exposes loading state via an in-button spinner and `aria-busy` / `data-loading` attributes. Clicking play again while startup is still pending pauses immediately without cancelling the background stem load.
+- Dev-only audio diagnostics are available through `window.__FRISCHES_AUDIO_DEBUG__`. A separate `AudioDebugHud` component can also be enabled in development with `VITE_AUDIO_DEBUG_HUD=true`.
+- `InstrumentFaders` now supports double-click solo, touch double-tap solo, and a right-click / long-press context menu for mute / solo actions. Group items also expose “solo in group”.
+- `scripts/run-limiter-metadata-all.js` auto-discovers all non-backup stem folders that have a matching `<folder> - Mastered.(mp3|wav)` file, so adding the remaining album stems should not require script edits. Optional overrides: `--audio-root=...`, `--stems-root=...`, `--output-root=...`, `--versioned-root=...`.
+
 ## Development Guidelines
 
 ### Testing Policy

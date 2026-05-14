@@ -120,6 +120,15 @@
     "groupLabel": "Instrumentenmixer",
     "muteToggleSuffix": "stummschalten",
     "instrumentVolumePrefix": "Lautstärke",
+    "contextMenuMute": "Stummschalten",
+    "contextMenuSolo": "Solo",
+    "contextMenuUnsolo": "Solo aufheben",
+    "contextMenuSoloInGroup": "Solo in Gruppe",
+    "contextMenuUnsoloInGroup": "Solo in Gruppe aufheben",
+    "muteAll": "Alle stummschalten",
+    "unmuteAll": "Alle Stummschaltungen aufheben",
+    "soloAll": "Alle solo",
+    "unsoloAll": "Alle Soli aufheben",
     "unavailableSuffix": "(nicht verfügbar)"
   },
   "logo": {

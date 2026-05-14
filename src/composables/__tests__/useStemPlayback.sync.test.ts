@@ -113,6 +113,8 @@ export const fakeAudioPath = '/src/assets/private/audio/test/stem.mp3'
 export const fakeAudioPath2 = '/src/assets/private/audio/test/stem2.mp3'
 export const fakeAudioPathRace = '/src/assets/private/audio/test/race.mp3'
 export const fakeAudioPathRace2 = '/src/assets/private/audio/test/race-2.mp3'
+export const fakeAudioPathCacheA = '/src/assets/private/audio/test/cache-a.mp3'
+export const fakeAudioPathCacheB = '/src/assets/private/audio/test/cache-b.mp3'
 
 vi.mock('@/data/stems', async () => {
   const actual = await vi.importActual<typeof import('@/data/stems')>('@/data/stems')
@@ -123,6 +125,8 @@ vi.mock('@/data/stems', async () => {
       [fakeAudioPath2]: vi.fn(() => Promise.resolve({ default: 'blob:fake-url-2' })),
       [fakeAudioPathRace]: vi.fn(() => Promise.resolve({ default: 'blob:race-url' })),
       [fakeAudioPathRace2]: vi.fn(() => Promise.resolve({ default: 'blob:race-url-2' })),
+      [fakeAudioPathCacheA]: vi.fn(() => Promise.resolve({ default: 'blob:cache-a-url' })),
+      [fakeAudioPathCacheB]: vi.fn(() => Promise.resolve({ default: 'blob:cache-b-url' })),
     },
   }
 })
@@ -338,6 +342,30 @@ describe('useStemPlayback', () => {
     playback.dispose()
   })
 
+  it('starts muted group items lazily when they become audible after activation', async () => {
+    const { useStemPlayback } = await import('@/composables/useStemPlayback')
+    const audioEl = ref<HTMLAudioElement | null>({ currentTime: 9 } as HTMLAudioElement)
+    const stemGains = computed<Partial<Record<AudioStemName, number>>>(() => ({ guitar: 1 }))
+    const currentGroupGains = ref<Record<string, number>>({ 'guitar-0': 1, 'guitar-1': 0 })
+    const groupGains = computed<Record<string, number>>(() => currentGroupGains.value)
+    const playback = useStemPlayback(audioEl, stemGains, groupGains)
+
+    playback.setSources({ guitar: [fakeAudioPath, fakeAudioPath2] })
+    await playback.activate(0)
+
+    expect(startOffsets).toHaveLength(1)
+    expect(startOffsets[0]).toBeCloseTo(9, 2)
+
+    currentGroupGains.value = { 'guitar-0': 1, 'guitar-1': 1 }
+    playback.updateGroupItemGain('guitar', 1, 1)
+
+    await vi.waitFor(() => {
+      expect(startOffsets).toHaveLength(2)
+    })
+    expect(startOffsets[1]).toBeCloseTo(9, 2)
+    playback.dispose()
+  })
+
   it('re-activating after deactivate re-reads current stemGains from ComputedRef', async () => {
     const { useStemPlayback } = await import('@/composables/useStemPlayback')
     const audioEl = ref<HTMLAudioElement | null>(null)
@@ -367,6 +395,32 @@ describe('useStemPlayback', () => {
     // The second stemGain is the second-to-last node created (stem before its single item)
     const secondStemGain = gainNodesAfterReactivation[gainNodesAfterReactivation.length - 2]
     expect(secondStemGain?.gain.value).toBe(0)
+    playback.dispose()
+  })
+
+  it('evicts decoded buffers for removed sources when switching tracks', async () => {
+    const { useStemPlayback } = await import('@/composables/useStemPlayback')
+    const audioEl = ref<HTMLAudioElement | null>(null)
+    const stemGains = computed<Partial<Record<AudioStemName, number>>>(() => ({ guitar: 1 }))
+    const groupGains = computed<Record<string, number>>(() => ({}))
+    const playback = useStemPlayback(audioEl, stemGains, groupGains)
+
+    playback.setSources({ guitar: [fakeAudioPathCacheA] })
+    await vi.waitFor(() => {
+      expect(playback.isStemsPrebuffered.value).toBe(true)
+    })
+
+    playback.setSources({ guitar: [fakeAudioPathCacheB] })
+    await vi.waitFor(() => {
+      expect(playback.isStemsPrebuffered.value).toBe(true)
+    })
+
+    playback.setSources({ guitar: [fakeAudioPathCacheA] })
+    await vi.waitFor(() => {
+      expect(playback.isStemsPrebuffered.value).toBe(true)
+    })
+
+    expect(mockCtx.decodeAudioData).toHaveBeenCalledTimes(3)
     playback.dispose()
   })
 

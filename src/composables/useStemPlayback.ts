@@ -25,6 +25,9 @@ import { stemAssetLoaders } from '@/data/stems'
 import { type LimiterParams, DEFAULT_LIMITER_PARAMS } from '@/data/stemLimiter'
 
 const JUCE_LIMITER_PROCESSOR = 'juce-limiter-processor'
+const PRELOAD_FETCH_CONCURRENCY = 6
+const PRELOAD_DECODE_CONCURRENCY = 4
+const SILENT_STEM_GAIN_THRESHOLD = 0.001
 const juceLimiterModuleByContext = new WeakMap<AudioContext, Promise<boolean>>()
 let juceLimiterModuleUrl: string | null = null
 
@@ -192,6 +195,26 @@ async function ensureJuceLimiterWorklet(ctx: AudioContext): Promise<boolean> {
   return readyPromise
 }
 
+async function runWithConcurrency<T>(
+  items: readonly T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<void>
+): Promise<void> {
+  if (items.length === 0) return
+
+  let nextIndex = 0
+  const runWorker = async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex
+      nextIndex += 1
+      await worker(items[index]!, index)
+    }
+  }
+
+  const workerCount = Math.min(concurrency, items.length)
+  await Promise.all(Array.from({ length: workerCount }, () => runWorker()))
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 // Re-export so callers that only import from this module still work.
@@ -199,10 +222,22 @@ export type { LimiterParams } from '@/data/stemLimiter'
 export { DEFAULT_LIMITER_PARAMS } from '@/data/stemLimiter'
 
 interface StemNode {
-  buffers: AudioBuffer[]
-  sources: AudioBufferSourceNode[]
+  paths: string[]
+  buffers: Array<AudioBuffer | null>
+  sources: Array<AudioBufferSourceNode | null>
   gainNode: GainNode
   itemGains: GainNode[]
+}
+
+type StemAssetDebugStat = {
+  assetPath: string
+  resolvedUrl: string | null
+  transferredBytes: number
+  decodedBytes: number
+  durationSeconds: number | null
+  channels: number | null
+  sampleRate: number | null
+  fetchCount: number
 }
 
 type TimeDomainBuffer = Parameters<AnalyserNode['getFloatTimeDomainData']>[0]
@@ -219,6 +254,11 @@ function sampleAnalyserRms(analyser: AnalyserNode | null, buffer: TimeDomainBuff
   return Math.sqrt(sumSquares / buffer.length)
 }
 
+function clamp01(value: number): number {
+  if (!Number.isFinite(value)) return 0
+  return Math.min(1, Math.max(0, value))
+}
+
 // ─── Module-level ArrayBuffer cache (shared across all composable instances) ──
 //
 // Splitting the expensive network fetch from the cheap CPU decode means stems
@@ -227,6 +267,31 @@ function sampleAnalyserRms(analyser: AnalyserNode | null, buffer: TimeDomainBuff
 // which typically takes < 100 ms per file.
 
 const _arrayBufferCache = new Map<string, Promise<ArrayBuffer | null>>()
+const _stemAssetDebugStats = new Map<string, StemAssetDebugStat>()
+
+function updateStemAssetDebugStat(
+  assetPath: string,
+  partial: Partial<StemAssetDebugStat>
+): StemAssetDebugStat {
+  const previous = _stemAssetDebugStats.get(assetPath)
+  const next: StemAssetDebugStat = {
+    assetPath,
+    resolvedUrl: previous?.resolvedUrl ?? null,
+    transferredBytes: previous?.transferredBytes ?? 0,
+    decodedBytes: previous?.decodedBytes ?? 0,
+    durationSeconds: previous?.durationSeconds ?? null,
+    channels: previous?.channels ?? null,
+    sampleRate: previous?.sampleRate ?? null,
+    fetchCount: previous?.fetchCount ?? 0,
+    ...partial,
+  }
+  _stemAssetDebugStats.set(assetPath, next)
+  return next
+}
+
+function estimateDecodedBufferBytes(buffer: AudioBuffer): number {
+  return buffer.numberOfChannels * buffer.length * 4
+}
 
 function _fetchArrayBuffer(assetPath: string): Promise<ArrayBuffer | null> {
   if (_arrayBufferCache.has(assetPath)) return _arrayBufferCache.get(assetPath)!
@@ -242,7 +307,14 @@ function _fetchArrayBuffer(assetPath: string): Promise<ArrayBuffer | null> {
       const url = (mod as { default: string }).default
       const response = await fetch(url)
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      return await response.arrayBuffer()
+      const arrayBuffer = await response.arrayBuffer()
+      updateStemAssetDebugStat(assetPath, {
+        resolvedUrl: url,
+        transferredBytes:
+          (_stemAssetDebugStats.get(assetPath)?.transferredBytes ?? 0) + arrayBuffer.byteLength,
+        fetchCount: (_stemAssetDebugStats.get(assetPath)?.fetchCount ?? 0) + 1,
+      })
+      return arrayBuffer
     } catch (err) {
       console.warn(`[useStemPlayback] Failed to fetch: ${assetPath}`, err)
       _arrayBufferCache.delete(assetPath) // allow retry on next attempt
@@ -290,6 +362,93 @@ export function useStemPlayback(
       _decodedCache.set(assetPath, loadBuffer(ctx, assetPath))
     }
     return _decodedCache.get(assetPath)!
+  }
+
+  function isStemPathAudible(stemName: AudioStemName, index: number): boolean {
+    const stemGain = clamp01(stemGains.value[stemName] ?? 1)
+    if (stemGain <= SILENT_STEM_GAIN_THRESHOLD) return false
+    const itemGain = clamp01(groupGains.value[`${stemName}-${index}`] ?? 1)
+    return stemGain * itemGain > SILENT_STEM_GAIN_THRESHOLD
+  }
+
+  function getPreloadPathOrder(sources: Partial<Record<AudioStemName, string[]>>): string[] {
+    const audiblePaths: string[] = []
+    const silentPaths: string[] = []
+
+    for (const [stemName, paths] of Object.entries(sources) as [AudioStemName, string[]][]) {
+      paths?.forEach((path, index) => {
+        if (!path) return
+        if (isStemPathAudible(stemName, index)) {
+          audiblePaths.push(path)
+          return
+        }
+        silentPaths.push(path)
+      })
+    }
+
+    return [...audiblePaths, ...silentPaths]
+  }
+
+  function getLivePlaybackOffset(fallbackSeconds = 0): number {
+    const liveTime = masterAudioEl.value?.currentTime
+    if (typeof liveTime === 'number' && Number.isFinite(liveTime)) {
+      return liveTime
+    }
+    return fallbackSeconds
+  }
+
+  function ensureStemNode(
+    ctx: AudioContext,
+    stemName: AudioStemName,
+    paths: string[],
+    stemDestination: AudioNode
+  ): StemNode {
+    const existing = stemNodes.get(stemName)
+    if (existing) return existing
+
+    const stemGain = ctx.createGain()
+    stemGain.gain.value = clamp01(stemGains.value[stemName] ?? 1)
+    stemGain.connect(stemDestination)
+
+    const itemGains: GainNode[] = paths.map((_, idx) => {
+      const itemGain = ctx.createGain()
+      itemGain.gain.value = clamp01(groupGains.value[`${stemName}-${idx}`] ?? 1)
+      itemGain.connect(stemGain)
+      return itemGain
+    })
+
+    const node: StemNode = {
+      paths: [...paths],
+      buffers: paths.map(() => null),
+      sources: paths.map(() => null),
+      gainNode: stemGain,
+      itemGains,
+    }
+    stemNodes.set(stemName, node)
+    return node
+  }
+
+  async function ensureStemPathBuffer(
+    ctx: AudioContext,
+    stemName: AudioStemName,
+    index: number,
+    assetPath: string
+  ): Promise<AudioBuffer | null> {
+    const node = stemNodes.get(stemName)
+    if (!node) return null
+    const existing = node.buffers[index]
+    if (existing) return existing
+
+    const buffer = await _getCachedDecodedBuffer(ctx, assetPath)
+    if (!buffer) return null
+
+    const currentNode = stemNodes.get(stemName)
+    if (!currentNode || currentNode !== node || currentNode.paths[index] !== assetPath) {
+      return null
+    }
+
+    currentNode.buffers[index] = buffer
+    return buffer
   }
 
   const stemNodes = new Map<AudioStemName, StemNode>()
@@ -378,14 +537,25 @@ export function useStemPlayback(
     try {
       // decodeAudioData() detaches the buffer in some browsers, so pass a copy
       // each time while keeping the cached original intact.
-      return await ctx.decodeAudioData(arrayBuffer.slice(0))
+      const decoded = await ctx.decodeAudioData(arrayBuffer.slice(0))
+      updateStemAssetDebugStat(assetPath, {
+        decodedBytes: estimateDecodedBufferBytes(decoded),
+        durationSeconds: decoded.duration,
+        channels: decoded.numberOfChannels,
+        sampleRate: decoded.sampleRate,
+      })
+      return decoded
     } catch (err) {
       console.warn(`[useStemPlayback] Failed to decode: ${assetPath}`, err)
       return null
+    } finally {
+      // Once decode has populated the current-context cache we can release the
+      // compressed bytes for this asset to keep peak memory down.
+      _arrayBufferCache.delete(assetPath)
     }
   }
 
-  async function loadAllStems(
+  async function loadAudibleStemBuffers(
     ctx: AudioContext,
     sources: Partial<Record<AudioStemName, string[]>>,
     stemDestination: AudioNode
@@ -396,63 +566,84 @@ export function useStemPlayback(
       entries.map(async ([stemName, paths]) => {
         if (!paths?.length) return
 
-        const buffers = (
-          await Promise.all(paths.map((p) => _getCachedDecodedBuffer(ctx, p)))
-        ).filter(Boolean) as AudioBuffer[]
+        ensureStemNode(ctx, stemName, paths, stemDestination)
 
-        if (buffers.length === 0) return
-
-        const stemGain = ctx.createGain()
-        stemGain.gain.value = Math.max(0, Math.min(1, stemGains.value[stemName] ?? 1))
-        stemGain.connect(stemDestination)
-
-        const itemGains: GainNode[] = paths.map((_, idx) => {
-          const g = ctx.createGain()
-          g.gain.value = Math.max(0, Math.min(1, groupGains.value[`${stemName}-${idx}`] ?? 1))
-          g.connect(stemGain)
-          return g
-        })
-
-        stemNodes.set(stemName, {
-          buffers,
-          sources: [],
-          gainNode: stemGain,
-          itemGains,
-        })
+        await Promise.all(
+          paths.map(async (assetPath, index) => {
+            if (!isStemPathAudible(stemName, index)) return
+            await ensureStemPathBuffer(ctx, stemName, index, assetPath)
+          })
+        )
       })
     )
   }
 
   // ─── Source scheduling ──────────────────────────────────────────────────────
 
-  function startAllSources(ctx: AudioContext, offsetSeconds: number): void {
-    const ctxNow = ctx.currentTime
+  function startStemPathSource(
+    ctx: AudioContext,
+    node: StemNode,
+    index: number,
+    offsetSeconds: number
+  ) {
+    const buffer = node.buffers[index]
+    if (!buffer || node.sources[index]) return
 
-    for (const [, node] of stemNodes) {
-      node.sources = node.buffers.map((buffer, idx) => {
-        const src = ctx.createBufferSource()
-        src.buffer = buffer
+    const src = ctx.createBufferSource()
+    src.buffer = buffer
 
-        const dest = node.itemGains[idx] ?? node.gainNode
-        src.connect(dest)
+    const dest = node.itemGains[index] ?? node.gainNode
+    src.connect(dest)
 
-        const safeOffset = Math.max(0, Math.min(offsetSeconds, buffer.duration - 0.001))
-        src.start(ctxNow, safeOffset)
-        return src
+    const safeOffset = Math.max(0, Math.min(offsetSeconds, buffer.duration - 0.001))
+    src.start(ctx.currentTime, safeOffset)
+    node.sources[index] = src
+  }
+
+  function syncAudibleStemSources(
+    ctx: AudioContext,
+    stemName: AudioStemName,
+    fallbackOffsetSeconds = 0
+  ): void {
+    const node = stemNodes.get(stemName)
+    if (!node) return
+
+    node.paths.forEach((assetPath, index) => {
+      if (!isStemPathAudible(stemName, index)) return
+
+      const buffer = node.buffers[index]
+      if (buffer) {
+        startStemPathSource(ctx, node, index, getLivePlaybackOffset(fallbackOffsetSeconds))
+        return
+      }
+
+      void ensureStemPathBuffer(ctx, stemName, index, assetPath).then((loadedBuffer) => {
+        if (!loadedBuffer || audioCtx !== ctx || !isActive.value) return
+        if (!isStemPathAudible(stemName, index)) return
+        const currentNode = stemNodes.get(stemName)
+        if (!currentNode) return
+        startStemPathSource(ctx, currentNode, index, getLivePlaybackOffset(fallbackOffsetSeconds))
       })
+    })
+  }
+
+  function startAllSources(ctx: AudioContext, offsetSeconds: number): void {
+    for (const [stemName] of stemNodes) {
+      syncAudibleStemSources(ctx, stemName, offsetSeconds)
     }
   }
 
   function stopAllSources(): void {
     for (const [, node] of stemNodes) {
       for (const src of node.sources) {
+        if (!src) continue
         try {
           src.stop()
         } catch {
           // already stopped
         }
       }
-      node.sources = []
+      node.sources = node.sources.map(() => null)
     }
   }
 
@@ -520,7 +711,7 @@ export function useStemPlayback(
       return
     } // superseded after graph build
 
-    await loadAllStems(ctx, activeSources, graph.preGainNode)
+    await loadAudibleStemBuffers(ctx, activeSources, graph.preGainNode)
     if (gen !== _opGen) {
       _disposeGraph()
       return
@@ -668,7 +859,11 @@ export function useStemPlayback(
   function updateStemGain(stem: AudioStemName, gain: number): void {
     const node = stemNodes.get(stem)
     if (node) {
-      node.gainNode.gain.value = Math.max(0, Math.min(1, gain))
+      node.gainNode.gain.value = clamp01(gain)
+    }
+
+    if (audioCtx && isActive.value && gain > SILENT_STEM_GAIN_THRESHOLD) {
+      syncAudibleStemSources(audioCtx, stem)
     }
   }
 
@@ -677,13 +872,62 @@ export function useStemPlayback(
     const node = stemNodes.get(stem)
     const itemGain = node?.itemGains[index]
     if (itemGain) {
-      itemGain.gain.value = Math.max(0, Math.min(1, gain))
+      itemGain.gain.value = clamp01(gain)
+    }
+
+    if (audioCtx && isActive.value && gain > SILENT_STEM_GAIN_THRESHOLD) {
+      syncAudibleStemSources(audioCtx, stem)
     }
   }
 
   function getOutputLevel(): number {
     if (!isActive.value) return 0
     return sampleAnalyserRms(outputAnalyser, outputAnalyserBuffer)
+  }
+
+  function getDebugSnapshot() {
+    const currentTrackPaths = (Object.values(stemSources) as string[][]).flat().filter(Boolean)
+    const currentTrackPathSet = new Set(currentTrackPaths)
+    const allAssets = Array.from(_stemAssetDebugStats.values()).sort((a, b) =>
+      a.assetPath.localeCompare(b.assetPath)
+    )
+
+    const currentTrackAssets = allAssets.filter((asset) => currentTrackPathSet.has(asset.assetPath))
+    const currentCompressedCacheBytes = Array.from(currentTrackPathSet).reduce((sum, path) => {
+      if (!_arrayBufferCache.has(path)) return sum
+      return sum + (_stemAssetDebugStats.get(path)?.transferredBytes ?? 0)
+    }, 0)
+    const currentDecodedCacheBytes = Array.from(currentTrackPathSet).reduce((sum, path) => {
+      if (!_decodedCache.has(path)) return sum
+      return sum + (_stemAssetDebugStats.get(path)?.decodedBytes ?? 0)
+    }, 0)
+
+    return {
+      active: isActive.value,
+      prebuffered: isStemsPrebuffered.value,
+      currentTrackPaths,
+      currentTrackTransferredBytes: currentTrackAssets.reduce(
+        (sum, asset) => sum + asset.transferredBytes,
+        0
+      ),
+      currentTrackDecodedBytes: currentTrackAssets.reduce(
+        (sum, asset) => sum + asset.decodedBytes,
+        0
+      ),
+      currentCompressedCacheBytes,
+      currentDecodedCacheBytes,
+      totalTransferredBytes: allAssets.reduce((sum, asset) => sum + asset.transferredBytes, 0),
+      totalDecodedBytes: allAssets.reduce((sum, asset) => sum + asset.decodedBytes, 0),
+      assets: currentTrackAssets,
+    }
+  }
+
+  function printDebugSnapshot(reason = 'manual') {
+    const snapshot = getDebugSnapshot()
+    if (import.meta.env.DEV) {
+      console.debug(`[audio-debug] stems ${reason}`, snapshot)
+    }
+    return snapshot
   }
 
   // ─── Source management ──────────────────────────────────────────────────────
@@ -710,6 +954,13 @@ export function useStemPlayback(
         _arrayBufferCache.delete(path)
       }
     }
+    if (_decodedCache.size > 0) {
+      for (const path of _decodedCache.keys()) {
+        if (!nextPaths.has(path)) {
+          _decodedCache.delete(path)
+        }
+      }
+    }
 
     stemSources = sources
     isStemsPrebuffered.value = false
@@ -725,11 +976,14 @@ export function useStemPlayback(
     sources: Partial<Record<AudioStemName, string[]>>,
     preloadGen: number
   ): Promise<void> {
-    const allPaths = (Object.values(sources) as string[][]).flat().filter(Boolean)
+    const allPaths = getPreloadPathOrder(sources)
     if (allPaths.length === 0) return
 
-    // Step 1: fetch all ArrayBuffers in parallel (network I/O only).
-    await Promise.all(allPaths.map((p) => _fetchArrayBuffer(p)))
+    // Step 1: fetch audible paths first, with enough parallelism to reduce the
+    // visible delay when stems are enabled mid-playback.
+    await runWithConcurrency(allPaths, PRELOAD_FETCH_CONCURRENCY, async (path) => {
+      await _fetchArrayBuffer(path)
+    })
     if (preloadGen !== _preloadGen) return
 
     // Step 2: create/reuse the AudioContext (starts suspended — that is fine).
@@ -739,12 +993,14 @@ export function useStemPlayback(
     await ensureJuceLimiterWorklet(ctx)
     if (preloadGen !== _preloadGen) return
 
-    // Step 4: decode all AudioBuffers.  Results are cached; loadAllStems() reads
-    // from cache so the user experiences no decode latency when enabling stems.
-    await Promise.all(allPaths.map((p) => _getCachedDecodedBuffer(ctx, p)))
+    // Step 4: decode audible paths first, then finish the rest in the background.
+    await runWithConcurrency(allPaths, PRELOAD_DECODE_CONCURRENCY, async (path) => {
+      await _getCachedDecodedBuffer(ctx, path)
+    })
     if (preloadGen !== _preloadGen) return
 
     isStemsPrebuffered.value = true
+    printDebugSnapshot('prebuffered')
   }
 
   // ─── Internal cleanup ───────────────────────────────────────────────────────
@@ -808,6 +1064,8 @@ export function useStemPlayback(
     updateStemGain,
     updateGroupItemGain,
     getOutputLevel,
+    getDebugSnapshot,
+    printDebugSnapshot,
     setSources,
     dispose,
   }

@@ -120,6 +120,15 @@
     "groupLabel": "Instrument faders",
     "muteToggleSuffix": "mute toggle",
     "instrumentVolumePrefix": "volume",
+    "contextMenuMute": "Mute",
+    "contextMenuSolo": "Solo",
+    "contextMenuUnsolo": "Unsolo",
+    "contextMenuSoloInGroup": "Solo in group",
+    "contextMenuUnsoloInGroup": "Unsolo in group",
+    "muteAll": "Mute all",
+    "unmuteAll": "Unmute all",
+    "soloAll": "Solo all",
+    "unsoloAll": "Unsolo all",
     "unavailableSuffix": "(not available)"
   },
   "logo": {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 
 import { useUiText } from '@/composables/useUiText'
 import OverflowMarqueeLabel from '@/components/OverflowMarqueeLabel.vue'
@@ -78,6 +78,7 @@ const GROUP_HANDLE_HEIGHT_PX = 56
 const GROUP_HANDLE_GRIP_WIDTH_PX = 2
 const GROUP_HANDLE_GRIP_GAP_PX = 3
 const GROUP_HANDLE_OVERHANG_PX = Math.ceil(GROUP_HANDLE_WIDTH_PX / 2)
+const GROUP_SHELL_TOP_OVERHANG_PX = 6
 const GROUP_SHELL_PADDING_TOP_PX = 0
 const GROUP_SHELL_PADDING_RIGHT_PX = 2
 const GROUP_SHELL_PADDING_BOTTOM_PX = 0
@@ -101,6 +102,28 @@ type GroupDragSession = {
   didDrag: boolean
 }
 
+export type StemSoloScope = 'global-stem' | 'global-item' | 'group-item'
+
+export type StemSoloTarget = {
+  scope: StemSoloScope
+  stem: StemName
+  index: number | null
+}
+
+export type StemSoloState = {
+  targets: StemSoloTarget[]
+}
+
+type ContextMenuAction = 'mute' | 'solo' | 'solo-in-group'
+
+type ContextMenuState = {
+  stem: StemName
+  index: number | null
+  x: number
+  y: number
+  actions: ContextMenuAction[]
+}
+
 export type StemName =
   | 'drums'
   | 'guitar'
@@ -122,6 +145,7 @@ const props = defineProps<{
   availability?: StemAvailability
   groupItems?: Partial<Record<StemName, StemGroupItem[]>>
   groupGains?: Record<string, number>
+  soloState?: StemSoloState | null
   stemsModeAvailable?: boolean
 }>()
 
@@ -129,6 +153,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
   (e: 'setGain', stem: StemName, value: number): void
   (e: 'setGroupGain', stem: StemName, index: number, value: number): void
+  (e: 'setSoloState', value: StemSoloState | null): void
   (e: 'resetGains'): void
   (e: 'enableStems'): void
   (e: 'disableStems'): void
@@ -177,9 +202,14 @@ const groupOpen = reactive<Partial<Record<StemName, boolean>>>({})
 const groupPreviewWidth = reactive<Partial<Record<StemName, number>>>({})
 const suppressHandleClick = reactive<Partial<Record<StemName, boolean>>>({})
 const draggingGroupStem = ref<StemName | null>(null)
+const contextMenuState = ref<ContextMenuState | null>(null)
+const contextMenuEl = ref<HTMLElement | null>(null)
 
 const isFaderEditingEnabled = ref(false)
 let activeGroupDrag: GroupDragSession | null = null
+let longPressTimer: ReturnType<typeof setTimeout> | null = null
+const pendingIconActionTimers = new Map<string, ReturnType<typeof setTimeout>>()
+const suppressedIconActionKeys = new Set<string>()
 
 watch(
   [() => props.stemsEnabled, () => props.stemsModeAvailable],
@@ -305,6 +335,7 @@ const groupDrawerCssVars = computed(() => ({
   '--group-shell-padding-right': `${GROUP_SHELL_PADDING_RIGHT_PX}px`,
   '--group-shell-padding-bottom': `${GROUP_SHELL_PADDING_BOTTOM_PX}px`,
   '--group-shell-padding-left': `${GROUP_SHELL_PADDING_LEFT_PX}px`,
+  '--group-shell-top-overhang': `${GROUP_SHELL_TOP_OVERHANG_PX}px`,
   '--group-shell-extension-bottom': `${GROUP_SHELL_EXTENSION_BOTTOM_PX}px`,
   '--group-handle-width': `${GROUP_HANDLE_WIDTH_PX}px`,
   '--group-handle-height': `${GROUP_HANDLE_HEIGHT_PX}px`,
@@ -339,6 +370,377 @@ function groupItemShortLabel(item: StemGroupItem, index: number): string {
 
 function groupItemAriaLabel(stemTitle: string, item: StemGroupItem, index: number): string {
   return item.label ?? `${stemTitle} ${index + 1}`
+}
+
+function groupItemKey(stem: StemName, index: number): string {
+  return `${stem}-${index}`
+}
+
+function iconTargetKey(stem: StemName, index: number | null = null): string {
+  return index === null ? stem : groupItemKey(stem, index)
+}
+
+function isSameSoloTarget(a: StemSoloTarget, b: StemSoloTarget): boolean {
+  return a.scope === b.scope && a.stem === b.stem && a.index === b.index
+}
+
+function soloTargetKey(target: StemSoloTarget): string {
+  return `${target.scope}:${target.stem}:${target.index ?? 'stem'}`
+}
+
+function getSoloTargets(): StemSoloTarget[] {
+  return props.soloState?.targets ?? []
+}
+
+function emitSoloTargets(targets: StemSoloTarget[]) {
+  const next: StemSoloTarget[] = []
+  const seen = new Set<string>()
+
+  for (const target of targets) {
+    const key = soloTargetKey(target)
+    if (seen.has(key)) continue
+    seen.add(key)
+    next.push(target)
+  }
+
+  emit('setSoloState', next.length > 0 ? { targets: next } : null)
+}
+
+function hasAnySoloTargets(): boolean {
+  return getSoloTargets().length > 0
+}
+
+function hasAnyGlobalSoloTargets(): boolean {
+  return getSoloTargets().some((target) => target.scope !== 'group-item')
+}
+
+function isStemGloballySoloed(stem: StemName): boolean {
+  return getSoloTargets().some(
+    (target) => target.scope === 'global-stem' && target.stem === stem && target.index === null
+  )
+}
+
+function isGroupItemGloballySoloed(stem: StemName, index: number): boolean {
+  return getSoloTargets().some(
+    (target) => target.scope === 'global-item' && target.stem === stem && target.index === index
+  )
+}
+
+function isGroupItemGroupSoloed(stem: StemName, index: number): boolean {
+  return getSoloTargets().some(
+    (target) => target.scope === 'group-item' && target.stem === stem && target.index === index
+  )
+}
+
+function stemHasAnySolo(stem: StemName): boolean {
+  return getSoloTargets().some((target) => target.stem === stem)
+}
+
+function stemHasLocalGroupSolo(stem: StemName): boolean {
+  return getSoloTargets().some((target) => target.scope === 'group-item' && target.stem === stem)
+}
+
+function isStemEffectivelySoloAudible(stem: StemName): boolean {
+  if (!hasAnyGlobalSoloTargets()) return true
+  if (isStemGloballySoloed(stem)) return true
+  return getSoloTargets().some((target) => target.scope === 'global-item' && target.stem === stem)
+}
+
+function isGroupItemEffectivelySoloAudible(stem: StemName, index: number): boolean {
+  if (!isStemEffectivelySoloAudible(stem)) return false
+
+  if (isStemGloballySoloed(stem)) {
+    if (!stemHasLocalGroupSolo(stem)) return true
+    return isGroupItemGroupSoloed(stem, index)
+  }
+
+  const hasGlobalItemSoloForStem = getSoloTargets().some(
+    (target) => target.scope === 'global-item' && target.stem === stem
+  )
+  if (hasGlobalItemSoloForStem) {
+    return isGroupItemGloballySoloed(stem, index)
+  }
+
+  if (stemHasLocalGroupSolo(stem)) {
+    return isGroupItemGroupSoloed(stem, index)
+  }
+
+  return true
+}
+
+function isStemSoloVisual(stem: StemName): boolean {
+  return stemHasAnySolo(stem)
+}
+
+function isGroupItemSoloVisual(stem: StemName, index: number): boolean {
+  return isGroupItemGloballySoloed(stem, index) || isGroupItemGroupSoloed(stem, index)
+}
+
+function isStemDimmed(stem: StemName): boolean {
+  return hasAnySoloTargets() && !isStemEffectivelySoloAudible(stem)
+}
+
+function isGroupItemDimmed(stem: StemName, index: number): boolean {
+  return hasAnySoloTargets() && !isGroupItemEffectivelySoloAudible(stem, index)
+}
+
+function isStemMuted(stem: StemName): boolean {
+  return clamp01(props.gains[stem]) <= 0.001
+}
+
+function isGroupItemMuted(stem: StemName, index: number): boolean {
+  return groupItemGain(stem, index) <= 0.001
+}
+
+function applyStemGainChange(stem: StemName, value: number) {
+  const nextValue = clamp01(value)
+  if (nextValue > 0) lastNonZeroGain[stem] = nextValue
+  emit('setGain', stem, nextValue)
+}
+
+function applyGroupGainChange(stem: StemName, index: number, value: number) {
+  const nextValue = clamp01(value)
+  const key = groupItemKey(stem, index)
+  if (nextValue > 0) lastNonZeroGroupGain[key] = nextValue
+  emit('setGroupGain', stem, index, nextValue)
+}
+
+const allVisibleStemsMuted = computed(
+  () => visibleStems.value.length > 0 && visibleStems.value.every((stem) => stem.gain <= 0.001)
+)
+
+function clearAllIconActionTimers() {
+  for (const timer of pendingIconActionTimers.values()) {
+    clearTimeout(timer)
+  }
+  pendingIconActionTimers.clear()
+}
+
+function scheduleIconAction(key: string, singleAction: () => void, doubleAction: () => void) {
+  if (suppressedIconActionKeys.has(key)) {
+    suppressedIconActionKeys.delete(key)
+    return
+  }
+
+  const existingTimer = pendingIconActionTimers.get(key)
+  if (existingTimer) {
+    clearTimeout(existingTimer)
+    pendingIconActionTimers.delete(key)
+    doubleAction()
+    return
+  }
+
+  const timer = setTimeout(() => {
+    pendingIconActionTimers.delete(key)
+    singleAction()
+  }, 220)
+  pendingIconActionTimers.set(key, timer)
+}
+
+function closeContextMenu() {
+  contextMenuState.value = null
+  document.removeEventListener('pointerdown', onDocumentPointerDown, true)
+  document.removeEventListener('keydown', onDocumentKeyDown)
+}
+
+function onDocumentPointerDown(event: PointerEvent) {
+  if (!contextMenuState.value) return
+  if (contextMenuEl.value?.contains(event.target as Node)) return
+  closeContextMenu()
+}
+
+function onDocumentKeyDown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    closeContextMenu()
+  }
+}
+
+async function clampContextMenuPosition() {
+  await nextTick()
+  const menu = contextMenuEl.value
+  const state = contextMenuState.value
+  if (!menu || !state || typeof window === 'undefined') return
+
+  const rect = menu.getBoundingClientRect()
+  const padding = 10
+  state.x = Math.min(Math.max(state.x, padding), window.innerWidth - rect.width - padding)
+  state.y = Math.min(Math.max(state.y, padding), window.innerHeight - rect.height - padding)
+}
+
+function openContextMenu(stem: StemName, index: number | null, x: number, y: number) {
+  if (!isFaderEditingEnabled.value) return
+
+  const actions: ContextMenuAction[] =
+    index === null || isGroupItemGloballySoloed(stem, index)
+      ? ['mute', 'solo']
+      : ['mute', 'solo', 'solo-in-group']
+
+  contextMenuState.value = {
+    stem,
+    index,
+    x,
+    y,
+    actions,
+  }
+  document.addEventListener('pointerdown', onDocumentPointerDown, true)
+  document.addEventListener('keydown', onDocumentKeyDown)
+  void clampContextMenuPosition()
+}
+
+function clearLongPressTimer() {
+  if (longPressTimer !== null) {
+    clearTimeout(longPressTimer)
+    longPressTimer = null
+  }
+}
+
+function scheduleLongPress(stem: StemName, index: number | null, event: PointerEvent) {
+  if (!isFaderEditingEnabled.value || event.pointerType !== 'touch') return
+
+  clearLongPressTimer()
+  const key = iconTargetKey(stem, index)
+  const x = event.clientX
+  const y = event.clientY
+
+  longPressTimer = setTimeout(() => {
+    suppressedIconActionKeys.add(key)
+    openContextMenu(stem, index, x, y)
+  }, 420)
+}
+
+function openStemContextMenu(stem: StemName, event: MouseEvent) {
+  event.preventDefault()
+  openContextMenu(stem, null, event.clientX, event.clientY)
+}
+
+function openGroupItemContextMenu(stem: StemName, index: number, event: MouseEvent) {
+  event.preventDefault()
+  openContextMenu(stem, index, event.clientX, event.clientY)
+}
+
+function clearSoloForStem(stem: StemName) {
+  emitSoloTargets(getSoloTargets().filter((target) => target.stem !== stem))
+}
+
+function clearSoloForItem(stem: StemName, index: number) {
+  emitSoloTargets(
+    getSoloTargets().filter((target) => !(target.stem === stem && target.index === index))
+  )
+}
+
+function clearAllSoloTargets() {
+  emitSoloTargets([])
+}
+
+function toggleSoloTarget(target: StemSoloTarget) {
+  if (!isFaderEditingEnabled.value) return
+
+  closeContextMenu()
+  const targets = getSoloTargets()
+
+  if (targets.some((existing) => isSameSoloTarget(existing, target))) {
+    if (target.scope === 'global-stem') {
+      clearSoloForStem(target.stem)
+      return
+    }
+
+    emitSoloTargets(targets.filter((existing) => !isSameSoloTarget(existing, target)))
+    return
+  }
+
+  let nextTargets = targets.filter((existing) => {
+    if (target.scope === 'global-stem') {
+      return existing.stem !== target.stem
+    }
+
+    if (target.scope === 'global-item') {
+      return !(
+        existing.stem === target.stem &&
+        (existing.scope === 'global-stem' || existing.index === target.index)
+      )
+    }
+
+    return !(existing.stem === target.stem && existing.scope === 'global-stem')
+  })
+
+  nextTargets = [...nextTargets, target]
+  emitSoloTargets(nextTargets)
+}
+
+function contextMenuActionLabel(action: ContextMenuAction, state: ContextMenuState): string {
+  if (action === 'mute') return t.value.faders.contextMenuMute
+
+  if (action === 'solo') {
+    if (state.index === null) {
+      return isStemSoloVisual(state.stem)
+        ? t.value.faders.contextMenuUnsolo
+        : t.value.faders.contextMenuSolo
+    }
+
+    return isGroupItemGloballySoloed(state.stem, state.index)
+      ? t.value.faders.contextMenuUnsolo
+      : t.value.faders.contextMenuSolo
+  }
+
+  if (state.index !== null && isGroupItemGroupSoloed(state.stem, state.index)) {
+    return t.value.faders.contextMenuUnsoloInGroup
+  }
+
+  return t.value.faders.contextMenuSoloInGroup
+}
+
+function runContextMenuAction(action: ContextMenuAction) {
+  const state = contextMenuState.value
+  if (!state) return
+
+  closeContextMenu()
+  if (action === 'mute') {
+    if (state.index === null) {
+      toggleMute(state.stem)
+      return
+    }
+    toggleGroupItemMute(state.stem, state.index)
+    return
+  }
+
+  if (action === 'solo') {
+    toggleSoloTarget({
+      scope: state.index === null ? 'global-stem' : 'global-item',
+      stem: state.stem,
+      index: state.index,
+    })
+    return
+  }
+
+  if (state.index !== null) {
+    toggleSoloTarget({ scope: 'group-item', stem: state.stem, index: state.index })
+  }
+}
+
+function toggleMuteAll() {
+  if (!isFaderEditingEnabled.value) return
+
+  closeContextMenu()
+  for (const stem of visibleStems.value) {
+    if (allVisibleStemsMuted.value) {
+      const restore = clamp01(lastNonZeroGain[stem.key] ?? 1)
+      applyStemGainChange(stem.key, restore > 0 ? restore : 1)
+      continue
+    }
+
+    if (stem.gain > 0.001) {
+      lastNonZeroGain[stem.key] = stem.gain
+      applyStemGainChange(stem.key, 0)
+    }
+  }
+}
+
+function clearSoloMomentarily() {
+  if (!isFaderEditingEnabled.value) return
+  if (!hasAnySoloTargets()) return
+
+  closeContextMenu()
+  clearAllSoloTargets()
 }
 
 function groupToggleLabel(isOpen: boolean): string {
@@ -474,28 +876,111 @@ function onGroupHandleClick(stem: StemName) {
 
 onBeforeUnmount(() => {
   clearGroupDragSession()
+  clearLongPressTimer()
+  clearAllIconActionTimers()
+  closeContextMenu()
 })
 
 function onGroupItemInput(stem: StemName, index: number, e: Event) {
   if (!isFaderEditingEnabled.value) return
   const target = e.target as HTMLInputElement
   const value = clamp01(Number.parseFloat(target.value))
-  const key = `${stem}-${index}`
-  if (value > 0) lastNonZeroGroupGain[key] = value
-  emit('setGroupGain', stem, index, value)
+  applyGroupGainChange(stem, index, value)
 }
 
 function toggleGroupItemMute(stem: StemName, index: number) {
   if (!isFaderEditingEnabled.value) return
   const current = groupItemGain(stem, index)
-  const key = `${stem}-${index}`
+  const key = groupItemKey(stem, index)
   if (current <= 0) {
     const restore = clamp01(lastNonZeroGroupGain[key] ?? 1)
-    emit('setGroupGain', stem, index, restore > 0 ? restore : 1)
+    applyGroupGainChange(stem, index, restore > 0 ? restore : 1)
     return
   }
   lastNonZeroGroupGain[key] = current
-  emit('setGroupGain', stem, index, 0)
+  applyGroupGainChange(stem, index, 0)
+}
+
+function runStemPrimaryAction(stem: StemName) {
+  if (isStemSoloVisual(stem)) {
+    clearSoloForStem(stem)
+    return
+  }
+
+  toggleMute(stem)
+}
+
+function runGroupItemPrimaryAction(stem: StemName, index: number) {
+  if (isGroupItemSoloVisual(stem, index)) {
+    clearSoloForItem(stem, index)
+    return
+  }
+
+  toggleGroupItemMute(stem, index)
+}
+
+function onStemIconClick(stem: StemName, event: MouseEvent) {
+  if (!isFaderEditingEnabled.value) return
+  const key = iconTargetKey(stem)
+  if (suppressedIconActionKeys.has(key)) {
+    suppressedIconActionKeys.delete(key)
+    return
+  }
+
+  if (event.detail === 0) {
+    runStemPrimaryAction(stem)
+    return
+  }
+
+  scheduleIconAction(
+    key,
+    () => runStemPrimaryAction(stem),
+    () => toggleSoloTarget({ scope: 'global-stem', stem, index: null })
+  )
+}
+
+function onStemIconPointerUp(stem: StemName, event: PointerEvent) {
+  clearLongPressTimer()
+  if (event.pointerType !== 'touch') return
+
+  scheduleIconAction(
+    iconTargetKey(stem),
+    () => runStemPrimaryAction(stem),
+    () => toggleSoloTarget({ scope: 'global-stem', stem, index: null })
+  )
+  suppressedIconActionKeys.add(iconTargetKey(stem))
+}
+
+function onGroupItemIconClick(stem: StemName, index: number, event: MouseEvent) {
+  if (!isFaderEditingEnabled.value) return
+  const key = iconTargetKey(stem, index)
+  if (suppressedIconActionKeys.has(key)) {
+    suppressedIconActionKeys.delete(key)
+    return
+  }
+
+  if (event.detail === 0) {
+    runGroupItemPrimaryAction(stem, index)
+    return
+  }
+
+  scheduleIconAction(
+    key,
+    () => runGroupItemPrimaryAction(stem, index),
+    () => toggleSoloTarget({ scope: 'global-item', stem, index })
+  )
+}
+
+function onGroupItemIconPointerUp(stem: StemName, index: number, event: PointerEvent) {
+  clearLongPressTimer()
+  if (event.pointerType !== 'touch') return
+
+  scheduleIconAction(
+    iconTargetKey(stem, index),
+    () => runGroupItemPrimaryAction(stem, index),
+    () => toggleSoloTarget({ scope: 'global-item', stem, index })
+  )
+  suppressedIconActionKeys.add(iconTargetKey(stem, index))
 }
 
 // ─── Core fader handlers ─────────────────────────────────────────────────────────────────────────
@@ -512,8 +997,7 @@ function onInput(stem: StemName, e: Event) {
   if (!isFaderEditingEnabled.value) return
   const target = e.target as HTMLInputElement
   const value = clamp01(Number.parseFloat(target.value))
-  if (value > 0) lastNonZeroGain[stem] = value
-  emit('setGain', stem, value)
+  applyStemGainChange(stem, value)
 }
 
 function toggleMute(stem: StemName) {
@@ -522,12 +1006,12 @@ function toggleMute(stem: StemName) {
   const current = clamp01(props.gains[stem])
   if (current <= 0) {
     const restore = clamp01(lastNonZeroGain[stem] ?? 1)
-    emit('setGain', stem, restore > 0 ? restore : 1)
+    applyStemGainChange(stem, restore > 0 ? restore : 1)
     return
   }
 
   lastNonZeroGain[stem] = current
-  emit('setGain', stem, 0)
+  applyStemGainChange(stem, 0)
 }
 
 function toggleFaderEditing() {
@@ -537,12 +1021,16 @@ function toggleFaderEditing() {
   if (nextEnabled) {
     emit('enableStems')
   } else {
+    closeContextMenu()
+    clearAllSoloTargets()
     emit('disableStems')
   }
 }
 
 function resetGains() {
   if (!isFaderEditingEnabled.value) return
+  closeContextMenu()
+  clearAllSoloTargets()
   emit('resetGains')
 }
 </script>
@@ -585,6 +1073,33 @@ function resetGains() {
         </button>
 
         <div class="stems__header-actions">
+          <button
+            class="stems__mode-btn stems__mode-btn--mute"
+            type="button"
+            :class="{ 'is-active': allVisibleStemsMuted }"
+            :aria-label="allVisibleStemsMuted ? t.faders.unmuteAll : t.faders.muteAll"
+            :data-tooltip="allVisibleStemsMuted ? t.faders.unmuteAll : t.faders.muteAll"
+            :aria-pressed="allVisibleStemsMuted"
+            :disabled="!isFaderEditingEnabled"
+            data-testid="stems-mute-all"
+            @click="toggleMuteAll"
+          >
+            <span aria-hidden="true">M</span>
+          </button>
+
+          <button
+            class="stems__mode-btn stems__mode-btn--solo-clear"
+            type="button"
+            :aria-label="t.faders.unsoloAll"
+            :data-tooltip="t.faders.unsoloAll"
+            :aria-pressed="false"
+            :disabled="!isFaderEditingEnabled || !hasAnySoloTargets()"
+            data-testid="stems-solo-all"
+            @click="clearSoloMomentarily"
+          >
+            <span aria-hidden="true">!S</span>
+          </button>
+
           <button
             class="stems__reset"
             type="button"
@@ -645,6 +1160,7 @@ function resetGains() {
                   <div
                     class="stem"
                     :class="{
+                      'stem--dimmed': isStemDimmed(stem.key),
                       'stem--unavailable': !stem.isAvailable,
                       'stem--group-parent': hasGroupItems(stem.key),
                     }"
@@ -657,9 +1173,23 @@ function resetGains() {
                       :aria-pressed="stem.gain <= 0"
                       :disabled="!isFaderEditingEnabled || !stem.isAvailable"
                       :data-testid="`stem-${stem.key}-mute`"
-                      @click="toggleMute(stem.key)"
+                      @click="onStemIconClick(stem.key, $event)"
+                      @contextmenu="openStemContextMenu(stem.key, $event)"
+                      @pointerdown="scheduleLongPress(stem.key, null, $event)"
+                      @pointerup="onStemIconPointerUp(stem.key, $event)"
+                      @pointercancel="clearLongPressTimer"
+                      @pointerleave="clearLongPressTimer"
                     >
                       <span class="stem__icon" aria-hidden="true" v-html="stem.icon" />
+                      <span v-if="isStemMuted(stem.key)" class="stem__mute-badge" aria-hidden="true"
+                        >M</span
+                      >
+                      <span
+                        v-if="isStemSoloVisual(stem.key)"
+                        class="stem__solo-badge"
+                        aria-hidden="true"
+                        >S</span
+                      >
                     </button>
 
                     <div class="stem__slider-wrap" :style="{ '--stem-percent': stem.percent }">
@@ -690,7 +1220,11 @@ function resetGains() {
                       :key="idx"
                       class="stem-group__item"
                     >
-                      <div class="stem stem--child" :data-testid="`stem-${stem.key}-item-${idx}`">
+                      <div
+                        class="stem stem--child"
+                        :class="{ 'stem--dimmed': isGroupItemDimmed(stem.key, idx) }"
+                        :data-testid="`stem-${stem.key}-item-${idx}`"
+                      >
                         <button
                           class="stem__icon-btn"
                           type="button"
@@ -699,7 +1233,12 @@ function resetGains() {
                           :aria-pressed="groupItemGain(stem.key, idx) <= 0"
                           :disabled="!isFaderEditingEnabled"
                           :data-testid="`stem-${stem.key}-item-${idx}-mute`"
-                          @click="toggleGroupItemMute(stem.key, idx)"
+                          @click="onGroupItemIconClick(stem.key, idx, $event)"
+                          @contextmenu="openGroupItemContextMenu(stem.key, idx, $event)"
+                          @pointerdown="scheduleLongPress(stem.key, idx, $event)"
+                          @pointerup="onGroupItemIconPointerUp(stem.key, idx, $event)"
+                          @pointercancel="clearLongPressTimer"
+                          @pointerleave="clearLongPressTimer"
                         >
                           <span
                             class="stem__icon"
@@ -713,6 +1252,18 @@ function resetGains() {
                               )
                             "
                           />
+                          <span
+                            v-if="isGroupItemMuted(stem.key, idx)"
+                            class="stem__mute-badge"
+                            aria-hidden="true"
+                            >M</span
+                          >
+                          <span
+                            v-if="isGroupItemSoloVisual(stem.key, idx)"
+                            class="stem__solo-badge"
+                            aria-hidden="true"
+                            >S</span
+                          >
                         </button>
 
                         <div
@@ -766,6 +1317,31 @@ function resetGains() {
         </div>
       </div>
     </div>
+
+    <Teleport to="body">
+      <div
+        v-if="contextMenuState"
+        ref="contextMenuEl"
+        class="stems__context-menu"
+        :style="{ left: `${contextMenuState.x}px`, top: `${contextMenuState.y}px` }"
+        data-testid="stems-context-menu"
+        role="menu"
+        @pointerdown.stop
+        @click.stop
+      >
+        <button
+          v-for="action in contextMenuState.actions"
+          :key="action"
+          class="stems__context-action"
+          type="button"
+          role="menuitem"
+          :data-testid="`stems-context-action-${action}`"
+          @click="runContextMenuAction(action)"
+        >
+          {{ contextMenuActionLabel(action, contextMenuState) }}
+        </button>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -782,9 +1358,10 @@ function resetGains() {
 
 .stems__overlay {
   position: absolute;
-  left: 50%;
+  right: 0;
   bottom: calc(100% + 10px);
-  transform: translateX(-50%);
+  left: auto;
+  transform: none;
   max-width: min(92vw, 38rem);
   padding: 10px 10px 10px;
   background: rgba(0, 0, 0, 0.92);
@@ -798,14 +1375,52 @@ function resetGains() {
 .stems__overlay::after {
   content: '';
   position: absolute;
-  left: 50%;
+  right: 14px;
   bottom: -6px;
   width: 12px;
   height: 12px;
-  transform: translateX(-50%) rotate(45deg);
+  transform: rotate(45deg);
   background: rgba(0, 0, 0, 0.92);
   border-right: 1px solid rgba(255, 255, 255, 0.12);
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.stems__context-menu {
+  position: fixed;
+  min-width: 9.5rem;
+  padding: 0.35rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, rgba(16, 16, 18, 0.97), rgba(8, 8, 10, 0.94));
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(16px);
+  z-index: 1100;
+}
+
+.stems__context-action {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.65rem;
+  border: none;
+  border-radius: 0.6rem;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
+}
+
+.stems__context-action:hover,
+.stems__context-action:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  transform: translateX(1px);
 }
 
 .stems__header {
@@ -821,6 +1436,57 @@ function resetGains() {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.stems__mode-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease;
+}
+
+.stems__mode-btn--mute {
+  color: rgba(255, 108, 108, 0.92);
+}
+
+.stems__mode-btn--solo {
+  color: rgba(245, 210, 108, 0.92);
+}
+
+.stems__mode-btn--solo-clear {
+  min-width: 28px;
+  padding: 0 5px;
+  color: rgba(245, 210, 108, 0.92);
+}
+
+.stems__mode-btn--mute.is-active {
+  background: rgba(255, 108, 108, 0.92);
+  border-color: rgba(255, 108, 108, 0.96);
+  color: #070707;
+}
+
+.stems__mode-btn:disabled {
+  opacity: 0.34;
+  cursor: default;
+}
+
+.stems__mode-btn--solo-clear:not(:disabled):active {
+  background: rgba(245, 210, 108, 0.92);
+  border-color: rgba(245, 210, 108, 0.96);
+  color: #070707;
 }
 
 .stems__close {
@@ -925,6 +1591,7 @@ function resetGains() {
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
+  padding-top: var(--group-shell-top-overhang);
   padding-bottom: 14px;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.34) transparent;
@@ -981,7 +1648,7 @@ function resetGains() {
 .stem-group__shell--grouped::before {
   content: '';
   position: absolute;
-  top: 0;
+  top: calc(var(--group-shell-top-overhang) * -1);
   left: 0;
   right: 0;
   bottom: calc(var(--group-shell-extension-bottom) * -1);
@@ -1154,6 +1821,11 @@ function resetGains() {
   justify-items: center;
   align-content: start;
   min-height: var(--stem-stack-min-height);
+  transition: opacity 150ms ease;
+}
+
+.stem--dimmed {
+  opacity: 0.38;
 }
 
 .stem__icon {
@@ -1161,6 +1833,7 @@ function resetGains() {
 }
 
 .stem__icon-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1171,10 +1844,37 @@ function resetGains() {
   background: transparent;
   color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
+  transition: color 150ms ease;
 }
 
 .stem__icon-btn:hover {
   color: var(--lyrics-album-contour);
+}
+
+.stem__solo-badge {
+  position: absolute;
+  top: -3px;
+  right: -4px;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: rgba(245, 210, 108, 0.96);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.stem__mute-badge {
+  position: absolute;
+  top: -3px;
+  left: -4px;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: rgba(255, 108, 108, 0.98);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
 }
 
 .stem__icon-btn:disabled {
@@ -1284,19 +1984,5 @@ function resetGains() {
   height: 0;
   opacity: 0;
   border: none;
-}
-
-@media (max-width: 900px) {
-  .stems__overlay {
-    left: auto;
-    right: 0;
-    transform: none;
-  }
-
-  .stems__overlay::after {
-    left: auto;
-    right: 14px;
-    transform: rotate(45deg);
-  }
 }
 </style>

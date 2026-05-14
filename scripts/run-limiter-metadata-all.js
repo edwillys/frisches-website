@@ -6,11 +6,28 @@ import { spawnSync } from 'node:child_process'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
-const AUDIO_ROOT = path.join(ROOT, 'src/assets/private/audio/TalesFromTheCellar')
-const STEMS_ROOT = path.join(AUDIO_ROOT, 'stems')
-const OUTPUT_ROOT = path.join(ROOT, 'artifacts/limiter-metadata')
-const VERSIONED_METADATA_ROOT = path.join(ROOT, 'src/assets/metadata/limiter/tftc')
 const shouldVerify = process.argv.includes('--verify')
+const MASTER_FILE_EXTENSIONS = ['.mp3', '.wav']
+
+function getArg(name, fallback) {
+  const prefix = `--${name}=`
+  const match = process.argv.find((arg) => arg.startsWith(prefix))
+  if (!match) return fallback
+  return match.slice(prefix.length)
+}
+
+function resolveFromRoot(inputPath) {
+  return path.resolve(ROOT, inputPath)
+}
+
+const AUDIO_ROOT = resolveFromRoot(
+  getArg('audio-root', 'src/assets/private/audio/TalesFromTheCellar')
+)
+const STEMS_ROOT = resolveFromRoot(getArg('stems-root', path.join(AUDIO_ROOT, 'stems')))
+const OUTPUT_ROOT = resolveFromRoot(getArg('output-root', 'artifacts/limiter-metadata'))
+const VERSIONED_METADATA_ROOT = resolveFromRoot(
+  getArg('versioned-root', 'src/assets/metadata/limiter/tftc')
+)
 
 function slugify(value) {
   return value
@@ -38,6 +55,23 @@ function relativeToRoot(filePath) {
   return path.relative(ROOT, filePath).replace(/\\/g, '/')
 }
 
+function findMasterPath(audioRoot, label) {
+  for (const extension of MASTER_FILE_EXTENSIONS) {
+    const candidate = path.join(audioRoot, `${label} - Mastered${extension}`)
+    if (fs.existsSync(candidate)) {
+      return candidate
+    }
+  }
+
+  return null
+}
+
+function stemDirectoryHasAudioFiles(stemDir) {
+  return fs
+    .readdirSync(stemDir, { withFileTypes: true })
+    .some((entry) => entry.isFile() && /\.(mp3|wav)$/i.test(entry.name))
+}
+
 function main() {
   if (!fs.existsSync(STEMS_ROOT)) {
     throw new Error(`Stems root not found: ${STEMS_ROOT}`)
@@ -48,11 +82,24 @@ function main() {
 
   const jobs = fs
     .readdirSync(STEMS_ROOT, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
+    .filter((entry) => entry.isDirectory() && !/backup/i.test(entry.name))
     .map((entry) => {
       const stemDir = path.join(STEMS_ROOT, entry.name)
-      const masterPath = path.join(AUDIO_ROOT, `${entry.name} - Mastered.mp3`)
-      if (!fs.existsSync(masterPath)) return null
+      if (!stemDirectoryHasAudioFiles(stemDir)) {
+        console.warn(
+          `Skipping ${entry.name}: no .mp3 or .wav files found in ${relativeToRoot(stemDir)}`
+        )
+        return null
+      }
+
+      const masterPath = findMasterPath(AUDIO_ROOT, entry.name)
+      if (!masterPath) {
+        console.warn(
+          `Skipping ${entry.name}: no matching mastered file found in ${relativeToRoot(AUDIO_ROOT)}`
+        )
+        return null
+      }
+
       const slug = slugify(entry.name)
       return {
         label: entry.name,
@@ -66,7 +113,9 @@ function main() {
     .filter(Boolean)
 
   if (jobs.length === 0) {
-    throw new Error(`No valid stem/master pairs found under ${STEMS_ROOT}`)
+    throw new Error(
+      `No valid stem/master pairs found under ${STEMS_ROOT}. Expected <stem dir> plus a matching <stem dir> - Mastered.(mp3|wav) file under ${AUDIO_ROOT}.`
+    )
   }
 
   for (const job of jobs) {

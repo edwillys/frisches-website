@@ -34,8 +34,17 @@ describe('InstrumentFaders', () => {
     vi.clearAllMocks()
   })
 
+  afterEach(() => {
+    vi.useRealTimers()
+    document.body.innerHTML = ''
+  })
+
   async function enableEditing(wrapper: ReturnType<typeof mount>) {
     await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+  }
+
+  function dispatchDetailedClick(button: ReturnType<typeof mount>['element'], detail: number) {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true, detail }))
   }
 
   function mountOpen(
@@ -184,6 +193,72 @@ describe('InstrumentFaders', () => {
     await enableEditing(wrapper)
     await wrapper.find('[data-testid="stem-strings-mute"]').trigger('click')
     expect(wrapper.emitted('setGain')?.[0]).toEqual(['strings', 0])
+  })
+
+  it('double clicking a stem icon emits a global stem solo state', async () => {
+    vi.useFakeTimers()
+    const wrapper = mountOpen()
+    await enableEditing(wrapper)
+
+    const button = wrapper.find('[data-testid="stem-drums-mute"]')
+    dispatchDetailedClick(button.element, 1)
+    dispatchDetailedClick(button.element, 2)
+    await nextTick()
+
+    expect(wrapper.emitted('setSoloState')?.[0]).toEqual([
+      {
+        targets: [{ scope: 'global-stem', stem: 'drums', index: null }],
+      },
+    ])
+    expect(wrapper.emitted('setGain')).toBeUndefined()
+  })
+
+  it('soloing a muted stem keeps gains untouched and emits solo state', async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(InstrumentFaders, {
+      props: {
+        modelValue: true,
+        gains: { ...defaultGains, drums: 0 },
+        availability: defaultAvailability,
+        stemsModeAvailable: true,
+      },
+    })
+    await enableEditing(wrapper)
+
+    const button = wrapper.find('[data-testid="stem-drums-mute"]')
+    dispatchDetailedClick(button.element, 1)
+    dispatchDetailedClick(button.element, 2)
+    await nextTick()
+
+    expect(wrapper.emitted('setSoloState')?.[0]).toEqual([
+      {
+        targets: [{ scope: 'global-stem', stem: 'drums', index: null }],
+      },
+    ])
+    expect(wrapper.emitted('setGain')).toBeUndefined()
+  })
+
+  it('renders mute badges for muted stem and muted group items', async () => {
+    const guitarItems: StemGroupItem[] = [
+      { label: 'Guitar PRS', role: 'base', type: 'electric', isAvailable: true },
+    ]
+    const wrapper = mount(InstrumentFaders, {
+      props: {
+        modelValue: true,
+        gains: { ...defaultGains, drums: 0 },
+        availability: defaultAvailability,
+        stemsModeAvailable: true,
+        groupItems: { guitar: guitarItems },
+        groupGains: { 'guitar-0': 0 },
+      },
+    })
+
+    await wrapper.find('[data-testid="stem-guitar-expand"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="stem-drums-mute"] .stem__mute-badge').text()).toBe('M')
+    expect(wrapper.find('[data-testid="stem-guitar-item-0-mute"] .stem__mute-badge').text()).toBe(
+      'M'
+    )
   })
 
   it('disable toggle is inactive when stemsModeAvailable is false', async () => {
@@ -398,10 +473,206 @@ describe('InstrumentFaders', () => {
     expect(Number(events?.[0]?.[2])).toBeCloseTo(0.6)
   })
 
+  it('opens a group-item context menu with mute, solo, and solo-in-group actions', async () => {
+    const guitarItems: StemGroupItem[] = [
+      { label: 'Guitar PRS', role: 'base', type: 'electric', isAvailable: true },
+      { label: 'Guitar MM', role: 'base', type: 'electric', isAvailable: true },
+    ]
+    const wrapper = mount(InstrumentFaders, {
+      attachTo: document.body,
+      props: {
+        modelValue: true,
+        gains: defaultGains,
+        availability: defaultAvailability,
+        stemsModeAvailable: true,
+        groupItems: { guitar: guitarItems },
+        groupGains: {},
+      },
+    })
+    await enableEditing(wrapper)
+    await wrapper.find('[data-testid="stem-guitar-expand"]').trigger('click')
+
+    await wrapper
+      .find('[data-testid="stem-guitar-item-0-mute"]')
+      .trigger('contextmenu', { clientX: 120, clientY: 140 })
+
+    expect(document.body.querySelector('[data-testid="stems-context-menu"]')).not.toBeNull()
+    expect(document.body.querySelector('[data-testid="stems-context-action-mute"]')).not.toBeNull()
+    expect(document.body.querySelector('[data-testid="stems-context-action-solo"]')).not.toBeNull()
+    expect(
+      document.body.querySelector('[data-testid="stems-context-action-solo-in-group"]')
+    ).not.toBeNull()
+  })
+
+  it('shows only unsolo when a group item is globally soloed even if it also has local group solo', async () => {
+    const guitarItems: StemGroupItem[] = [
+      { label: 'Guitar PRS', role: 'base', type: 'electric', isAvailable: true },
+      { label: 'Guitar MM', role: 'base', type: 'electric', isAvailable: true },
+    ]
+    const wrapper = mount(InstrumentFaders, {
+      attachTo: document.body,
+      props: {
+        modelValue: true,
+        gains: defaultGains,
+        availability: defaultAvailability,
+        stemsModeAvailable: true,
+        groupItems: { guitar: guitarItems },
+        groupGains: { 'guitar-0': 1, 'guitar-1': 1 },
+        soloState: {
+          targets: [
+            { scope: 'global-item', stem: 'guitar', index: 0 },
+            { scope: 'group-item', stem: 'guitar', index: 0 },
+          ],
+        },
+      },
+    })
+    await enableEditing(wrapper)
+    await wrapper.find('[data-testid="stem-guitar-expand"]').trigger('click')
+    await wrapper
+      .find('[data-testid="stem-guitar-item-0-mute"]')
+      .trigger('contextmenu', { clientX: 120, clientY: 140 })
+
+    expect(
+      document.body.querySelector('[data-testid="stems-context-action-solo"]')?.textContent?.trim()
+    ).toBe('Unsolo')
+    expect(
+      document.body.querySelector('[data-testid="stems-context-action-solo-in-group"]')
+    ).toBeNull()
+  })
+
+  it('omits solo-in-group when a group item is already globally soloed', async () => {
+    const guitarItems: StemGroupItem[] = [
+      { label: 'Guitar PRS', role: 'base', type: 'electric', isAvailable: true },
+      { label: 'Guitar MM', role: 'base', type: 'electric', isAvailable: true },
+    ]
+    const wrapper = mount(InstrumentFaders, {
+      attachTo: document.body,
+      props: {
+        modelValue: true,
+        gains: defaultGains,
+        availability: defaultAvailability,
+        stemsModeAvailable: true,
+        groupItems: { guitar: guitarItems },
+        groupGains: { 'guitar-0': 1, 'guitar-1': 1 },
+        soloState: {
+          targets: [{ scope: 'global-item', stem: 'guitar', index: 0 }],
+        },
+      },
+    })
+    await enableEditing(wrapper)
+    await wrapper.find('[data-testid="stem-guitar-expand"]').trigger('click')
+    await wrapper
+      .find('[data-testid="stem-guitar-item-0-mute"]')
+      .trigger('contextmenu', { clientX: 120, clientY: 140 })
+
+    expect(
+      document.body.querySelector('[data-testid="stems-context-action-solo"]')?.textContent?.trim()
+    ).toBe('Unsolo')
+    expect(
+      document.body.querySelector('[data-testid="stems-context-action-solo-in-group"]')
+    ).toBeNull()
+  })
+
+  it('solo-in-group emits local group solo state without muting siblings through gains', async () => {
+    const guitarItems: StemGroupItem[] = [
+      { label: 'Guitar PRS', role: 'base', type: 'electric', isAvailable: true },
+      { label: 'Guitar MM', role: 'base', type: 'electric', isAvailable: true },
+    ]
+    const wrapper = mount(InstrumentFaders, {
+      attachTo: document.body,
+      props: {
+        modelValue: true,
+        gains: defaultGains,
+        availability: defaultAvailability,
+        stemsModeAvailable: true,
+        groupItems: { guitar: guitarItems },
+        groupGains: { 'guitar-0': 1, 'guitar-1': 1 },
+      },
+    })
+    await enableEditing(wrapper)
+    await wrapper.find('[data-testid="stem-guitar-expand"]').trigger('click')
+
+    await wrapper
+      .find('[data-testid="stem-guitar-item-0-mute"]')
+      .trigger('contextmenu', { clientX: 120, clientY: 140 })
+    ;(
+      document.body.querySelector(
+        '[data-testid="stems-context-action-solo-in-group"]'
+      ) as HTMLButtonElement
+    ).click()
+    await nextTick()
+
+    expect(wrapper.emitted('setSoloState')?.[0]).toEqual([
+      {
+        targets: [{ scope: 'group-item', stem: 'guitar', index: 0 }],
+      },
+    ])
+    expect(wrapper.emitted('setGroupGain')).toBeUndefined()
+    expect(wrapper.emitted('setGain')).toBeUndefined()
+  })
+
   it('closes the overlay when close button is clicked', async () => {
     const wrapper = mountOpen()
     await wrapper.find('[data-testid="stems-close"]').trigger('click')
     expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([false])
+  })
+
+  it('clears all solos from the momentary !S button without latching', async () => {
+    const wrapper = mount(InstrumentFaders, {
+      props: {
+        modelValue: true,
+        gains: defaultGains,
+        availability: defaultAvailability,
+        stemsModeAvailable: true,
+        soloState: {
+          targets: [{ scope: 'global-stem', stem: 'drums', index: null }],
+        },
+      },
+    })
+    await enableEditing(wrapper)
+
+    const clearButton = wrapper.find('[data-testid="stems-solo-all"]')
+    expect(clearButton.text()).toBe('!S')
+    expect(clearButton.classes()).not.toContain('is-active')
+
+    await clearButton.trigger('click')
+
+    expect(wrapper.emitted('setSoloState')?.[0]).toEqual([null])
+  })
+
+  it('single touch tap still mutes after the delayed action resolves', async () => {
+    vi.useFakeTimers()
+    const wrapper = mountOpen()
+    await enableEditing(wrapper)
+
+    const button = wrapper.find('[data-testid="stem-drums-mute"]')
+    await button.trigger('pointerup', { pointerType: 'touch' })
+    dispatchDetailedClick(button.element, 1)
+    vi.advanceTimersByTime(221)
+    await nextTick()
+
+    expect(wrapper.emitted('setGain')?.[0]).toEqual(['drums', 0])
+    expect(wrapper.emitted('setSoloState')).toBeUndefined()
+  })
+
+  it('double touch tap emits solo without firing the mute action', async () => {
+    vi.useFakeTimers()
+    const wrapper = mountOpen()
+    await enableEditing(wrapper)
+
+    const button = wrapper.find('[data-testid="stem-drums-mute"]')
+    await button.trigger('pointerup', { pointerType: 'touch' })
+    dispatchDetailedClick(button.element, 1)
+    await button.trigger('pointerup', { pointerType: 'touch' })
+    dispatchDetailedClick(button.element, 1)
+    await nextTick()
+
+    expect(wrapper.emitted('setSoloState')?.[0]).toEqual([
+      {
+        targets: [{ scope: 'global-stem', stem: 'drums', index: null }],
+      },
+    ])
+    expect(wrapper.emitted('setGain')).toBeUndefined()
   })
 
   it('does not emit setGain when fader editing is disabled', async () => {

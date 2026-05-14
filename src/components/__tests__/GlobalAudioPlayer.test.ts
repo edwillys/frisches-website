@@ -39,6 +39,19 @@ const {
     setLimiterParams: vi.fn(),
     updateStemGain: vi.fn(),
     updateGroupItemGain: vi.fn(),
+    getDebugSnapshot: vi.fn(() => ({
+      active: false,
+      prebuffered: false,
+      currentTrackPaths: [],
+      currentTrackTransferredBytes: 0,
+      currentTrackDecodedBytes: 0,
+      currentCompressedCacheBytes: 0,
+      currentDecodedCacheBytes: 0,
+      totalTransferredBytes: 0,
+      totalDecodedBytes: 0,
+      assets: [],
+    })),
+    printDebugSnapshot: vi.fn(),
     dispose: vi.fn(() => {
       stemPlaybackMock.isActive.value = false
     }),
@@ -87,6 +100,16 @@ const noStemAvailability = {
   strings: false,
 }
 
+function dispatchDetailedClick(element: Element, detail: number): void {
+  element.dispatchEvent(
+    new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      detail,
+    })
+  )
+}
+
 describe('GlobalAudioPlayer', () => {
   const originalMatchMedia = window.matchMedia
   const originalInnerWidth = window.innerWidth
@@ -106,6 +129,8 @@ describe('GlobalAudioPlayer', () => {
     stemPlaybackMock.setLimiterParams.mockClear()
     stemPlaybackMock.updateStemGain.mockClear()
     stemPlaybackMock.updateGroupItemGain.mockClear()
+    stemPlaybackMock.getDebugSnapshot.mockClear()
+    stemPlaybackMock.printDebugSnapshot.mockClear()
     stemPlaybackMock.suspend.mockClear()
     stemPlaybackMock.resume.mockClear()
     stemPlaybackMock.warmUp.mockClear()
@@ -791,6 +816,153 @@ describe('GlobalAudioPlayer', () => {
     ).toBe(0)
   })
 
+  it('holds master playback until stem activation resolves on fresh persisted stem start', async () => {
+    window.localStorage.setItem(
+      'frisches:audio:stems:v1',
+      JSON.stringify({
+        m: true,
+        tracks: {
+          'tftc:02-tojd': {
+            sg: {},
+            sgg: {},
+          },
+        },
+      })
+    )
+
+    let resolveActivate!: () => void
+    stemPlaybackMock.activate.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveActivate = () => {
+            stemPlaybackMock.isActive.value = true
+            resolve()
+          }
+        })
+    )
+
+    const playSpy = window.HTMLMediaElement.prototype.play as ReturnType<typeof vi.fn>
+    playSpy.mockClear()
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+
+    mount(GlobalAudioPlayer, {
+      global: { plugins: [pinia] },
+    })
+
+    await flushPromises()
+
+    expect(stemPlaybackMock.activate).toHaveBeenCalled()
+    expect(playSpy).not.toHaveBeenCalled()
+
+    resolveActivate()
+    await flushPromises()
+
+    expect(playSpy).toHaveBeenCalled()
+  })
+
+  it('shows a loading state on the play button while persisted stem activation is pending', async () => {
+    window.localStorage.setItem(
+      'frisches:audio:stems:v1',
+      JSON.stringify({
+        m: true,
+        tracks: {
+          'tftc:02-tojd': {
+            sg: {},
+            sgg: {},
+          },
+        },
+      })
+    )
+
+    let resolveActivate!: () => void
+    stemPlaybackMock.activate.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveActivate = () => {
+            stemPlaybackMock.isActive.value = true
+            resolve()
+          }
+        })
+    )
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: { plugins: [pinia] },
+    })
+
+    await flushPromises()
+
+    const button = wrapper.find('[data-testid="mini-play-pause"]')
+    expect(button.attributes('data-loading')).toBe('true')
+    expect(button.attributes('aria-busy')).toBe('true')
+
+    resolveActivate()
+    await flushPromises()
+
+    expect(button.attributes('data-loading')).toBe('false')
+    expect(button.attributes('aria-busy')).toBe('false')
+  })
+
+  it('keeps loading visible after pausing while a persisted stem activation is still pending', async () => {
+    window.localStorage.setItem(
+      'frisches:audio:stems:v1',
+      JSON.stringify({
+        m: true,
+        tracks: {
+          'tftc:02-tojd': {
+            sg: {},
+            sgg: {},
+          },
+        },
+      })
+    )
+
+    let resolveActivate!: () => void
+    stemPlaybackMock.activate.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveActivate = () => {
+            stemPlaybackMock.isActive.value = true
+            resolve()
+          }
+        })
+    )
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: { plugins: [pinia] },
+    })
+
+    await flushPromises()
+
+    const button = wrapper.find('[data-testid="mini-play-pause"]')
+    await button.trigger('click')
+    await flushPromises()
+
+    expect(audio.isPlaying).toBe(false)
+    expect(button.attributes('data-loading')).toBe('true')
+
+    resolveActivate()
+    await flushPromises()
+
+    expect(button.attributes('data-loading')).toBe('false')
+  })
+
   it('reapplies restored stem gains into the live graph right after activation', async () => {
     let pinia = createPinia()
     setActivePinia(pinia)
@@ -981,6 +1153,100 @@ describe('GlobalAudioPlayer', () => {
     ).toBe(0)
   })
 
+  it('does not arm stem sources until stem mode is enabled', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await flushPromises()
+
+    expect(stemPlaybackMock.setSources).toHaveBeenCalledWith({})
+    expect(stemPlaybackMock.setSources).not.toHaveBeenCalledWith({
+      guitar: ['/src/assets/private/audio/test/stem.mp3'],
+    })
+
+    await wrapper.find('[data-testid="mini-stems"]').trigger('click')
+    await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
+
+    expect(stemPlaybackMock.setSources).toHaveBeenCalledWith({
+      guitar: ['/src/assets/private/audio/test/stem.mp3'],
+    })
+  })
+
+  it('keeps persisted gains untouched while solo updates the effective playback mask', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.find('[data-testid="mini-stems"]').trigger('click')
+    await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
+
+    expect(
+      (stemPlaybackMock.lastStemGainsRef as { value: Record<string, number> }).value.guitar
+    ).toBe(1)
+    expect(
+      (stemPlaybackMock.lastStemGainsRef as { value: Record<string, number> }).value.drums
+    ).toBe(1)
+
+    const guitarButton = wrapper.find('[data-testid="stem-guitar-mute"]').element
+    dispatchDetailedClick(guitarButton, 1)
+    dispatchDetailedClick(guitarButton, 2)
+    await flushPromises()
+
+    expect(audio.stemGains.guitar).toBe(1)
+    expect(audio.stemGains.drums).toBe(1)
+    expect(
+      (stemPlaybackMock.lastStemGainsRef as { value: Record<string, number> }).value.guitar
+    ).toBe(1)
+    expect(
+      (stemPlaybackMock.lastStemGainsRef as { value: Record<string, number> }).value.drums
+    ).toBe(0)
+  })
+
+  it('clears stem sources again when stem mode is disabled', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.find('[data-testid="mini-stems"]').trigger('click')
+    await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
+
+    stemPlaybackMock.setSources.mockClear()
+
+    await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
+
+    expect(audio.stemMixEnabled).toBe(false)
+    expect(stemPlaybackMock.setSources).toHaveBeenCalledWith({})
+  })
+
   it('keeps the last requested stem mode across tracks without stems and reactivates on return', async () => {
     resolveStemAvailabilityMock.mockImplementation((trackId: string) => {
       return trackId === 'tftc:02-tojd' ? allStemAvailability : noStemAvailability
@@ -1140,5 +1406,44 @@ describe('GlobalAudioPlayer', () => {
     const visual = wrapper.find('[data-testid="mini-progress-visual"]')
     expect(visual.exists()).toBe(true)
     expect(visual.attributes('data-wobble-active')).toBe('true')
+  })
+
+  it('renders the buffered progress shadow on the desktop progress bar', async () => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 1440,
+    })
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:01-misled')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+
+    const audioEl = wrapper.find('audio').element as HTMLAudioElement
+    Object.defineProperty(audioEl, 'duration', { value: 200, configurable: true })
+    Object.defineProperty(audioEl, 'buffered', {
+      configurable: true,
+      value: {
+        length: 1,
+        end: vi.fn(() => 100),
+      },
+    })
+
+    audioEl.dispatchEvent(new Event('loadedmetadata'))
+    audioEl.dispatchEvent(new Event('progress'))
+    await wrapper.vm.$nextTick()
+
+    const progress = wrapper.find('input.mini-player__progress')
+    expect(progress.attributes('style')).toContain('--buffered-percent: 50.000%')
   })
 })

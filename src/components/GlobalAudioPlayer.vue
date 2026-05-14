@@ -23,6 +23,7 @@ import {
   updateWaveMotion,
   type TravelingWaveState,
 } from './miniPlayerWobble'
+import AudioDebugHud from './AudioDebugHud.vue'
 import InstrumentFaders from './InstrumentFaders.vue'
 
 // Icon imports
@@ -52,6 +53,36 @@ type E2eAudioProbe = {
     stemsActive: boolean
   }
 }
+
+type AudioDebugApi = {
+  readState: () => Record<string, unknown>
+  print: (reason?: string) => Record<string, unknown>
+}
+
+type StemSoloScope = 'global-stem' | 'global-item' | 'group-item'
+
+type StemSoloTarget = {
+  scope: StemSoloScope
+  stem: AudioStemName
+  index: number | null
+}
+
+type StemSoloState = {
+  targets: StemSoloTarget[]
+}
+
+type RuntimeAudioWindow = Window & {
+  __FRISCHES_E2E_AUDIO__?: E2eAudioProbe
+  __FRISCHES_AUDIO_DEBUG__?: AudioDebugApi
+}
+
+const PLAYBACK_STALL_THRESHOLD_MS = 900
+const PLAYBACK_PROGRESS_EPSILON_SEC = 0.05
+const MOBILE_TRANSFER_PROFILES = [
+  { label: 'Slow 3G (0.4 Mbps)', bitsPerSecond: 400_000 },
+  { label: 'Fast 3G (1.6 Mbps)', bitsPerSecond: 1_600_000 },
+  { label: '4G (9 Mbps)', bitsPerSecond: 9_000_000 },
+] as const
 
 type TimeDomainBuffer = Parameters<AnalyserNode['getFloatTimeDomainData']>[0]
 type CaptureStreamAudioEl = HTMLAudioElement & {
@@ -94,10 +125,15 @@ let masterMeterAnalyser: AnalyserNode | null = null
 let masterMeterSource: MediaStreamAudioSourceNode | null = null
 let masterMeterSink: GainNode | null = null
 let masterMeterBuffer: TimeDomainBuffer | null = null
+let lastMediaAdvanceMs = 0
+let lastObservedMediaTime = 0
 
 const showStemFaders = ref(false)
 const t = useUiText()
 const isCompactMiniPlayerUi = ref(false)
+const isPlaybackStartPending = ref(false)
+const isMediaWaiting = ref(false)
+const isPlaybackProgressStalled = ref(false)
 const { prefersReducedMotion } = useReducedMotion()
 const { isOverflowing: isTitleOverflowing, scheduleOverflowUpdate: scheduleTitleOverflowUpdate } =
   useOverflowMarquee(titleEl)
@@ -127,12 +163,120 @@ const currentStemLimiterParams = computed(() => resolveStemLimiterParams(audioSt
 const currentTrackHasStemsAvailable = computed(() =>
   Object.values(currentStemAvailability.value).some(Boolean)
 )
-
-const stemPlayback = useStemPlayback(
-  audioEl,
-  computed(() => audioStore.stemGains),
-  computed(() => audioStore.stemGroupGains)
+const stemSoloState = ref<StemSoloState | null>(null)
+const activeStemAudioSources = computed(() =>
+  audioStore.stemMixEnabled ? currentStemAudioSources.value : {}
 )
+const shouldShowAudioDebugHud =
+  import.meta.env.DEV && import.meta.env.VITE_AUDIO_DEBUG_HUD === 'true'
+const audioDebugTick = ref(0)
+let audioDebugHudTimer: ReturnType<typeof setInterval> | null = null
+
+function getSoloTargets(): StemSoloTarget[] {
+  return stemSoloState.value?.targets ?? []
+}
+
+function isStemGloballySoloed(stem: AudioStemName): boolean {
+  return getSoloTargets().some(
+    (target) => target.scope === 'global-stem' && target.stem === stem && target.index === null
+  )
+}
+
+function isGroupItemGloballySoloed(stem: AudioStemName, index: number): boolean {
+  return getSoloTargets().some(
+    (target) => target.scope === 'global-item' && target.stem === stem && target.index === index
+  )
+}
+
+function isGroupItemGroupSoloed(stem: AudioStemName, index: number): boolean {
+  return getSoloTargets().some(
+    (target) => target.scope === 'group-item' && target.stem === stem && target.index === index
+  )
+}
+
+function hasAnyGlobalSoloTargets(): boolean {
+  return getSoloTargets().some((target) => target.scope !== 'group-item')
+}
+
+function stemHasLocalGroupSolo(stem: AudioStemName): boolean {
+  return getSoloTargets().some((target) => target.scope === 'group-item' && target.stem === stem)
+}
+
+function isStemEffectivelySoloAudible(stem: AudioStemName): boolean {
+  if (!hasAnyGlobalSoloTargets()) return true
+  if (isStemGloballySoloed(stem)) return true
+  return getSoloTargets().some((target) => target.scope === 'global-item' && target.stem === stem)
+}
+
+function isGroupItemEffectivelySoloAudible(stem: AudioStemName, index: number): boolean {
+  if (!isStemEffectivelySoloAudible(stem)) return false
+
+  if (isStemGloballySoloed(stem)) {
+    if (!stemHasLocalGroupSolo(stem)) return true
+    return isGroupItemGroupSoloed(stem, index)
+  }
+
+  const hasGlobalItemSoloForStem = getSoloTargets().some(
+    (target) => target.scope === 'global-item' && target.stem === stem
+  )
+  if (hasGlobalItemSoloForStem) {
+    return isGroupItemGloballySoloed(stem, index)
+  }
+
+  if (stemHasLocalGroupSolo(stem)) {
+    return isGroupItemGroupSoloed(stem, index)
+  }
+
+  return true
+}
+
+const effectiveStemGains = computed<Record<AudioStemName, number>>(() => {
+  const next = { ...audioStore.stemGains }
+
+  for (const stem of Object.keys(next) as AudioStemName[]) {
+    if (!isStemEffectivelySoloAudible(stem)) {
+      next[stem] = 0
+    }
+  }
+
+  return next
+})
+
+const effectiveStemGroupGains = computed<Record<string, number>>(() => {
+  const next: Record<string, number> = { ...audioStore.stemGroupGains }
+
+  for (const [stem, items] of Object.entries(currentStemGroupItems.value) as [
+    AudioStemName,
+    (typeof currentStemGroupItems.value)[AudioStemName],
+  ][]) {
+    items?.forEach((_, index) => {
+      const key = `${stem}-${index}`
+      const baseGain = audioStore.stemGroupGains[key] ?? 1
+      next[key] = isGroupItemEffectivelySoloAudible(stem, index) ? baseGain : 0
+    })
+  }
+
+  return next
+})
+
+const isPlaybackLoading = computed(
+  () => isPlaybackStartPending.value || isMediaWaiting.value || isPlaybackProgressStalled.value
+)
+
+const playbackLoadingReason = computed(() => {
+  if (isPlaybackStartPending.value) return 'starting'
+  if (isMediaWaiting.value) return 'buffering'
+  if (isPlaybackProgressStalled.value) return 'stalled'
+  return 'idle'
+})
+
+const playPauseButtonLabel = computed(() =>
+  audioStore.isPlaying ? t.value.player.pause : t.value.player.play
+)
+
+const playPauseButtonIcon = computed(() => (audioStore.isPlaying ? pauseSvg : playSvg))
+
+const stemPlayback = useStemPlayback(audioEl, effectiveStemGains, effectiveStemGroupGains)
 
 function sampleAnalyserRms(analyser: AnalyserNode | null, buffer: TimeDomainBuffer | null) {
   if (!analyser || !buffer) return 0
@@ -153,7 +297,7 @@ function readMasterOutputLevel() {
 function installE2eAudioProbe() {
   if (typeof window === 'undefined' || !import.meta.env.DEV) return
 
-  const runtimeWindow = window as Window & { __FRISCHES_E2E_AUDIO__?: E2eAudioProbe }
+  const runtimeWindow = window as RuntimeAudioWindow
   runtimeWindow.__FRISCHES_E2E_AUDIO__ = {
     readMasterLevel: () => readMasterOutputLevel(),
     readStemLevel: () => stemPlayback.getOutputLevel(),
@@ -168,6 +312,116 @@ function installE2eAudioProbe() {
         stemsActive: stemPlayback.isActive.value,
       }
     },
+  }
+}
+
+function formatBytes(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${Math.round(bytes)} B`
+}
+
+function buildMobileTransferEstimates(totalBytes: number) {
+  if (!Number.isFinite(totalBytes) || totalBytes <= 0) return []
+  return MOBILE_TRANSFER_PROFILES.map((profile) => ({
+    label: profile.label,
+    seconds: Number(((totalBytes * 8) / profile.bitsPerSecond).toFixed(1)),
+  }))
+}
+
+function getCurrentMasterResourceTiming() {
+  if (typeof performance === 'undefined' || typeof performance.getEntriesByName !== 'function') {
+    return null
+  }
+  const src = audioEl.value?.currentSrc || currentUrl.value
+  if (!src) return null
+
+  const entries = performance.getEntriesByName(src)
+  const resourceEntries = entries.filter(
+    (entry): entry is PerformanceResourceTiming =>
+      typeof (entry as PerformanceResourceTiming).transferSize === 'number'
+  )
+  if (resourceEntries.length === 0) return null
+
+  const entry = resourceEntries[resourceEntries.length - 1]!
+  return {
+    src,
+    transferBytes: entry.transferSize || entry.encodedBodySize || 0,
+    encodedBodyBytes: entry.encodedBodySize || 0,
+    decodedBodyBytes: entry.decodedBodySize || 0,
+    durationMs: Math.round(entry.duration),
+  }
+}
+
+function getAllMasterTransferredBytes(): number {
+  if (typeof performance === 'undefined' || typeof performance.getEntriesByType !== 'function') {
+    return 0
+  }
+  let total = 0
+  for (const entry of performance.getEntriesByType('resource') as PerformanceResourceTiming[]) {
+    if (!entry.name.startsWith('blob:') && /\.(mp3|wav|ogg|aac)(\?|$)/i.test(entry.name)) {
+      total += entry.transferSize || entry.encodedBodySize || 0
+    }
+  }
+  return total
+}
+
+function getAudioDebugSnapshot() {
+  const masterResource = getCurrentMasterResourceTiming()
+  const stemStats = stemPlayback.getDebugSnapshot()
+  const currentTrackTransferBytes =
+    (masterResource?.transferBytes ?? 0) + stemStats.currentTrackTransferredBytes
+  const connection = (
+    navigator as Navigator & {
+      connection?: {
+        effectiveType?: string
+        downlink?: number
+        rtt?: number
+        saveData?: boolean
+      }
+    }
+  ).connection
+
+  return {
+    trackId: audioStore.currentTrackId ?? null,
+    loading: isPlaybackLoading.value,
+    loadingReason: playbackLoadingReason.value,
+    currentTrackTransferBytes,
+    currentTrackTransferLabel: formatBytes(currentTrackTransferBytes),
+    mobileTransferEstimates: buildMobileTransferEstimates(currentTrackTransferBytes),
+    connection: connection
+      ? {
+          effectiveType: connection.effectiveType ?? null,
+          downlinkMbps: connection.downlink ?? null,
+          rttMs: connection.rtt ?? null,
+          saveData: connection.saveData ?? null,
+        }
+      : null,
+    masterResource,
+    stems: stemStats,
+    totalSessionTransferBytes: getAllMasterTransferredBytes() + stemStats.totalTransferredBytes,
+  }
+}
+
+function printAudioDebugSnapshot(reason = 'manual') {
+  const snapshot = getAudioDebugSnapshot()
+  if (import.meta.env.DEV) {
+    console.debug(`[audio-debug] ${reason}`, snapshot)
+    if (snapshot.mobileTransferEstimates.length > 0 && typeof console.table === 'function') {
+      console.table(snapshot.mobileTransferEstimates)
+    }
+  }
+  return snapshot
+}
+
+function installAudioDebugApi() {
+  if (typeof window === 'undefined' || !import.meta.env.DEV) return
+
+  const runtimeWindow = window as RuntimeAudioWindow
+  runtimeWindow.__FRISCHES_AUDIO_DEBUG__ = {
+    readState: () => getAudioDebugSnapshot(),
+    print: (reason = 'manual') => printAudioDebugSnapshot(reason),
   }
 }
 
@@ -246,7 +500,10 @@ function setupMasterOutputProbe() {
 function syncStemPlaybackMixFromStore() {
   if (!stemPlayback.isActive.value) return
 
-  for (const [stem, gain] of Object.entries(audioStore.stemGains) as [AudioStemName, number][]) {
+  for (const [stem, gain] of Object.entries(effectiveStemGains.value) as [
+    AudioStemName,
+    number,
+  ][]) {
     stemPlayback.updateStemGain(stem, gain)
   }
 
@@ -258,7 +515,7 @@ function syncStemPlaybackMixFromStore() {
       stemPlayback.updateGroupItemGain(
         stem,
         index,
-        audioStore.stemGroupGains[`${stem}-${index}`] ?? 1
+        effectiveStemGroupGains.value[`${stem}-${index}`] ?? 1
       )
     })
   }
@@ -267,7 +524,14 @@ function syncStemPlaybackMixFromStore() {
 watch(
   () => audioStore.currentTrackId,
   () => {
-    stemPlayback.setSources(currentStemAudioSources.value)
+    stemSoloState.value = null
+  }
+)
+
+watch(
+  [() => audioStore.currentTrackId, () => audioStore.stemMixEnabled],
+  () => {
+    stemPlayback.setSources(activeStemAudioSources.value)
     stemPlayback.setLimiterParams(currentStemLimiterParams.value)
     void syncStemPlaybackState()
   },
@@ -318,7 +582,7 @@ async function syncStemPlaybackState() {
   el.volume = audioStore.volume
 }
 
-watch([() => audioStore.stemGains, () => audioStore.stemGroupGains, currentStemGroupItems], () => {
+watch([effectiveStemGains, effectiveStemGroupGains, currentStemGroupItems], () => {
   syncStemPlaybackMixFromStore()
 })
 
@@ -326,6 +590,9 @@ watch(
   () => stemPlayback.isStemsPrebuffered.value,
   (prebuffered) => {
     if (!prebuffered) return
+    if (import.meta.env.DEV) {
+      printAudioDebugSnapshot('stems-prebuffered')
+    }
     void syncStemPlaybackState()
   }
 )
@@ -358,6 +625,8 @@ watch(
 
 const visualProgressRatio = ref(0)
 const progressPercent = computed(() => `${(visualProgressRatio.value * 100).toFixed(3)}%`)
+const bufferedProgressRatio = ref(0)
+const bufferedPercent = computed(() => `${(bufferedProgressRatio.value * 100).toFixed(3)}%`)
 const desktopProgressTime = computed(() => {
   const duration = audioStore.duration
   if (!Number.isFinite(duration) || duration <= 0) {
@@ -398,6 +667,24 @@ function updateVisualProgressRatio(dtSec = 0) {
   visualProgressRatio.value = clamp(current / duration, 0, 1)
 }
 
+function updateBufferedProgressRatio() {
+  const el = audioEl.value
+  const duration = audioStore.duration || el?.duration
+  if (!el || !Number.isFinite(duration) || !duration || duration <= 0) {
+    bufferedProgressRatio.value = 0
+    return
+  }
+
+  const buffered = el.buffered
+  if (!buffered || buffered.length === 0) {
+    bufferedProgressRatio.value = visualProgressRatio.value
+    return
+  }
+
+  const end = buffered.end(buffered.length - 1)
+  bufferedProgressRatio.value = clamp(Math.max(visualProgressRatio.value, end / duration), 0, 1)
+}
+
 function startProgressTicker() {
   if (progressTickerFn) return
   progressTickerFn = () => {
@@ -406,6 +693,7 @@ function startProgressTicker() {
     const dtSec = clamp((nowMs - progressLastFrameMs) / 1000, 1 / 120, 0.08)
     progressLastFrameMs = nowMs
     updateVisualProgressRatio(dtSec)
+    updatePlaybackProgressHealth(nowMs)
   }
   gsap.ticker.add(progressTickerFn)
 }
@@ -604,6 +892,46 @@ function safeSetAudioCurrentTime(nextTime: number) {
   el.currentTime = nextTime
 }
 
+function markPlaybackProgress(nowMs = performance.now()) {
+  const el = audioEl.value
+  lastMediaAdvanceMs = nowMs
+  lastObservedMediaTime = el?.currentTime ?? audioStore.currentTime
+  isMediaWaiting.value = false
+  isPlaybackProgressStalled.value = false
+}
+
+function resetPlaybackLoadingFlags() {
+  lastMediaAdvanceMs = performance.now()
+  lastObservedMediaTime = audioEl.value?.currentTime ?? audioStore.currentTime
+  isMediaWaiting.value = false
+  isPlaybackProgressStalled.value = false
+}
+
+function updatePlaybackProgressHealth(nowMs = performance.now()) {
+  const el = audioEl.value
+  if (!el || isPlaybackStartPending.value) {
+    isPlaybackProgressStalled.value = false
+    return
+  }
+
+  if (!audioStore.isPlaying || el.paused || el.ended) {
+    isPlaybackProgressStalled.value = false
+    return
+  }
+
+  const mediaTime = el.currentTime
+  if (Math.abs(mediaTime - lastObservedMediaTime) >= PLAYBACK_PROGRESS_EPSILON_SEC) {
+    lastObservedMediaTime = mediaTime
+    lastMediaAdvanceMs = nowMs
+    isPlaybackProgressStalled.value = false
+    return
+  }
+
+  const waitingForData = isMediaWaiting.value || el.readyState < 3
+  isPlaybackProgressStalled.value =
+    waitingForData && nowMs - lastMediaAdvanceMs > PLAYBACK_STALL_THRESHOLD_MS
+}
+
 async function safePlay() {
   const el = audioEl.value
   if (!el) return
@@ -613,6 +941,57 @@ async function safePlay() {
     // Autoplay policies (or jsdom) may block; fall back to paused state.
     audioStore.isPlaying = false
   }
+}
+
+let playbackStartPromise: Promise<void> | null = null
+
+function shouldStartPlaybackNow() {
+  return audioStore.isPlaying && audioStore.hasUserStartedPlayback && !audioStore.isStopped
+}
+
+async function runPlaybackStartAttempt(options: { warmUp?: boolean } = {}) {
+  if (!shouldStartPlaybackNow()) return
+
+  isPlaybackStartPending.value = true
+
+  try {
+    if (!shouldStartPlaybackNow()) return
+
+    void masterMeterCtx?.resume()
+    // Resume the AudioContext before playing so stems stay in sync with master.
+    stemPlayback.resume()
+    await syncStemPlaybackState()
+
+    if (!shouldStartPlaybackNow()) return
+
+    await safePlay()
+    markPlaybackProgress()
+
+    if (options.warmUp) {
+      // Pre-warm stems pipeline in the background so enabling stems is instant.
+      void stemPlayback.warmUp()
+    }
+  } finally {
+    isPlaybackStartPending.value = false
+  }
+}
+
+async function syncAndStartPlayback(options: { warmUp?: boolean } = {}) {
+  if (!shouldStartPlaybackNow()) return
+
+  if (playbackStartPromise) {
+    await playbackStartPromise
+    const el = audioEl.value
+    if (!shouldStartPlaybackNow() || (el && !el.paused)) {
+      return
+    }
+  }
+
+  playbackStartPromise = runPlaybackStartAttempt(options).finally(() => {
+    playbackStartPromise = null
+  })
+
+  await playbackStartPromise
 }
 
 function safePause() {
@@ -629,6 +1008,11 @@ function onLoadedMetadata() {
   const el = audioEl.value
   if (!el) return
   audioStore.updateFromAudioDuration(el.duration)
+  updateBufferedProgressRatio()
+  markPlaybackProgress()
+  if (import.meta.env.DEV) {
+    printAudioDebugSnapshot('master-metadata')
+  }
 
   // If we have a stored/desired time, jump after metadata.
   if (audioStore.currentTime > 0) {
@@ -640,6 +1024,39 @@ function onTimeUpdate() {
   const el = audioEl.value
   if (!el) return
   audioStore.updateFromAudioTime(el.currentTime)
+  updateBufferedProgressRatio()
+  markPlaybackProgress()
+}
+
+function onProgress() {
+  updateBufferedProgressRatio()
+}
+
+function onAudioPlaying() {
+  markPlaybackProgress()
+}
+
+function onAudioCanPlay() {
+  if (!isPlaybackStartPending.value) {
+    isMediaWaiting.value = false
+  }
+}
+
+function onAudioWaiting() {
+  if (!audioStore.hasUserStartedPlayback || audioStore.isStopped) return
+  isMediaWaiting.value = true
+}
+
+function onAudioStalled() {
+  if (!audioStore.hasUserStartedPlayback || audioStore.isStopped) return
+  isMediaWaiting.value = true
+}
+
+function onAudioPause() {
+  if (!isPlaybackStartPending.value) {
+    isMediaWaiting.value = false
+    isPlaybackProgressStalled.value = false
+  }
 }
 
 function onSeeked() {
@@ -685,9 +1102,12 @@ watch(
 
     el.src = nextUrl
     safeLoad()
+    bufferedProgressRatio.value = 0
+    resetPlaybackLoadingFlags()
 
-    if (audioStore.isPlaying && audioStore.hasUserStartedPlayback && !audioStore.isStopped) {
-      await safePlay()
+    if (shouldStartPlaybackNow()) {
+      await syncAndStartPlayback({ warmUp: true })
+      return
     }
 
     await syncStemPlaybackState()
@@ -702,18 +1122,17 @@ watch(
     if (!el) return
 
     if (playing && audioStore.hasUserStartedPlayback && !audioStore.isStopped) {
-      void masterMeterCtx?.resume()
-      // Resume the AudioContext before playing so stems stay in sync with master.
-      stemPlayback.resume()
-      await safePlay()
-      await syncStemPlaybackState()
-      // Pre-warm stems pipeline in the background so enabling stems is instant.
-      void stemPlayback.warmUp()
+      markPlaybackProgress()
+      await syncAndStartPlayback({ warmUp: true })
     } else {
       // Suspend the AudioContext so stems freeze in step with the paused master.
       stemPlayback.suspend()
       await syncStemPlaybackState()
       safePause()
+      if (!isPlaybackStartPending.value) {
+        isMediaWaiting.value = false
+        isPlaybackProgressStalled.value = false
+      }
     }
   }
 )
@@ -832,6 +1251,8 @@ watch(
 onMounted(() => {
   updateCompactMiniPlayerUi()
   updateVisualProgressRatio()
+  updateBufferedProgressRatio()
+  resetPlaybackLoadingFlags()
 
   const el = audioEl.value
   if (!el) return
@@ -839,6 +1260,12 @@ onMounted(() => {
   el.volume = audioStore.volume
   setupMasterOutputProbe()
   installE2eAudioProbe()
+  installAudioDebugApi()
+  if (shouldShowAudioDebugHud) {
+    audioDebugHudTimer = setInterval(() => {
+      audioDebugTick.value = (audioDebugTick.value + 1) % 100_000
+    }, 500)
+  }
 
   // Ensure src is applied after the ref is mounted (the immediate watch can run before audioEl exists).
   if (currentUrl.value) {
@@ -846,12 +1273,11 @@ onMounted(() => {
     safeLoad()
   }
 
-  if (audioStore.isPlaying && audioStore.hasUserStartedPlayback && !audioStore.isStopped) {
-    void safePlay()
-    void stemPlayback.warmUp()
+  if (shouldStartPlaybackNow()) {
+    void syncAndStartPlayback({ warmUp: true })
+  } else {
+    void syncStemPlaybackState()
   }
-
-  void syncStemPlaybackState()
 
   window.addEventListener('keydown', handleGlobalKeydown)
 
@@ -870,10 +1296,15 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (audioDebugHudTimer !== null) {
+    clearInterval(audioDebugHudTimer)
+    audioDebugHudTimer = null
+  }
   stemPlayback.dispose()
   disposeMasterOutputProbe()
   if (typeof window !== 'undefined' && import.meta.env.DEV) {
-    delete (window as Window & { __FRISCHES_E2E_AUDIO__?: E2eAudioProbe }).__FRISCHES_E2E_AUDIO__
+    delete (window as RuntimeAudioWindow).__FRISCHES_E2E_AUDIO__
+    delete (window as RuntimeAudioWindow).__FRISCHES_AUDIO_DEBUG__
   }
   window.removeEventListener('keydown', handleGlobalKeydown)
 
@@ -924,12 +1355,21 @@ function onSeek(e: Event) {
 
 function onStemGain(stem: AudioStemName, value: number) {
   audioStore.setStemGain(stem, value)
-  stemPlayback.updateStemGain(stem, value)
+  stemPlayback.updateStemGain(stem, effectiveStemGains.value[stem] ?? value)
 }
 
 function onSetGroupGain(stem: AudioStemName, index: number, value: number) {
   audioStore.setStemGroupGain(stem, index, value)
-  stemPlayback.updateGroupItemGain(stem, index, value)
+  stemPlayback.updateGroupItemGain(
+    stem,
+    index,
+    effectiveStemGroupGains.value[`${stem}-${index}`] ?? value
+  )
+}
+
+function onSetSoloState(nextSoloState: StemSoloState | null) {
+  stemSoloState.value = nextSoloState
+  syncStemPlaybackMixFromStore()
 }
 
 function onEnableStems() {
@@ -938,14 +1378,19 @@ function onEnableStems() {
 }
 
 function onDisableStems() {
+  stemSoloState.value = null
   audioStore.setStemMixEnabled(false)
   void syncStemPlaybackState()
 }
 
 function onResetGains() {
+  stemSoloState.value = null
   audioStore.resetAllStemGains()
   if (stemPlayback.isActive.value) {
-    for (const [stem, gain] of Object.entries(audioStore.stemGains) as [AudioStemName, number][]) {
+    for (const [stem, gain] of Object.entries(effectiveStemGains.value) as [
+      AudioStemName,
+      number,
+    ][]) {
       stemPlayback.updateStemGain(stem, gain)
     }
 
@@ -954,7 +1399,11 @@ function onResetGains() {
       (typeof currentStemGroupItems.value)[AudioStemName],
     ][]) {
       items?.forEach((_, index) => {
-        stemPlayback.updateGroupItemGain(stem, index, 1)
+        stemPlayback.updateGroupItemGain(
+          stem,
+          index,
+          effectiveStemGroupGains.value[`${stem}-${index}`] ?? 1
+        )
       })
     }
   }
@@ -970,6 +1419,11 @@ function onLyricsButtonClick() {
 
   audioStore.toggleLyrics()
 }
+
+const audioDebugSnapshot = computed(() => {
+  void audioDebugTick.value // force refresh on HUD timer tick
+  return getAudioDebugSnapshot()
+})
 </script>
 
 <template>
@@ -979,10 +1433,20 @@ function onLyricsButtonClick() {
     :data-stems-active="stemPlayback.isActive.value ? 'true' : 'false'"
     :data-stems-prebuffered="stemPlayback.isStemsPrebuffered.value ? 'true' : 'false'"
   >
+    <Teleport to="body">
+      <AudioDebugHud v-if="shouldShowAudioDebugHud" :snapshot="audioDebugSnapshot" />
+    </Teleport>
+
     <audio
       ref="audioEl"
       @loadedmetadata="onLoadedMetadata"
       @timeupdate="onTimeUpdate"
+      @progress="onProgress"
+      @playing="onAudioPlaying"
+      @canplay="onAudioCanPlay"
+      @waiting="onAudioWaiting"
+      @stalled="onAudioStalled"
+      @pause="onAudioPause"
       @seeked="onSeeked"
       @ended="onEnded"
     />
@@ -1054,15 +1518,28 @@ function onLyricsButtonClick() {
           <button
             class="mini-player__btn mini-player__btn--play"
             type="button"
-            :data-tooltip="audioStore.isPlaying ? t.player.pause : t.player.play"
-            :aria-label="audioStore.isPlaying ? t.player.pause : t.player.play"
+            :data-tooltip="playPauseButtonLabel"
+            :aria-label="playPauseButtonLabel"
+            :aria-busy="isPlaybackLoading ? 'true' : 'false'"
+            :data-loading="isPlaybackLoading ? 'true' : 'false'"
+            :data-loading-reason="playbackLoadingReason"
             @click="audioStore.togglePlayPause"
             data-testid="mini-play-pause"
           >
+            <svg
+              v-if="isPlaybackLoading"
+              class="mini-player__loading-ring"
+              viewBox="0 0 32 32"
+              aria-hidden="true"
+            >
+              <circle class="mini-player__loading-track" cx="16" cy="16" r="15" />
+              <circle class="mini-player__loading-arc" cx="16" cy="16" r="15" />
+            </svg>
             <span
               class="mini-player__icon"
               aria-hidden="true"
-              v-html="audioStore.isPlaying ? pauseSvg : playSvg"
+              :class="{ 'mini-player__icon--loading': isPlaybackLoading }"
+              v-html="playPauseButtonIcon"
             />
           </button>
 
@@ -1105,7 +1582,7 @@ function onLyricsButtonClick() {
           :max="audioStore.duration || 100"
           step="any"
           :value="desktopProgressTime"
-          :style="{ '--progress-percent': progressPercent }"
+          :style="{ '--progress-percent': progressPercent, '--buffered-percent': bufferedPercent }"
           @input="onSeek"
           :aria-label="t.player.seek"
         />
@@ -1130,6 +1607,14 @@ function onLyricsButtonClick() {
               height="4"
               rx="2"
               class="wobble-track"
+            />
+            <rect
+              x="0"
+              y="6"
+              :width="bufferedPercent"
+              height="4"
+              rx="2"
+              class="wobble-buffered-fill"
             />
             <rect
               ref="miniPlayerWobbleBaseFillEl"
@@ -1169,9 +1654,11 @@ function onLyricsButtonClick() {
             :availability="currentStemAvailability"
             :group-items="currentStemGroupItems"
             :group-gains="audioStore.stemGroupGains"
+            :solo-state="stemSoloState"
             :stems-mode-available="currentTrackHasStemsAvailable"
             @setGain="onStemGain"
             @set-group-gain="onSetGroupGain"
+            @set-solo-state="onSetSoloState"
             @reset-gains="onResetGains"
             @enable-stems="onEnableStems"
             @disable-stems="onDisableStems"
@@ -1468,11 +1955,65 @@ audio {
   transform: scale(1.08);
 }
 
+.mini-player__loading-ring {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  overflow: visible;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mini-player-rotate 1.4s linear infinite;
+}
+
+.mini-player__loading-track {
+  stroke: rgba(0, 0, 0, 0.12);
+  stroke-width: 2;
+  fill: none;
+}
+
+.mini-player__loading-arc {
+  stroke: rgba(0, 0, 0, 0.72);
+  stroke-width: 2;
+  stroke-linecap: round;
+  fill: none;
+  stroke-dasharray: 6 94.25;
+  animation: mini-player-arc 1.4s ease-in-out infinite;
+}
+
+.mini-player__icon--loading {
+  opacity: 0.22;
+}
+
 :deep(.mini-player__btn--shuffle.is-active),
 :deep(.mini-player__btn--repeat.is-active),
 :deep(.mini-player__btn--lyrics.is-active),
 :deep(.mini-player__btn--stems.is-active) {
   color: var(--player-accent-color);
+}
+
+@keyframes mini-player-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes mini-player-arc {
+  0% {
+    stroke-dasharray: 6 94.25;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 56 94.25;
+    stroke-dashoffset: -18;
+  }
+  100% {
+    stroke-dasharray: 6 94.25;
+    stroke-dashoffset: -84;
+  }
 }
 
 .mini-player__progress::-webkit-slider-thumb {
@@ -1514,7 +2055,9 @@ audio {
     to right,
     white 0%,
     white var(--progress-percent, 0%),
-    rgba(255, 255, 255, 0.3) var(--progress-percent, 0%),
+    rgba(255, 255, 255, 0.52) var(--progress-percent, 0%),
+    rgba(255, 255, 255, 0.52) var(--buffered-percent, 0%),
+    rgba(255, 255, 255, 0.3) var(--buffered-percent, 0%),
     rgba(255, 255, 255, 0.3) 100%
   );
 }
@@ -1524,7 +2067,9 @@ audio {
     to right,
     var(--player-accent-color) 0%,
     var(--player-accent-color) var(--progress-percent, 0%),
-    rgba(255, 255, 255, 0.3) var(--progress-percent, 0%),
+    rgba(255, 255, 255, 0.52) var(--progress-percent, 0%),
+    rgba(255, 255, 255, 0.52) var(--buffered-percent, 0%),
+    rgba(255, 255, 255, 0.3) var(--buffered-percent, 0%),
     rgba(255, 255, 255, 0.3) 100%
   );
 }
@@ -1591,6 +2136,10 @@ audio {
 
 .wobble-base-fill {
   fill: white;
+}
+
+.wobble-buffered-fill {
+  fill: rgba(255, 255, 255, 0.5);
 }
 
 .wobble-wave {
