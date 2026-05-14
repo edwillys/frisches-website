@@ -115,37 +115,31 @@ describe('stem metadata availability', () => {
       guitar: [
         expect.objectContaining({
           label: 'Guitar PRS',
-          shortLabel: '1',
+          shortLabel: 'Riff1',
           type: 'electric',
           isAvailable: true,
         }),
         expect.objectContaining({
           label: 'Guitar MM',
-          shortLabel: '2',
+          shortLabel: 'Riff2',
           type: 'electric',
           isAvailable: true,
         }),
         expect.objectContaining({
           label: 'Guitar AS93',
-          shortLabel: '3',
-          type: 'electric',
-          isAvailable: true,
-        }),
-        expect.objectContaining({
-          label: 'Guitar AS93 2',
-          shortLabel: '4',
+          shortLabel: 'ODub',
           type: 'electric',
           isAvailable: true,
         }),
         expect.objectContaining({
           label: 'Guitar Maton',
-          shortLabel: '5',
+          shortLabel: 'Support',
           type: 'acoustic',
           isAvailable: true,
         }),
         expect.objectContaining({
           label: 'Guitar Solo',
-          shortLabel: 'SOLO',
+          shortLabel: 'Solo',
           role: 'solo',
           isAvailable: true,
         }),
@@ -153,13 +147,13 @@ describe('stem metadata availability', () => {
       vocals: [
         expect.objectContaining({
           label: 'Vocals Main',
-          shortLabel: '1',
+          shortLabel: 'Lead',
           role: 'main',
           isAvailable: true,
         }),
         expect.objectContaining({
           label: 'Vocals Backing',
-          shortLabel: '2',
+          shortLabel: 'Choir',
           role: 'backing',
           isAvailable: true,
         }),
@@ -174,7 +168,6 @@ describe('stem metadata availability', () => {
           '/src/assets/private/audio/TalesFromTheCellar/stems/02 - TOJD/TOJD - Guitar Base - PRS.mp3',
           '/src/assets/private/audio/TalesFromTheCellar/stems/02 - TOJD/TOJD - Guitar Base - MM.mp3',
           '/src/assets/private/audio/TalesFromTheCellar/stems/02 - TOJD/TOJD - Guitar Base - AS93.mp3',
-          '/src/assets/private/audio/TalesFromTheCellar/stems/02 - TOJD/TOJD - Guitar Base - AS93_2.mp3',
           '/src/assets/private/audio/TalesFromTheCellar/stems/02 - TOJD/TOJD - Guitar Base - Maton.mp3',
           '/src/assets/private/audio/TalesFromTheCellar/stems/02 - TOJD/TOJD - Guitar Solo.mp3',
         ],
