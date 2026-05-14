@@ -168,9 +168,6 @@ const currentTrackHasStemsAvailable = computed(() =>
   Object.values(currentStemAvailability.value).some(Boolean)
 )
 const stemSoloState = ref<StemSoloState | null>(null)
-const activeStemAudioSources = computed(() =>
-  audioStore.stemMixEnabled ? currentStemAudioSources.value : {}
-)
 const shouldShowAudioDebugHud =
   import.meta.env.DEV && import.meta.env.VITE_AUDIO_DEBUG_HUD === 'true'
 const audioDebugTick = ref(0)
@@ -598,25 +595,44 @@ watch(
   }
 )
 
+let stemSyncGeneration = 0
+let stemSyncQueue: Promise<void> = Promise.resolve()
+
 watch(
-  [() => audioStore.currentTrackId, () => audioStore.stemMixEnabled],
+  [() => audioStore.currentTrackId, currentStemAudioSources],
   () => {
-    stemPlayback.setSources(activeStemAudioSources.value)
+    // Keep stem sources prebuffered for the current track even while stems mode
+    // is off, so toggling stems can switch over without a long decode delay.
+    stemPlayback.setSources(currentStemAudioSources.value)
     stemPlayback.setLimiterParams(currentStemLimiterParams.value)
     void syncStemPlaybackState()
   },
   { immediate: true }
 )
 
-async function syncStemPlaybackState() {
-  const el = audioEl.value
-  if (!el) return
+watch(
+  () => audioStore.stemMixEnabled,
+  () => {
+    void syncStemPlaybackState()
+  }
+)
 
-  const stemsRequested =
+function areStemsRequested(): boolean {
+  return (
     audioStore.stemMixEnabled &&
     currentTrackHasStemsAvailable.value &&
     audioStore.hasUserStartedPlayback &&
     !audioStore.isStopped
+  )
+}
+
+async function runStemPlaybackSync(syncGen: number): Promise<void> {
+  if (syncGen !== stemSyncGeneration) return
+
+  const el = audioEl.value
+  if (!el) return
+
+  const stemsRequested = areStemsRequested()
 
   if (stemsRequested) {
     if (stemPlayback.isActive.value) {
@@ -631,12 +647,26 @@ async function syncStemPlaybackState() {
     }
 
     await stemPlayback.activate(audioStore.currentTime)
+    if (syncGen !== stemSyncGeneration) return
+
+    // Toggle state may have changed while activate() was awaiting decode/build.
+    if (!areStemsRequested()) {
+      if (stemPlayback.isActive.value) {
+        await stemPlayback.deactivateWithOptions({ restoreMasterVolume: true })
+        if (syncGen !== stemSyncGeneration) return
+      }
+      el.volume = audioStore.volume
+      return
+    }
 
     // Activation failed (e.g. no stem assets) — keep master audible.
     if (!stemPlayback.isActive.value) {
       el.volume = audioStore.volume
     } else {
       syncStemPlaybackMixFromStore()
+      // Defensive resync: restarting stem sources at the live timeline position
+      // avoids rare silent states after toggling stems off and on again.
+      stemPlayback.seek(audioStore.currentTime)
     }
     // On success the crossfade inside activate() handles volume.
     return
@@ -645,11 +675,24 @@ async function syncStemPlaybackState() {
   if (stemPlayback.isActive.value) {
     // Deactivate and let the internal crossfade restore master volume.
     await stemPlayback.deactivateWithOptions({ restoreMasterVolume: true })
+    if (syncGen !== stemSyncGeneration) return
+    // Enforce final master volume in case a transition got superseded and the
+    // internal fade did not complete to the intended endpoint.
+    el.volume = audioStore.volume
     return
   }
 
   // Stems not active and shouldn't be — ensure master volume is correct.
   el.volume = audioStore.volume
+}
+
+function syncStemPlaybackState(): Promise<void> {
+  const syncGen = ++stemSyncGeneration
+  const run = async () => {
+    await runStemPlaybackSync(syncGen)
+  }
+  stemSyncQueue = stemSyncQueue.then(run, run)
+  return stemSyncQueue
 }
 
 watch([effectiveStemGains, effectiveStemGroupGains, currentStemGroupItems], () => {

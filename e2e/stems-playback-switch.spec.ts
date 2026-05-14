@@ -155,6 +155,21 @@ async function expectSilentOutput(page: Page, reason: string): Promise<void> {
   ).toBeLessThan(0.005)
 }
 
+async function expectMasterPlaybackHealthyAfterDisable(page: Page, reason: string): Promise<void> {
+  const before = await capturePlaybackSnapshot(page)
+  await page.waitForTimeout(700)
+  const after = await capturePlaybackSnapshot(page)
+
+  expect(after.audioPaused, `${reason} (audio should keep playing)`).toBe(false)
+  expect(after.audioVolume, `${reason} (master element volume should be restored)`).toBeGreaterThan(
+    0.1
+  )
+  expect(
+    after.audioCurrentTime,
+    `${reason} (timeline should keep advancing under master playback)`
+  ).toBeGreaterThan((before.audioCurrentTime ?? 0) + 0.35)
+}
+
 async function openStemsOverlayOnTojd(page: Page): Promise<Locator> {
   await page.goto('/')
   await page.waitForLoadState('load')
@@ -434,5 +449,31 @@ test.describe('Stems playback switching', () => {
       return audio?.volume ?? 1
     })
     expect(volAfterResume).toBeLessThan(0.05)
+  })
+
+  test('toggling stems on and off 5 times keeps output audible in both states', async ({
+    page,
+  }) => {
+    test.setTimeout(120000)
+
+    const stemsEnableToggle = await openStemsOverlayOnTojd(page)
+    const player = page.locator('[data-testid="global-audio-player"]')
+
+    for (let cycle = 1; cycle <= 5; cycle += 1) {
+      // Re-seek each cycle so ON/OFF level checks are not affected by natural
+      // quiet passages later in the song.
+      await seekToKnownHotspot(page)
+
+      await stemsEnableToggle.click()
+      await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 5000 })
+      await expectAudibleOutput(page, `cycle ${cycle}: stems ON should be audible`)
+
+      await stemsEnableToggle.click()
+      await expect(player).toHaveAttribute('data-stems-active', 'false', { timeout: 5000 })
+      await expectMasterPlaybackHealthyAfterDisable(
+        page,
+        `cycle ${cycle}: stems OFF should restore healthy master playback`
+      )
+    }
   })
 })

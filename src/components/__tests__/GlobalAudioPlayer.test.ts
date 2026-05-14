@@ -1153,7 +1153,7 @@ describe('GlobalAudioPlayer', () => {
     ).toBe(0)
   })
 
-  it('does not arm stem sources until stem mode is enabled', async () => {
+  it('arms stem sources on track load so stems can prebuffer before enabling', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
 
@@ -1168,8 +1168,7 @@ describe('GlobalAudioPlayer', () => {
 
     await flushPromises()
 
-    expect(stemPlaybackMock.setSources).toHaveBeenCalledWith({})
-    expect(stemPlaybackMock.setSources).not.toHaveBeenCalledWith({
+    expect(stemPlaybackMock.setSources).toHaveBeenCalledWith({
       guitar: ['/src/assets/private/audio/test/stem.mp3'],
     })
 
@@ -1177,9 +1176,8 @@ describe('GlobalAudioPlayer', () => {
     await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
     await flushPromises()
 
-    expect(stemPlaybackMock.setSources).toHaveBeenCalledWith({
-      guitar: ['/src/assets/private/audio/test/stem.mp3'],
-    })
+    // Enabling stems should not require re-arming sources; it should only switch state.
+    expect(stemPlaybackMock.setSources).toHaveBeenCalled()
   })
 
   it('keeps persisted gains untouched while solo updates the effective playback mask', async () => {
@@ -1221,7 +1219,7 @@ describe('GlobalAudioPlayer', () => {
     ).toBe(0)
   })
 
-  it('clears stem sources again when stem mode is disabled', async () => {
+  it('keeps stem sources armed when stem mode is disabled', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
 
@@ -1244,7 +1242,39 @@ describe('GlobalAudioPlayer', () => {
     await flushPromises()
 
     expect(audio.stemMixEnabled).toBe(false)
-    expect(stemPlaybackMock.setSources).toHaveBeenCalledWith({})
+    expect(stemPlaybackMock.setSources).not.toHaveBeenCalledWith({})
+  })
+
+  it('re-enabling stems after disabling re-activates stems playback', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.find('[data-testid="mini-stems"]').trigger('click')
+    await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
+
+    stemPlaybackMock.activate.mockClear()
+
+    // Disable stems mode.
+    await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
+    expect(audio.stemMixEnabled).toBe(false)
+
+    // Re-enable stems mode and verify we re-activate the stems graph.
+    await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
+
+    expect(audio.stemMixEnabled).toBe(true)
+    expect(stemPlaybackMock.activate).toHaveBeenCalled()
   })
 
   it('keeps the last requested stem mode across tracks without stems and reactivates on return', async () => {

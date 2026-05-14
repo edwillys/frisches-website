@@ -989,6 +989,16 @@ export function useStemPlayback(
     // Step 2: create/reuse the AudioContext (starts suspended — that is fine).
     const ctx = ensureContext()
 
+    // Best-effort warm-up: if autoplay policy allows it (user already interacted),
+    // resume now so toggle activation does not pay resume latency.
+    if (ctx.state === 'suspended') {
+      try {
+        await ctx.resume()
+      } catch {
+        // If resume is blocked by policy, activate() will retry on toggle.
+      }
+    }
+
     // Step 3: register the worklet module so buildGraph() is synchronous later.
     await ensureJuceLimiterWorklet(ctx)
     if (preloadGen !== _preloadGen) return
