@@ -181,7 +181,7 @@ export function resolveStemGroupItems(
       shortLabel: entry.shortLabel,
       role: entry.role,
       type: entry.type,
-      path: buildStemAssetPath(albumEntry?.stemRoot, entry.path) ?? undefined,
+      path: buildStemAssetPath(albumEntry?.stemRoot, entry.path) || undefined,
       isAvailable: resolveStemEntryAvailability(entry, albumEntry?.stemRoot),
     }))
   }
