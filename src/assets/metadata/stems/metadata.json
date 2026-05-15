@@ -121,14 +121,76 @@
           "keyboard": { "path": "./06-suits/keyboard.wav", "force": "auto" }
         },
         "07-ordinary-suspects": {
-          "drums": { "path": "./07-ordinary-suspects/drums.wav", "force": "auto" },
-          "guitar": { "path": "./07-ordinary-suspects/guitar.wav", "force": "auto" },
-          "bass": { "path": "./07-ordinary-suspects/bass.wav", "force": "auto" },
-          "vocals": { "path": "./07-ordinary-suspects/vocals.wav", "force": "auto" },
-          "flute": { "path": "./07-ordinary-suspects/flute.wav", "force": "auto" },
-          "brass": { "path": "./07-ordinary-suspects/brass.wav", "force": "auto" },
-          "percussion": { "path": "./07-ordinary-suspects/percussion.wav", "force": "auto" },
-          "keyboard": { "path": "./07-ordinary-suspects/keyboard.wav", "force": "auto" }
+          "drums": {
+            "label": "Drums",
+            "shortLabel": "Drums",
+            "path": "./07 - Ordinary Suspects/Ordinary Suspects - Drums.mp3"
+          },
+          "guitar": [
+            {
+              "label": "Guitar Base Left",
+              "shortLabel": "BaseL",
+              "role": "base",
+              "type": "electric",
+              "path": "./07 - Ordinary Suspects/Ordinary Suspects - Guitar BaseL.mp3"
+            },
+            {
+              "label": "Guitar Base Right",
+              "shortLabel": "BaseR",
+              "role": "base",
+              "type": "electric",
+              "path": "./07 - Ordinary Suspects/Ordinary Suspects - Guitar BaseR.mp3"
+            },
+            {
+              "label": "Guitar Base Center",
+              "shortLabel": "BaseC",
+              "role": "base",
+              "type": "electric",
+              "path": "./07 - Ordinary Suspects/Ordinary Suspects - Guitar BaseC.mp3"
+            },
+            {
+              "label": "Guitar Solo",
+              "shortLabel": "Solo",
+              "role": "solo",
+              "type": "electric",
+              "path": "./07 - Ordinary Suspects/Ordinary Suspects - Guitar Solo.mp3"
+            }
+          ],
+          "bass": {
+            "label": "Bass",
+            "shortLabel": "Bass",
+            "path": "./07 - Ordinary Suspects/Ordinary Suspects - Bass.mp3"
+          },
+          "vocals": [
+            {
+              "label": "Vocals Main",
+              "shortLabel": "Lead",
+              "role": "main",
+              "path": "./07 - Ordinary Suspects/Ordinary Suspects - Vox Main.mp3"
+            },
+            {
+              "label": "Vocals Double",
+              "shortLabel": "Double",
+              "role": "double",
+              "path": "./07 - Ordinary Suspects/Ordinary Suspects - Vox Double.mp3"
+            },
+            {
+              "label": "Vocals Backing",
+              "shortLabel": "Choir",
+              "role": "backing",
+              "path": "./07 - Ordinary Suspects/Ordinary Suspects - Vox Backing.mp3"
+            }
+          ],
+          "flute": {
+            "label": "Flute",
+            "shortLabel": "Flute",
+            "path": "./07 - Ordinary Suspects/Ordinary Suspects - Flute.mp3"
+          },
+          "percussion": {
+            "label": "Percussion",
+            "shortLabel": "Percussion",
+            "path": "./07 - Ordinary Suspects/Ordinary Suspects - Percussion.mp3"
+          }
         },
         "08-solitude-etude": {
           "guitar": { "path": "./08-solitude-etude/guitar.wav", "force": "auto" }
