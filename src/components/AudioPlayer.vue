@@ -704,6 +704,12 @@ watch(currentTrack, async (newTrack, oldTrack) => {
   flex-direction: column;
 }
 
+@media (min-width: 769px) {
+  .main-content {
+    padding-bottom: calc(var(--mini-player-offset));
+  }
+}
+
 /* Album Hero Header */
 .album-hero {
   background: linear-gradient(

@@ -15,11 +15,11 @@
  */
 
 import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
 import http from 'node:http'
 import { spawnSync } from 'node:child_process'
 import { chromium } from 'playwright'
+import tmp from 'tmp'
 
 const LIMITER_PARAMS = {
   threshold: -0.1,
@@ -629,7 +629,12 @@ async function main() {
   })
 
   const server = await startFileServer(routes)
-  const tempAlignedWav = path.join(os.tmpdir(), `frisches-limited-${Date.now()}.wav`)
+  const tempAlignedWavHandle = tmp.fileSync({
+    prefix: 'frisches-limited-',
+    postfix: '.wav',
+    discardDescriptor: true,
+  })
+  const tempAlignedWav = tempAlignedWavHandle.name
 
   try {
     const renderResult = await renderLimitedMix({
@@ -687,7 +692,7 @@ async function main() {
     fs.writeFileSync(outPath, `${JSON.stringify(outputData, null, 4)}\n`)
     console.log(`Done. JSON saved to ${outPath}`)
   } finally {
-    if (fs.existsSync(tempAlignedWav)) fs.unlinkSync(tempAlignedWav)
+    if (tempAlignedWavHandle?.removeCallback) tempAlignedWavHandle.removeCallback()
     await server.close()
   }
 }
