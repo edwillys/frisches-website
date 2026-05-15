@@ -827,12 +827,19 @@ function onGroupHandlePointerUp() {
   clearGroupDragSession()
 }
 
-function onGroupHandlePointerDown(stem: StemName, event: PointerEvent) {
+function onGroupHandlePointerDown(stem: StemName, event: PointerEvent | MouseEvent) {
   if (!hasGroupItems(stem)) return
+  if (activeGroupDrag?.stem === stem) return
   event.preventDefault()
 
   const handleEl = event.currentTarget as HTMLElement
-  handleEl.setPointerCapture(event.pointerId)
+  if ('pointerId' in event) {
+    try {
+      handleEl.setPointerCapture(event.pointerId)
+    } catch {
+      // Pointer capture can fail on some synthetic events; dragging still works via window listeners.
+    }
+  }
   handleEl.style.cursor = 'grabbing'
 
   const mainEl = handleEl.closest('.stem-group__main') as HTMLElement | null
@@ -1309,6 +1316,7 @@ function resetGains() {
                 :data-testid="`stem-${stem.key}-expand`"
                 @click="onGroupHandleClick(stem.key)"
                 @pointerdown="onGroupHandlePointerDown(stem.key, $event)"
+                @mousedown="onGroupHandlePointerDown(stem.key, $event)"
               >
                 <span class="stem-group__handle-grip" aria-hidden="true" />
               </button>

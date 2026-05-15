@@ -217,6 +217,11 @@ watch(isCollapsed, (collapsed) => {
   font-family: Consolas, 'Courier New', monospace;
 }
 
+.audio-debug-hud,
+.audio-debug-hud * {
+  pointer-events: none;
+}
+
 .audio-debug-hud__header {
   display: flex;
   align-items: flex-start;
@@ -275,6 +280,7 @@ watch(isCollapsed, (collapsed) => {
     border-color 140ms ease,
     color 140ms ease,
     transform 140ms ease;
+  pointer-events: auto;
 }
 
 .audio-debug-hud__toggle:hover,
