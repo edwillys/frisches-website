@@ -26,6 +26,9 @@ const LIMITER_PARAMS = {
   releaseMs: 100,
 }
 
+const LIMITER_SEARCH_ITERATIONS = 18
+const RENDER_CHUNK_SIZE = 65536
+
 function getArg(name, fallback = undefined) {
   const flag = `--${name}`
   const exact = process.argv.find((arg) => arg.startsWith(`${flag}=`))
@@ -203,8 +206,13 @@ async function renderLimitedMix({
   const page = await browser.newPage()
   await page.goto(new URL(masterUrl).origin)
 
+  const renderedMixChunks = []
+  await page.exposeFunction('__captureRenderedMixChunk', (chunk) => {
+    renderedMixChunks.push(chunk)
+  })
+
   try {
-    return await page.evaluate(
+    const renderResult = await page.evaluate(
       async ({
         masterUrl,
         stemUrls,
@@ -213,6 +221,8 @@ async function renderLimitedMix({
         targetLufsI,
         limiterParams,
         fixedDriveDb,
+        limiterSearchIterations,
+        renderChunkSize,
       }) => {
         function measureLufsI(left, right, sr) {
           function applyBiquad(samples, coeffs) {
@@ -514,8 +524,8 @@ async function renderLimitedMix({
           }
           return {
             lag,
-            left: Array.from(alignedLeft),
-            right: Array.from(alignedRight),
+            left: alignedLeft,
+            right: alignedRight,
           }
         }
 
@@ -558,7 +568,7 @@ async function renderLimitedMix({
           let lowGain = initialDelta - 10
           let highGain = initialDelta + 15
           bestDrive = initialDelta
-          for (let iteration = 0; iteration < 25; iteration += 1) {
+          for (let iteration = 0; iteration < limiterSearchIterations; iteration += 1) {
             const midGain = (lowGain + highGain) / 2
             const rendered = await renderWithDrive(stemBuffers, midGain)
             const [left, right] = stereoChannels(rendered)
@@ -574,12 +584,20 @@ async function renderLimitedMix({
         }
         const finalMixRaw = await renderWithDrive(stemBuffers, bestDrive)
         const aligned = alignAndTrim(masterBuffer, finalMixRaw, sampleRate)
+        for (let start = 0; start < aligned.left.length; start += renderChunkSize) {
+          const end = Math.min(start + renderChunkSize, aligned.left.length)
+          // Keep each Playwright transport payload small enough to avoid string size limits.
+          await window.__captureRenderedMixChunk({
+            start,
+            left: Array.from(aligned.left.subarray(start, end)),
+            right: Array.from(aligned.right.subarray(start, end)),
+          })
+        }
         await decodeContext.close()
         return {
           bestDrive,
           sampleLag: aligned.lag,
-          left: aligned.left,
-          right: aligned.right,
+          frameCount: aligned.left.length,
         }
       },
       {
@@ -590,8 +608,24 @@ async function renderLimitedMix({
         targetLufsI,
         limiterParams: LIMITER_PARAMS,
         fixedDriveDb,
+        limiterSearchIterations: LIMITER_SEARCH_ITERATIONS,
+        renderChunkSize: RENDER_CHUNK_SIZE,
       }
     )
+
+    const left = new Float32Array(renderResult.frameCount)
+    const right = new Float32Array(renderResult.frameCount)
+    for (const chunk of renderedMixChunks) {
+      left.set(chunk.left, chunk.start)
+      right.set(chunk.right, chunk.start)
+    }
+
+    return {
+      bestDrive: renderResult.bestDrive,
+      sampleLag: renderResult.sampleLag,
+      left,
+      right,
+    }
   } finally {
     await browser.close()
   }

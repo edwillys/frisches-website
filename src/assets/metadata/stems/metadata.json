@@ -91,14 +91,83 @@
           "keyboard": { "path": "./03-etiquette/keyboard.wav", "force": "auto" }
         },
         "04-mr-red-jacket": {
-          "drums": { "path": "./04-mr-red-jacket/drums.wav", "force": "auto" },
-          "guitar": { "path": "./04-mr-red-jacket/guitar.wav", "force": "auto" },
-          "bass": { "path": "./04-mr-red-jacket/bass.wav", "force": "auto" },
-          "vocals": { "path": "./04-mr-red-jacket/vocals.wav", "force": "auto" },
-          "flute": { "path": "./04-mr-red-jacket/flute.wav", "force": "auto" },
-          "brass": { "path": "./04-mr-red-jacket/brass.wav", "force": "auto" },
-          "percussion": { "path": "./04-mr-red-jacket/percussion.wav", "force": "auto" },
-          "keyboard": { "path": "./04-mr-red-jacket/keyboard.wav", "force": "auto" }
+          "drums": {
+            "label": "Drums",
+            "shortLabel": "Drums",
+            "path": "./04 - Mr Red Jacket/Mr Red Jacket - Drums.mp3"
+          },
+          "guitar": [
+            {
+              "label": "Guitar Base 1",
+              "shortLabel": "Base1",
+              "role": "base",
+              "type": "electric",
+              "path": "./04 - Mr Red Jacket/Mr Red Jacket - Guitar Base1.mp3"
+            },
+            {
+              "label": "Guitar Base 2",
+              "shortLabel": "Base2",
+              "role": "base",
+              "type": "electric",
+              "path": "./04 - Mr Red Jacket/Mr Red Jacket - Guitar Base2.mp3"
+            },
+            {
+              "label": "Guitar Overdub",
+              "shortLabel": "ODub",
+              "role": "base",
+              "type": "electric",
+              "path": "./04 - Mr Red Jacket/Mr Red Jacket - Guitar ODub.mp3"
+            },
+            {
+              "label": "Guitar Solo 1",
+              "shortLabel": "Solo1",
+              "role": "solo",
+              "type": "electric",
+              "path": "./04 - Mr Red Jacket/Mr Red Jacket - Guitar Solo1.mp3"
+            },
+            {
+              "label": "Guitar Solo 2",
+              "shortLabel": "Solo2",
+              "role": "solo",
+              "type": "electric",
+              "path": "./04 - Mr Red Jacket/Mr Red Jacket - Guitar Solo2.mp3"
+            }
+          ],
+          "bass": {
+            "label": "Bass",
+            "shortLabel": "Bass",
+            "path": "./04 - Mr Red Jacket/Mr Red Jacket - Bass.mp3"
+          },
+          "vocals": [
+            {
+              "label": "Vocals Lead",
+              "shortLabel": "Lead",
+              "role": "main",
+              "path": "./04 - Mr Red Jacket/Mr Red Jacket - Vox Main.mp3"
+            },
+            {
+              "label": "Vocals Double",
+              "shortLabel": "Double",
+              "role": "double",
+              "path": "./04 - Mr Red Jacket/Mr Red Jacket - Vox Double.mp3"
+            },
+            {
+              "label": "Vocals Backing",
+              "shortLabel": "Choir",
+              "role": "backing",
+              "path": "./04 - Mr Red Jacket/Mr Red Jacket - Vox Backing.mp3"
+            }
+          ],
+          "flute": {
+            "label": "Flute",
+            "shortLabel": "Flute",
+            "path": "./04 - Mr Red Jacket/Mr Red Jacket - Flute.mp3"
+          },
+          "percussion": {
+            "label": "Percussion",
+            "shortLabel": "Percussion",
+            "path": "./04 - Mr Red Jacket/Mr Red Jacket - Percussion.mp3"
+          }
         },
         "05-witch-hunting": {
           "drums": { "path": "./05-witch-hunting/drums.wav", "force": "auto" },

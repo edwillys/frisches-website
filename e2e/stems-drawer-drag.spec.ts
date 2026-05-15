@@ -41,24 +41,41 @@ async function handleCenterX(handle: Locator): Promise<number> {
 }
 
 test.describe('Stems drawer drag', () => {
-  test('group drawer handle follows the cursor while dragging open', async ({ page }) => {
+  test('group drawer drag stays anchored while left-expanding UI still exposes close state', async ({
+    page,
+  }) => {
     const handle = await openStemsOverlayOnTojd(page)
+    const drawerLabels = page.locator('[data-testid="stem-guitar-labels"]')
     await expect(handle).toBeVisible({ timeout: 15000 })
+    await expect(handle).toHaveAttribute('aria-expanded', 'false')
 
     const box = await handle.boundingBox()
     expect(box, 'Handle bounding box unavailable before drag').not.toBeNull()
 
     const startX = box!.x + box!.width / 2
     const startY = box!.y + box!.height / 2
-    const targetX = startX + 36
+    const targetX = startX + 120
 
     await page.mouse.move(startX, startY)
     await page.mouse.down()
     await page.mouse.move(targetX, startY, { steps: 10 })
+    await page.mouse.up()
 
     const currentHandleCenterX = await handleCenterX(handle)
-    expect(Math.abs(currentHandleCenterX - targetX)).toBeLessThanOrEqual(3)
+    expect(Math.abs(currentHandleCenterX - startX)).toBeLessThanOrEqual(3)
 
-    await page.mouse.up()
+    // Drag can intentionally suppress the next click, so retry once if needed.
+    await handle.click()
+    if ((await handle.getAttribute('aria-expanded')) !== 'true') {
+      await handle.click()
+    }
+
+    await expect(handle).toHaveAttribute('aria-expanded', 'true')
+    await expect(handle).toHaveAttribute('aria-label', 'Close stem group')
+    await expect(drawerLabels).toBeVisible()
+
+    const labelsBox = await drawerLabels.boundingBox()
+    expect(labelsBox, 'Expanded group labels should have a bounding box').not.toBeNull()
+    expect(labelsBox!.width).toBeGreaterThan(20)
   })
 })
