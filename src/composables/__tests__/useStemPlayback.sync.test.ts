@@ -265,6 +265,31 @@ describe('useStemPlayback', () => {
     playback.dispose()
   })
 
+  it('deactivateWithOptions fades master volume to restoreToVolume, not always 1', async () => {
+    // Regression: _fadeMasterVolume was hardcoded to fade TO 1 regardless of the
+    // actual user volume level.  After the fix, the target is the supplied
+    // restoreToVolume value so the crossfade lands at the correct volume.
+    const { useStemPlayback } = await import('@/composables/useStemPlayback')
+    const audioEl = ref<HTMLAudioElement | null>(null)
+    const fakeEl = { volume: 1 } as HTMLAudioElement
+    audioEl.value = fakeEl
+
+    const stemGains = computed<Partial<Record<AudioStemName, number>>>(() => ({ guitar: 1 }))
+    const groupGains = computed<Record<string, number>>(() => ({}))
+    const playback = useStemPlayback(audioEl, stemGains, groupGains)
+    playback.setSources({ guitar: [fakeAudioPath] })
+    await playback.activate(0)
+    // After activate the master element was faded to 0.
+    expect(fakeEl.volume).toBeLessThan(1)
+
+    // Deactivate and request restoration to a specific volume (e.g. 0.6).
+    await playback.deactivateWithOptions({ restoreMasterVolume: true, restoreToVolume: 0.6 })
+
+    // The rAF fade (synchronous in tests) must have ended at the requested target.
+    expect(fakeEl.volume).toBeCloseTo(0.6)
+    playback.dispose()
+  })
+
   it('updateStemGain sets the stem GainNode value', async () => {
     const { playback } = await buildAndActivate()
     // Graph order: outputGain(0), preGain(1), stemGain(2)
@@ -398,6 +423,24 @@ describe('useStemPlayback', () => {
     playback.dispose()
   })
 
+  it('marks stems as prebuffered after first activate without explicit preload', async () => {
+    const { useStemPlayback } = await import('@/composables/useStemPlayback')
+    const audioEl = ref<HTMLAudioElement | null>(null)
+    const stemGains = computed<Partial<Record<AudioStemName, number>>>(() => ({ guitar: 1 }))
+    const groupGains = computed<Record<string, number>>(() => ({}))
+    const playback = useStemPlayback(audioEl, stemGains, groupGains)
+
+    playback.setSources({ guitar: [fakeAudioPath] })
+    expect(playback.isStemsPrebuffered.value).toBe(false)
+
+    await playback.activate(0)
+
+    // Track-start in stems mode calls activate() directly; this must still mark
+    // buffers as ready so toggling stems off/on on the same track is instant.
+    expect(playback.isStemsPrebuffered.value).toBe(true)
+    playback.dispose()
+  })
+
   it('evicts decoded buffers for removed sources when switching tracks', async () => {
     const { useStemPlayback } = await import('@/composables/useStemPlayback')
     const audioEl = ref<HTMLAudioElement | null>(null)
@@ -406,16 +449,19 @@ describe('useStemPlayback', () => {
     const playback = useStemPlayback(audioEl, stemGains, groupGains)
 
     playback.setSources({ guitar: [fakeAudioPathCacheA] })
+    await playback.preloadStemsForCurrentSources()
     await vi.waitFor(() => {
       expect(playback.isStemsPrebuffered.value).toBe(true)
     })
 
     playback.setSources({ guitar: [fakeAudioPathCacheB] })
+    await playback.preloadStemsForCurrentSources()
     await vi.waitFor(() => {
       expect(playback.isStemsPrebuffered.value).toBe(true)
     })
 
     playback.setSources({ guitar: [fakeAudioPathCacheA] })
+    await playback.preloadStemsForCurrentSources()
     await vi.waitFor(() => {
       expect(playback.isStemsPrebuffered.value).toBe(true)
     })
@@ -463,7 +509,9 @@ describe('useStemPlayback', () => {
     )
 
     playback.setSources({ guitar: [fakeAudioPathRace] })
+    const firstPreloadPromise = playback.preloadStemsForCurrentSources()
     playback.setSources({ guitar: [fakeAudioPathRace2] })
+    const secondPreloadPromise = playback.preloadStemsForCurrentSources()
 
     expect(playback.isStemsPrebuffered.value).toBe(false)
 
@@ -474,12 +522,14 @@ describe('useStemPlayback', () => {
 
     const firstRaceFetch = requireFetchResolver(resolveRaceFetch, 'first race')
     firstRaceFetch({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) })
+    await firstPreloadPromise
     await flushAsyncTasks()
 
     expect(playback.isStemsPrebuffered.value).toBe(false)
 
     const secondRaceFetch = requireFetchResolver(resolveRaceFetch2, 'second race')
     secondRaceFetch({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) })
+    await secondPreloadPromise
 
     await vi.waitFor(() => {
       expect(playback.isStemsPrebuffered.value).toBe(true)

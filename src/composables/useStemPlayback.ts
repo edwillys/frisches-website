@@ -337,9 +337,13 @@ export function useStemPlayback(
   let currentLimiterParams: LimiterParams = { ...limiterParams }
   let audioCtx: AudioContext | null = null
   const isActive = ref(false)
-  // Becomes true once _preloadForSources() has finished fetching + decoding.
-  // Callers can wait on this to guarantee near-instant activation.
+  // True once stems are fully fetched+decoded and ready for instant activation.
   const isStemsPrebuffered = ref(false)
+  // True while stems are being loaded (fetching/decoding).
+  const isStemsLoading = ref(false)
+  // True while a rAF-based master-volume fade is running (activate or deactivate).
+  // Used by callers to avoid snapping el.volume while a crossfade owns it.
+  const isMasterFading = ref(false)
   // Generation counter: incremented on every new operation so in-flight
   // activate/deactivate callbacks can detect they have been superseded.
   let _opGen = 0
@@ -653,6 +657,7 @@ export function useStemPlayback(
     if (_masterFadeRaf !== null) {
       cancelAnimationFrame(_masterFadeRaf)
       _masterFadeRaf = null
+      isMasterFading.value = false
     }
   }
 
@@ -663,6 +668,7 @@ export function useStemPlayback(
     durationMs: number
   ): void {
     _cancelMasterFade()
+    isMasterFading.value = true
     const start = performance.now()
     function tick(): void {
       const elapsed = performance.now() - start
@@ -672,6 +678,7 @@ export function useStemPlayback(
         _masterFadeRaf = requestAnimationFrame(tick)
       } else {
         _masterFadeRaf = null
+        isMasterFading.value = false
       }
     }
     _masterFadeRaf = requestAnimationFrame(tick)
@@ -723,6 +730,11 @@ export function useStemPlayback(
       return
     }
 
+    // Track-start in stems mode can activate directly without running explicit
+    // preload first. Once activate() has loaded buffers successfully, mark the
+    // current track as prebuffered so same-track toggles avoid loading UI.
+    isStemsPrebuffered.value = true
+
     const liveTime = masterAudioEl.value?.currentTime
     const startAt =
       typeof liveTime === 'number' && Number.isFinite(liveTime) ? liveTime : currentTimeSeconds
@@ -755,7 +767,11 @@ export function useStemPlayback(
     return deactivateWithOptions()
   }
 
-  async function deactivateWithOptions(options?: { restoreMasterVolume?: boolean }): Promise<void> {
+  async function deactivateWithOptions(options?: {
+    restoreMasterVolume?: boolean
+    /** Target volume to restore the master element to (default 1). */
+    restoreToVolume?: number
+  }): Promise<void> {
     // Always increment generation to cancel any in-flight activate.
     const gen = ++_opGen
     _cancelMasterFade()
@@ -778,7 +794,7 @@ export function useStemPlayback(
 
     const masterEl = masterAudioEl.value
     if (masterEl && options?.restoreMasterVolume !== false) {
-      _fadeMasterVolume(masterEl, masterEl.volume, 1, FADE_MS)
+      _fadeMasterVolume(masterEl, masterEl.volume, options?.restoreToVolume ?? 1, FADE_MS)
     }
 
     setTimeout(() => {
@@ -964,52 +980,58 @@ export function useStemPlayback(
 
     stemSources = sources
     isStemsPrebuffered.value = false
-    const preloadGen = ++_preloadGen
-
-    // Kick off full background pre-warm immediately — no user gesture is needed
-    // for either network fetching or decodeAudioData (works on suspended contexts).
-    // By the time the user enables stems, all AudioBuffers should be ready.
-    void _preloadForSources(sources, preloadGen)
+    isStemsLoading.value = false
+    // Do not trigger preloading here. Preloading is now triggered on demand.
   }
 
-  async function _preloadForSources(
-    sources: Partial<Record<AudioStemName, string[]>>,
-    preloadGen: number
-  ): Promise<void> {
-    const allPaths = getPreloadPathOrder(sources)
-    if (allPaths.length === 0) return
+  /**
+   * Preload stems for the current sources. Call when user requests stems mode for the first time.
+   * Sets isStemsLoading true while in progress, and isStemsPrebuffered true when done.
+   */
+  async function preloadStemsForCurrentSources(): Promise<void> {
+    isStemsLoading.value = true
+    const preloadGen = ++_preloadGen
+    const allPaths = getPreloadPathOrder(stemSources)
+    if (allPaths.length === 0) {
+      isStemsLoading.value = false
+      return
+    }
 
-    // Step 1: fetch audible paths first, with enough parallelism to reduce the
-    // visible delay when stems are enabled mid-playback.
+    // Step 1: fetch audible paths first.
     await runWithConcurrency(allPaths, PRELOAD_FETCH_CONCURRENCY, async (path) => {
       await _fetchArrayBuffer(path)
     })
-    if (preloadGen !== _preloadGen) return
+    if (preloadGen !== _preloadGen) {
+      isStemsLoading.value = false
+      return
+    }
 
-    // Step 2: create/reuse the AudioContext (starts suspended — that is fine).
+    // Step 2: create/reuse the AudioContext.
     const ctx = ensureContext()
-
-    // Best-effort warm-up: if autoplay policy allows it (user already interacted),
-    // resume now so toggle activation does not pay resume latency.
     if (ctx.state === 'suspended') {
       try {
         await ctx.resume()
-      } catch {
-        // If resume is blocked by policy, activate() will retry on toggle.
-      }
+      } catch {}
     }
 
-    // Step 3: register the worklet module so buildGraph() is synchronous later.
+    // Step 3: register the worklet module.
     await ensureJuceLimiterWorklet(ctx)
-    if (preloadGen !== _preloadGen) return
+    if (preloadGen !== _preloadGen) {
+      isStemsLoading.value = false
+      return
+    }
 
     // Step 4: decode audible paths first, then finish the rest in the background.
     await runWithConcurrency(allPaths, PRELOAD_DECODE_CONCURRENCY, async (path) => {
       await _getCachedDecodedBuffer(ctx, path)
     })
-    if (preloadGen !== _preloadGen) return
+    if (preloadGen !== _preloadGen) {
+      isStemsLoading.value = false
+      return
+    }
 
     isStemsPrebuffered.value = true
+    isStemsLoading.value = false
     printDebugSnapshot('prebuffered')
   }
 
@@ -1063,6 +1085,8 @@ export function useStemPlayback(
   return {
     isActive,
     isStemsPrebuffered,
+    isStemsLoading,
+    isMasterFading,
     activate,
     deactivate,
     deactivateWithOptions,
@@ -1077,6 +1101,7 @@ export function useStemPlayback(
     getDebugSnapshot,
     printDebugSnapshot,
     setSources,
+    preloadStemsForCurrentSources,
     dispose,
   }
 }

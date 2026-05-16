@@ -141,6 +141,7 @@ export type { StemAvailability }
 const props = defineProps<{
   modelValue: boolean
   stemsEnabled?: boolean
+  isStemsLoading?: boolean
   gains: StemGains
   availability?: StemAvailability
   groupItems?: Partial<Record<StemName, StemGroupItem[]>>
@@ -1022,12 +1023,18 @@ function toggleMute(stem: StemName) {
 }
 
 function toggleFaderEditing() {
+  // During first-time stem decode, a second tap should cancel the switch and keep normal mode.
+  if (!isFaderEditingEnabled.value && props.isStemsLoading) {
+    emit('disableStems')
+    return
+  }
+
   if (!isFaderEditingEnabled.value && !props.stemsModeAvailable) return
   const nextEnabled = !isFaderEditingEnabled.value
-  isFaderEditingEnabled.value = nextEnabled
   if (nextEnabled) {
     emit('enableStems')
   } else {
+    isFaderEditingEnabled.value = false
     closeContextMenu()
     clearAllSoloTargets()
     emit('disableStems')
@@ -1068,15 +1075,20 @@ function resetGains() {
       <div class="stems__header">
         <button
           class="stems__activation-toggle"
-          :class="{ 'is-enabled': isFaderEditingEnabled, 'is-unavailable': !stemsModeAvailable }"
+          :class="{
+            'is-enabled': isFaderEditingEnabled,
+            'is-unavailable': !stemsModeAvailable,
+            'is-loading': !isFaderEditingEnabled && !!isStemsLoading,
+          }"
           type="button"
           :aria-pressed="isFaderEditingEnabled"
-          :aria-label="'Enable stem mixing'"
+          :aria-label="isStemsLoading ? 'Loading stems' : 'Enable stem mixing'"
           :disabled="!stemsModeAvailable && !isFaderEditingEnabled"
           data-testid="stems-enable-toggle"
           @click="toggleFaderEditing"
         >
           <span class="stems__activation-knob" aria-hidden="true" />
+          <span v-if="!isFaderEditingEnabled && isStemsLoading" class="stems__activation-spinner" />
         </button>
 
         <div class="stems__header-actions">
@@ -1585,6 +1597,32 @@ function resetGains() {
 
 .stems__activation-toggle.is-enabled .stems__activation-knob {
   transform: translate(12px, -50%);
+}
+
+.stems__activation-toggle.is-loading .stems__activation-knob {
+  transform: translate(6px, -50%);
+}
+
+.stems__activation-spinner {
+  position: absolute;
+  top: 50%;
+  right: -12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  border-top-color: rgba(255, 255, 255, 0.95);
+  transform: translateY(-50%);
+  animation: stems-toggle-spin 0.8s linear infinite;
+}
+
+@keyframes stems-toggle-spin {
+  from {
+    transform: translateY(-50%) rotate(0deg);
+  }
+  to {
+    transform: translateY(-50%) rotate(360deg);
+  }
 }
 
 :deep(.stems__close-icon svg) {

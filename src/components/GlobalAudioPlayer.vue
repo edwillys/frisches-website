@@ -50,6 +50,9 @@ type E2eAudioProbe = {
   readMasterLevel: () => number
   readStemLevel: () => number
   readCombinedLevel: () => number
+  readMasterSamples: () => number[]
+  readStemSamples: () => number[]
+  readSampleRate: () => number
   readState: () => {
     masterLevel: number
     stemLevel: number
@@ -126,7 +129,7 @@ let wobbleLastFrameMs = 0
 let windowResizeHandler: (() => void) | null = null
 let masterMeterCtx: AudioContext | null = null
 let masterMeterAnalyser: AnalyserNode | null = null
-let masterMeterSource: MediaStreamAudioSourceNode | null = null
+let masterMeterSource: AudioNode | null = null
 let masterMeterSink: GainNode | null = null
 let masterMeterBuffer: TimeDomainBuffer | null = null
 let lastMediaAdvanceMs = 0
@@ -306,6 +309,13 @@ function installE2eAudioProbe() {
     readMasterLevel: () => readMasterOutputLevel(),
     readStemLevel: () => stemPlayback.getOutputLevel(),
     readCombinedLevel: () => Math.max(readMasterOutputLevel(), stemPlayback.getOutputLevel()),
+    readMasterSamples: () => {
+      if (!masterMeterAnalyser || !masterMeterBuffer) return []
+      masterMeterAnalyser.getFloatTimeDomainData(masterMeterBuffer)
+      return Array.from(masterMeterBuffer)
+    },
+    readStemSamples: () => stemPlayback.getOutputSamples(),
+    readSampleRate: () => stemPlayback.getSampleRate(),
     readState: () => {
       const masterLevel = readMasterOutputLevel()
       const stemLevel = stemPlayback.getOutputLevel()
@@ -537,7 +547,6 @@ function setupMasterOutputProbe() {
       : typeof mediaEl.mozCaptureStream === 'function'
         ? () => mediaEl.mozCaptureStream!()
         : null
-  if (!capture) return
 
   try {
     const ctx = new AudioContext()
@@ -548,7 +557,9 @@ function setupMasterOutputProbe() {
     const sink = ctx.createGain()
     sink.gain.value = 0
 
-    const source = ctx.createMediaStreamSource(capture())
+    const source = capture
+      ? ctx.createMediaStreamSource(capture())
+      : ctx.createMediaElementSource(el)
     source.connect(analyser)
     analyser.connect(sink)
     sink.connect(ctx.destination)
@@ -646,6 +657,15 @@ async function runStemPlaybackSync(syncGen: number): Promise<void> {
       return
     }
 
+    if (!stemPlayback.isStemsPrebuffered.value) {
+      await stemPlayback.preloadStemsForCurrentSources()
+      if (syncGen !== stemSyncGeneration) return
+      if (!areStemsRequested()) {
+        el.volume = audioStore.volume
+        return
+      }
+    }
+
     await stemPlayback.activate(audioStore.currentTime)
     if (syncGen !== stemSyncGeneration) return
 
@@ -664,9 +684,6 @@ async function runStemPlaybackSync(syncGen: number): Promise<void> {
       el.volume = audioStore.volume
     } else {
       syncStemPlaybackMixFromStore()
-      // Defensive resync: restarting stem sources at the live timeline position
-      // avoids rare silent states after toggling stems off and on again.
-      stemPlayback.seek(audioStore.currentTime)
     }
     // On success the crossfade inside activate() handles volume.
     return
@@ -1764,7 +1781,8 @@ const audioDebugSnapshot = computed(() => {
         <div class="mini-player__actions">
           <InstrumentFaders
             v-model="showStemFaders"
-            :stems-enabled="audioStore.stemMixEnabled"
+            :stems-enabled="stemPlayback.isActive.value"
+            :is-stems-loading="stemPlayback.isStemsLoading.value"
             :gains="audioStore.stemGains"
             :availability="currentStemAvailability"
             :group-items="currentStemGroupItems"

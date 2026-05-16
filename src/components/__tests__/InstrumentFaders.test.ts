@@ -41,6 +41,8 @@ describe('InstrumentFaders', () => {
 
   async function enableEditing(wrapper: ReturnType<typeof mount>) {
     await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await wrapper.setProps({ stemsEnabled: true })
+    await nextTick()
   }
 
   function dispatchDetailedClick(button: ReturnType<typeof mount>['element'], detail: number) {
@@ -283,6 +285,8 @@ describe('InstrumentFaders', () => {
   it('emits disableStems when toggling off', async () => {
     const wrapper = mountOpen()
     await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click') // enable
+    await wrapper.setProps({ stemsEnabled: true })
+    await nextTick()
     await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click') // disable
     const events = wrapper.emitted('disableStems')
     expect(events).toBeTruthy()

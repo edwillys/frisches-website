@@ -21,7 +21,14 @@ const {
     lastStemGainsRef: null as unknown,
     lastGroupGainsRef: null as unknown,
     isActive: { value: false },
-    isStemsPrebuffered: { value: false },
+    isStemsPrebuffered: { value: true },
+    isStemsLoading: { value: false },
+    preloadStemsForCurrentSources: vi.fn(async () => {
+      stemPlaybackMock.isStemsLoading.value = true
+      await Promise.resolve()
+      stemPlaybackMock.isStemsPrebuffered.value = true
+      stemPlaybackMock.isStemsLoading.value = false
+    }),
     activate: vi.fn(async () => {
       stemPlaybackMock.isActive.value = true
     }),
@@ -121,6 +128,9 @@ describe('GlobalAudioPlayer', () => {
     stemPlaybackMock.lastStemGainsRef = null
     stemPlaybackMock.lastGroupGainsRef = null
     stemPlaybackMock.isActive.value = false
+    stemPlaybackMock.isStemsPrebuffered.value = true
+    stemPlaybackMock.isStemsLoading.value = false
+    stemPlaybackMock.preloadStemsForCurrentSources.mockClear()
     stemPlaybackMock.activate.mockClear()
     stemPlaybackMock.deactivate.mockClear()
     stemPlaybackMock.deactivateWithOptions.mockClear()
