@@ -44,6 +44,7 @@ const {
     warmUp: vi.fn().mockResolvedValue(undefined),
     setSources: vi.fn(),
     setLimiterParams: vi.fn(),
+    setMasterVolume: vi.fn(),
     updateStemGain: vi.fn(),
     updateGroupItemGain: vi.fn(),
     getDebugSnapshot: vi.fn(() => ({
@@ -137,6 +138,7 @@ describe('GlobalAudioPlayer', () => {
     stemPlaybackMock.seek.mockClear()
     stemPlaybackMock.setSources.mockClear()
     stemPlaybackMock.setLimiterParams.mockClear()
+    stemPlaybackMock.setMasterVolume.mockClear()
     stemPlaybackMock.updateStemGain.mockClear()
     stemPlaybackMock.updateGroupItemGain.mockClear()
     stemPlaybackMock.getDebugSnapshot.mockClear()
@@ -519,6 +521,29 @@ describe('GlobalAudioPlayer', () => {
     audioEl.dispatchEvent(new Event('seeked'))
 
     expect(stemPlaybackMock.seek).toHaveBeenCalledWith(21.5)
+  })
+
+  it('enabling stems forwards the current timeline into stem activation', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const audio = useAudioStore()
+    audio.startFromMusic('tftc:02-tojd')
+    audio.seek(12.5)
+
+    const wrapper = mount(GlobalAudioPlayer, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.vm.$nextTick()
+    await wrapper.find('[data-testid="mini-stems"]').trigger('click')
+    await wrapper.vm.$nextTick()
+    await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
+
+    expect(stemPlaybackMock.activate).toHaveBeenCalledWith(12.5, expect.any(Function))
   })
 
   it('toggles instrument faders overlay and updates stem gain', async () => {

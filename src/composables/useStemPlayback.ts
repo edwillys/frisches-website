@@ -344,6 +344,7 @@ export function useStemPlayback(
   // True while a rAF-based master-volume fade is running (activate or deactivate).
   // Used by callers to avoid snapping el.volume while a crossfade owns it.
   const isMasterFading = ref(false)
+  let masterVolume = 1
   // Generation counter: incremented on every new operation so in-flight
   // activate/deactivate callbacks can detect they have been superseded.
   let _opGen = 0
@@ -393,10 +394,12 @@ export function useStemPlayback(
     return [...audiblePaths, ...silentPaths]
   }
 
-  function getLivePlaybackOffset(fallbackSeconds = 0): number {
-    const liveTime = masterAudioEl.value?.currentTime
-    if (typeof liveTime === 'number' && Number.isFinite(liveTime)) {
-      return liveTime
+  function getLivePlaybackOffset(fallbackSeconds = 0, preferMasterClock = true): number {
+    if (preferMasterClock) {
+      const liveTime = masterAudioEl.value?.currentTime
+      if (typeof liveTime === 'number' && Number.isFinite(liveTime)) {
+        return liveTime
+      }
     }
     return fallbackSeconds
   }
@@ -461,6 +464,7 @@ export function useStemPlayback(
   let limiterWorkletNode: AudioWorkletNode | null = null
   let limiterNode: AudioNode | null = null
   let preGainNode: GainNode | null = null
+  let outputVolumeGain: GainNode | null = null
   let outputAnalyser: AnalyserNode | null = null
   let outputAnalyserBuffer: TimeDomainBuffer | null = null
 
@@ -487,10 +491,14 @@ export function useStemPlayback(
     const nextOutputGain = ctx.createGain()
     nextOutputGain.gain.value = 0
 
+    const nextOutputVolumeGain = ctx.createGain()
+    nextOutputVolumeGain.gain.value = clamp01(masterVolume)
+
     const nextOutputAnalyser = ctx.createAnalyser()
     nextOutputAnalyser.fftSize = 2048
     nextOutputAnalyser.smoothingTimeConstant = 0
-    nextOutputGain.connect(nextOutputAnalyser)
+    nextOutputGain.connect(nextOutputVolumeGain)
+    nextOutputVolumeGain.connect(nextOutputAnalyser)
     nextOutputAnalyser.connect(ctx.destination)
 
     const nextPreGainNode = ctx.createGain()
@@ -522,6 +530,7 @@ export function useStemPlayback(
 
     nextPreGainNode.connect(limiterNode)
     outputGain = nextOutputGain
+    outputVolumeGain = nextOutputVolumeGain
     preGainNode = nextPreGainNode
     outputAnalyser = nextOutputAnalyser
     outputAnalyserBuffer = new Float32Array(nextOutputAnalyser.fftSize) as TimeDomainBuffer
@@ -607,7 +616,8 @@ export function useStemPlayback(
   function syncAudibleStemSources(
     ctx: AudioContext,
     stemName: AudioStemName,
-    fallbackOffsetSeconds = 0
+    fallbackOffsetSeconds = 0,
+    preferMasterClock = true
   ): void {
     const node = stemNodes.get(stemName)
     if (!node) return
@@ -617,7 +627,12 @@ export function useStemPlayback(
 
       const buffer = node.buffers[index]
       if (buffer) {
-        startStemPathSource(ctx, node, index, getLivePlaybackOffset(fallbackOffsetSeconds))
+        startStemPathSource(
+          ctx,
+          node,
+          index,
+          getLivePlaybackOffset(fallbackOffsetSeconds, preferMasterClock)
+        )
         return
       }
 
@@ -626,14 +641,23 @@ export function useStemPlayback(
         if (!isStemPathAudible(stemName, index)) return
         const currentNode = stemNodes.get(stemName)
         if (!currentNode) return
-        startStemPathSource(ctx, currentNode, index, getLivePlaybackOffset(fallbackOffsetSeconds))
+        startStemPathSource(
+          ctx,
+          currentNode,
+          index,
+          getLivePlaybackOffset(fallbackOffsetSeconds, preferMasterClock)
+        )
       })
     })
   }
 
-  function startAllSources(ctx: AudioContext, offsetSeconds: number): void {
+  function startAllSources(
+    ctx: AudioContext,
+    offsetSeconds: number,
+    preferMasterClock = true
+  ): void {
     for (const [stemName] of stemNodes) {
-      syncAudibleStemSources(ctx, stemName, offsetSeconds)
+      syncAudibleStemSources(ctx, stemName, offsetSeconds, preferMasterClock)
     }
   }
 
@@ -691,8 +715,13 @@ export function useStemPlayback(
   /**
    * Switch from master-track playback to stems playback.
    * @param currentTimeSeconds Current playback position to synchronise all stems to.
+   * @param getCurrentTimeSeconds Optional callback to read the freshest external
+   * playback timeline (e.g. playback bar/store) right before source start.
    */
-  async function activate(currentTimeSeconds: number): Promise<void> {
+  async function activate(
+    currentTimeSeconds: number,
+    getCurrentTimeSeconds?: () => number
+  ): Promise<void> {
     if (Object.keys(stemSources).length === 0) return
 
     // Increment generation — any superseded in-flight operation will bail when it
@@ -735,11 +764,10 @@ export function useStemPlayback(
     // current track as prebuffered so same-track toggles avoid loading UI.
     isStemsPrebuffered.value = true
 
-    const liveTime = masterAudioEl.value?.currentTime
-    const startAt =
-      typeof liveTime === 'number' && Number.isFinite(liveTime) ? liveTime : currentTimeSeconds
+    const latestRequestedTime = getCurrentTimeSeconds?.() ?? currentTimeSeconds
+    const startAt = Number.isFinite(latestRequestedTime) ? Math.max(0, latestRequestedTime) : 0
 
-    startAllSources(ctx, startAt)
+    startAllSources(ctx, startAt, getCurrentTimeSeconds === undefined)
 
     // Crossfade: stems in, master out
     const now = ctx.currentTime
@@ -901,6 +929,23 @@ export function useStemPlayback(
     return sampleAnalyserRms(outputAnalyser, outputAnalyserBuffer)
   }
 
+  function setMasterVolume(volume: number): void {
+    masterVolume = clamp01(volume)
+    if (outputVolumeGain) {
+      outputVolumeGain.gain.value = masterVolume
+    }
+  }
+
+  function getSampleRate(): number {
+    return audioCtx?.sampleRate ?? 0
+  }
+
+  function getOutputSamples(): number[] {
+    if (!isActive.value || !outputAnalyser || !outputAnalyserBuffer) return []
+    outputAnalyser.getFloatTimeDomainData(outputAnalyserBuffer)
+    return Array.from(outputAnalyserBuffer)
+  }
+
   function getDebugSnapshot() {
     const currentTrackPaths = (Object.values(stemSources) as string[][]).flat().filter(Boolean)
     const currentTrackPathSet = new Set(currentTrackPaths)
@@ -1051,6 +1096,12 @@ export function useStemPlayback(
     } catch {
       /* ignore */
     }
+    try {
+      outputVolumeGain?.disconnect()
+    } catch {
+      /* ignore */
+    }
+    outputVolumeGain = null
     outputAnalyser = null
     outputAnalyserBuffer = null
     try {
@@ -1098,6 +1149,9 @@ export function useStemPlayback(
     updateStemGain,
     updateGroupItemGain,
     getOutputLevel,
+    setMasterVolume,
+    getOutputSamples,
+    getSampleRate,
     getDebugSnapshot,
     printDebugSnapshot,
     setSources,

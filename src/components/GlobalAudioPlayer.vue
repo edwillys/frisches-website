@@ -666,13 +666,19 @@ async function runStemPlaybackSync(syncGen: number): Promise<void> {
       }
     }
 
-    await stemPlayback.activate(audioStore.currentTime)
+    await stemPlayback.activate(
+      audioStore.currentTime,
+      () => audioEl.value?.currentTime ?? audioStore.currentTime
+    )
     if (syncGen !== stemSyncGeneration) return
 
     // Toggle state may have changed while activate() was awaiting decode/build.
     if (!areStemsRequested()) {
       if (stemPlayback.isActive.value) {
-        await stemPlayback.deactivateWithOptions({ restoreMasterVolume: true })
+        await stemPlayback.deactivateWithOptions({
+          restoreMasterVolume: true,
+          restoreToVolume: audioStore.volume,
+        })
         if (syncGen !== stemSyncGeneration) return
       }
       el.volume = audioStore.volume
@@ -684,6 +690,10 @@ async function runStemPlaybackSync(syncGen: number): Promise<void> {
       el.volume = audioStore.volume
     } else {
       syncStemPlaybackMixFromStore()
+      const liveMasterTime = el.currentTime
+      if (Number.isFinite(liveMasterTime)) {
+        stemPlayback.seek(liveMasterTime)
+      }
     }
     // On success the crossfade inside activate() handles volume.
     return
@@ -691,7 +701,10 @@ async function runStemPlaybackSync(syncGen: number): Promise<void> {
 
   if (stemPlayback.isActive.value) {
     // Deactivate and let the internal crossfade restore master volume.
-    await stemPlayback.deactivateWithOptions({ restoreMasterVolume: true })
+    await stemPlayback.deactivateWithOptions({
+      restoreMasterVolume: true,
+      restoreToVolume: audioStore.volume,
+    })
     if (syncGen !== stemSyncGeneration) return
     // Enforce final master volume in case a transition got superseded and the
     // internal fade did not complete to the intended endpoint.
@@ -1272,6 +1285,7 @@ watch(
 watch(
   () => audioStore.volume,
   (vol) => {
+    stemPlayback.setMasterVolume(vol)
     const el = audioEl.value
     if (!el) return
     // Don't clobber master-mute when stems are active; the crossfade owns volume.
