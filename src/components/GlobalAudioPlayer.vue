@@ -58,6 +58,8 @@ type E2eAudioProbe = {
     stemLevel: number
     combinedLevel: number
     stemsActive: boolean
+    masterCurrentTime: number | null
+    stemCurrentTime: number | null
   }
 }
 
@@ -319,11 +321,17 @@ function installE2eAudioProbe() {
     readState: () => {
       const masterLevel = readMasterOutputLevel()
       const stemLevel = stemPlayback.getOutputLevel()
+      const el = audioEl.value
       return {
         masterLevel,
         stemLevel,
         combinedLevel: Math.max(masterLevel, stemLevel),
         stemsActive: stemPlayback.isActive.value,
+        masterCurrentTime:
+          typeof el?.currentTime === 'number' && Number.isFinite(el.currentTime)
+            ? el.currentTime
+            : null,
+        stemCurrentTime: stemPlayback.getPlaybackOffset(),
       }
     },
   }
@@ -648,12 +656,9 @@ async function runStemPlaybackSync(syncGen: number): Promise<void> {
   if (stemsRequested) {
     if (stemPlayback.isActive.value) {
       el.volume = 0
-      return
-    }
-
-    // While paused, keep stem mixing armed but do not start the stem graph.
-    if (!audioStore.isPlaying) {
-      el.volume = audioStore.volume
+      if (!audioStore.isPlaying) {
+        stemPlayback.suspend()
+      }
       return
     }
 
@@ -693,6 +698,9 @@ async function runStemPlaybackSync(syncGen: number): Promise<void> {
       const liveMasterTime = el.currentTime
       if (Number.isFinite(liveMasterTime)) {
         stemPlayback.seek(liveMasterTime)
+      }
+      if (!audioStore.isPlaying) {
+        stemPlayback.suspend()
       }
     }
     // On success the crossfade inside activate() handles volume.
@@ -1101,13 +1109,33 @@ async function runPlaybackStartAttempt(options: { warmUp?: boolean } = {}) {
     if (!shouldStartPlaybackNow()) return
 
     void masterMeterCtx?.resume()
-    // Resume the AudioContext before playing so stems stay in sync with master.
-    stemPlayback.resume()
-    await syncStemPlaybackState()
+    const shouldGatePlaybackForStemStart = areStemsRequested() && !stemPlayback.isActive.value
 
-    if (!shouldStartPlaybackNow()) return
+    if (shouldGatePlaybackForStemStart) {
+      // Stems-first startup: keep master paused until stems activation is done.
+      stemPlayback.resume()
+      await syncStemPlaybackState()
+      if (!shouldStartPlaybackNow()) return
 
-    await safePlay()
+      await safePlay()
+      if (!shouldStartPlaybackNow()) return
+    } else {
+      await safePlay()
+      if (!shouldStartPlaybackNow()) return
+
+      // Resume/sync stems after master starts so stems cannot run ahead while
+      // the media element is still paused.
+      stemPlayback.resume()
+      await syncStemPlaybackState()
+
+      if (!shouldStartPlaybackNow()) return
+    }
+
+    const liveMasterTime = audioEl.value?.currentTime
+    if (stemPlayback.isActive.value && Number.isFinite(liveMasterTime)) {
+      stemPlayback.seek(liveMasterTime)
+    }
+
     markPlaybackProgress()
 
     if (options.warmUp) {
@@ -1178,6 +1206,11 @@ function onProgress() {
 
 function onAudioPlaying() {
   markPlaybackProgress()
+  const liveMasterTime = audioEl.value?.currentTime
+  if (stemPlayback.isActive.value && Number.isFinite(liveMasterTime)) {
+    // Re-anchor stems to the media element timeline on play/resume edges.
+    stemPlayback.seek(liveMasterTime)
+  }
 }
 
 function onAudioCanPlay() {

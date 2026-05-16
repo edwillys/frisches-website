@@ -19,6 +19,12 @@ type OutputLevelStats = {
   stemsActive: boolean
 }
 
+type TransportProbeState = {
+  stemsActive: boolean
+  masterCurrentTime: number | null
+  stemCurrentTime: number | null
+}
+
 const allTojdStemFaders: StemName[] = ['drums', 'guitar', 'bass', 'vocals', 'percussion', 'strings']
 const coreAudibleStems: Array<Extract<StemName, 'vocals' | 'bass' | 'guitar' | 'drums'>> = [
   'vocals',
@@ -149,6 +155,50 @@ async function sampleOutputLevels(
     },
     { probeDurationMs: durationMs, probeSampleEveryMs: sampleEveryMs }
   )
+}
+
+async function readTransportProbeState(page: Page): Promise<TransportProbeState> {
+  return page.evaluate(() => {
+    const probe = (
+      window as Window & {
+        __FRISCHES_E2E_AUDIO__?: {
+          readState: () => {
+            stemsActive: boolean
+            masterCurrentTime: number | null
+            stemCurrentTime: number | null
+          }
+        }
+      }
+    ).__FRISCHES_E2E_AUDIO__
+
+    if (!probe) {
+      throw new Error('Missing __FRISCHES_E2E_AUDIO__ transport probe')
+    }
+
+    const state = probe.readState()
+    return {
+      stemsActive: state.stemsActive,
+      masterCurrentTime: state.masterCurrentTime,
+      stemCurrentTime: state.stemCurrentTime,
+    }
+  })
+}
+
+async function expectTransportAligned(
+  page: Page,
+  reason: string,
+  maxDriftSeconds = 0.12
+): Promise<void> {
+  const state = await readTransportProbeState(page)
+  expect(state.stemsActive, `${reason} (stems should be active)`).toBe(true)
+  expect(state.masterCurrentTime, `${reason} (missing master timeline)`).not.toBeNull()
+  expect(state.stemCurrentTime, `${reason} (missing stem timeline)`).not.toBeNull()
+
+  const driftSeconds = Math.abs(state.masterCurrentTime! - state.stemCurrentTime!)
+  expect(
+    driftSeconds,
+    `${reason} (master=${state.masterCurrentTime}, stem=${state.stemCurrentTime})`
+  ).toBeLessThanOrEqual(maxDriftSeconds)
 }
 
 async function expectAudibleOutput(page: Page, reason: string): Promise<void> {
@@ -299,6 +349,172 @@ test.describe('Stems playback switching', () => {
     expect(
       Math.abs(afterDisable.audioCurrentTime! - afterDisable.storeCurrentTime)
     ).toBeLessThanOrEqual(0.35)
+  })
+
+  test('TOJD stems activation keeps transport aligned', async ({ page }) => {
+    const stemsEnableToggle = await openStemsOverlayOnTojd(page)
+    await seekToKnownHotspot(page)
+
+    await stemsEnableToggle.click()
+
+    const player = page.locator('[data-testid="global-audio-player"]')
+    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 7000 })
+
+    await expectTransportAligned(page, 'activation should align stem/master transport')
+    await page.waitForTimeout(450)
+    await expectTransportAligned(page, 'alignment should hold after activation settles', 0.14)
+  })
+
+  test('seek plus stems toggles keep transport aligned', async ({ page }) => {
+    const stemsEnableToggle = await openStemsOverlayOnTojd(page)
+    await seekToKnownHotspot(page)
+
+    await stemsEnableToggle.click()
+    const player = page.locator('[data-testid="global-audio-player"]')
+    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 7000 })
+    await expectTransportAligned(page, 'initial stems enable should be aligned')
+
+    await seekToKnownHotspot(page, 46)
+    await page.waitForTimeout(200)
+    await expectTransportAligned(page, 'seek in stems mode should stay aligned', 0.14)
+
+    await stemsEnableToggle.click()
+    await expect(player).toHaveAttribute('data-stems-active', 'false', { timeout: 7000 })
+
+    await stemsEnableToggle.click()
+    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 7000 })
+    await expectTransportAligned(page, 're-enable after seek/toggle should be aligned', 0.14)
+
+    await stemsEnableToggle.click()
+    await expect(player).toHaveAttribute('data-stems-active', 'false', { timeout: 7000 })
+
+    await stemsEnableToggle.click()
+    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 7000 })
+    await expectTransportAligned(page, 'second re-enable should remain aligned', 0.14)
+  })
+
+  test('stress: repeated seek/pause/toggle cycles keep stems transport aligned', async ({
+    page,
+  }) => {
+    const stemsEnableToggle = await openStemsOverlayOnTojd(page)
+    const player = page.locator('[data-testid="global-audio-player"]')
+    const playPauseBtn = page.locator('[data-testid="mini-play-pause"]')
+
+    await stemsEnableToggle.click()
+    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 7000 })
+    await expectTransportAligned(page, 'initial activation should be aligned', 0.1)
+
+    const hotspots = [18, 32, 46, 58, 71]
+    for (let cycle = 0; cycle < 6; cycle += 1) {
+      const hotspot = hotspots[cycle % hotspots.length]!
+      await seekToKnownHotspot(page, hotspot)
+      await expectTransportAligned(page, `cycle ${cycle + 1}: alignment after seek`, 0.1)
+
+      await playPauseBtn.click()
+      await page.waitForFunction(
+        () => {
+          const audio = document.querySelector('audio') as HTMLAudioElement | null
+          return Boolean(audio && audio.paused)
+        },
+        null,
+        { timeout: 7000, polling: 100 }
+      )
+
+      await playPauseBtn.click()
+      await page.waitForFunction(
+        () => {
+          const audio = document.querySelector('audio') as HTMLAudioElement | null
+          return Boolean(audio && !audio.paused && audio.currentTime > 0.25)
+        },
+        null,
+        { timeout: 7000, polling: 100 }
+      )
+
+      await expectTransportAligned(page, `cycle ${cycle + 1}: alignment after pause/resume`, 0.1)
+
+      await stemsEnableToggle.click()
+      await expect(player).toHaveAttribute('data-stems-active', 'false', { timeout: 7000 })
+      await stemsEnableToggle.click()
+      await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 7000 })
+      await expectTransportAligned(page, `cycle ${cycle + 1}: alignment after toggle`, 0.1)
+    }
+  })
+
+  test('starting playback with stems mode enabled waits for stems activation before play', async ({
+    page,
+  }) => {
+    test.setTimeout(120000)
+
+    await page.goto('/')
+    await page.waitForLoadState('load')
+
+    await page.evaluate(() => {
+      localStorage.setItem(
+        'frisches:audio:stems:v1',
+        JSON.stringify({
+          m: true,
+          tracks: {
+            'tftc:02-tojd': {
+              sg: {},
+              sgg: {},
+            },
+          },
+        })
+      )
+    })
+
+    await page.reload()
+    await page.waitForLoadState('load')
+    await page.locator('[data-testid="card-dealer"]').waitFor({ state: 'attached', timeout: 10000 })
+    await waitForAnimations(page)
+
+    await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
+    await page.locator('[data-testid="card-music"]').click()
+    await waitForAnimations(page)
+    await page
+      .locator('[data-testid="album-carousel"]')
+      .waitFor({ state: 'visible', timeout: 15000 })
+
+    await page.evaluate(async () => {
+      const { useAudioStore } = await import('/src/stores/audio.ts')
+      useAudioStore().startFromMusic('tftc:02-tojd')
+    })
+
+    // While stems are not active yet, playback should not start on the master element.
+    const playedBeforeStems = await page
+      .waitForFunction(
+        () => {
+          const player = document.querySelector('[data-testid="global-audio-player"]')
+          const stemsActive = player?.getAttribute('data-stems-active') === 'true'
+          const audio = document.querySelector('audio') as HTMLAudioElement | null
+          if (!audio) return false
+          if (stemsActive) return false
+          return !audio.paused && audio.currentTime > 0.2
+        },
+        null,
+        { timeout: 4000, polling: 100 }
+      )
+      .then(
+        () => true,
+        () => false
+      )
+
+    expect(playedBeforeStems, 'master should not start before stems become active').toBe(false)
+
+    await expect(page.locator('[data-testid="global-audio-player"]')).toHaveAttribute(
+      'data-stems-active',
+      'true',
+      { timeout: 15000 }
+    )
+
+    await page.waitForFunction(
+      () => {
+        const audio = document.querySelector('audio') as HTMLAudioElement | null
+        return Boolean(audio && !audio.paused && audio.currentTime > 0.2)
+      },
+      null,
+      { timeout: 7000, polling: 100 }
+    )
   })
 
   test('enabling stems activates within 300ms once buffers are pre-decoded', async ({ page }) => {
@@ -514,6 +730,34 @@ test.describe('Stems playback switching', () => {
       return audio?.volume ?? 1
     })
     expect(volAfterResume).toBeLessThan(0.05)
+  })
+
+  test('stems can be enabled while paused and remain armed', async ({ page }) => {
+    const stemsEnableToggle = await openStemsOverlayOnTojd(page)
+    const player = page.locator('[data-testid="global-audio-player"]')
+
+    const playPauseBtn = page.locator('[data-testid="mini-play-pause"]')
+    await playPauseBtn.click()
+
+    await page.waitForFunction(
+      () => {
+        const audio = document.querySelector('audio') as HTMLAudioElement | null
+        return Boolean(audio && audio.paused)
+      },
+      null,
+      { timeout: 7000, polling: 100 }
+    )
+
+    await stemsEnableToggle.click()
+
+    await expect(stemsEnableToggle).toHaveAttribute('aria-pressed', 'true', { timeout: 15000 })
+    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 15000 })
+
+    const pausedState = await page.evaluate(() => {
+      const audio = document.querySelector('audio') as HTMLAudioElement | null
+      return audio?.paused ?? false
+    })
+    expect(pausedState).toBe(true)
   })
 
   test('toggling stems on and off 5 times keeps output audible in both states', async ({

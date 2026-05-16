@@ -47,6 +47,7 @@ const {
     setMasterVolume: vi.fn(),
     updateStemGain: vi.fn(),
     updateGroupItemGain: vi.fn(),
+    getPlaybackOffset: vi.fn(() => (stemPlaybackMock.isActive.value ? 0 : null)),
     getDebugSnapshot: vi.fn(() => ({
       active: false,
       prebuffered: false,
@@ -141,6 +142,7 @@ describe('GlobalAudioPlayer', () => {
     stemPlaybackMock.setMasterVolume.mockClear()
     stemPlaybackMock.updateStemGain.mockClear()
     stemPlaybackMock.updateGroupItemGain.mockClear()
+    stemPlaybackMock.getPlaybackOffset.mockClear()
     stemPlaybackMock.getDebugSnapshot.mockClear()
     stemPlaybackMock.printDebugSnapshot.mockClear()
     stemPlaybackMock.suspend.mockClear()
@@ -462,7 +464,7 @@ describe('GlobalAudioPlayer', () => {
     expect(audioEl.volume).toBe(1)
   })
 
-  it('arming stem mixing while paused does not resume playback', async () => {
+  it('arming stem mixing while paused keeps playback paused and stems armed', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
 
@@ -483,7 +485,8 @@ describe('GlobalAudioPlayer', () => {
     await flushPromises()
 
     expect(audio.isPlaying).toBe(false)
-    expect(stemPlaybackMock.activate).not.toHaveBeenCalled()
+    expect(stemPlaybackMock.activate).toHaveBeenCalled()
+    expect(stemPlaybackMock.suspend).toHaveBeenCalled()
   })
 
   it('pausing and seeking while stem mixing is armed follows the master player transport', async () => {
@@ -996,6 +999,9 @@ describe('GlobalAudioPlayer', () => {
     await flushPromises()
 
     expect(button.attributes('data-loading')).toBe('false')
+    expect(stemPlaybackMock.activate).toHaveBeenCalled()
+    expect(stemPlaybackMock.deactivateWithOptions).not.toHaveBeenCalled()
+    expect(stemPlaybackMock.isActive.value).toBe(true)
   })
 
   it('reapplies restored stem gains into the live graph right after activation', async () => {

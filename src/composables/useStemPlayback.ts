@@ -472,6 +472,8 @@ export function useStemPlayback(
 
   // Ongoing rAF handles for master volume fades — cancel if a new fade starts
   let _masterFadeRaf: number | null = null
+  let _timelineStartOffsetSeconds = 0
+  let _timelineStartCtxTimeSeconds = 0
 
   // ─── AudioContext management ────────────────────────────────────────────────
 
@@ -656,8 +658,11 @@ export function useStemPlayback(
     offsetSeconds: number,
     preferMasterClock = true
   ): void {
+    const sharedOffset = getLivePlaybackOffset(offsetSeconds, preferMasterClock)
+    _timelineStartOffsetSeconds = sharedOffset
+    _timelineStartCtxTimeSeconds = ctx.currentTime
     for (const [stemName] of stemNodes) {
-      syncAudibleStemSources(ctx, stemName, offsetSeconds, preferMasterClock)
+      syncAudibleStemSources(ctx, stemName, sharedOffset, false)
     }
   }
 
@@ -837,7 +842,7 @@ export function useStemPlayback(
     if (!isActive.value || !audioCtx) return
     limiterWorkletNode?.port.postMessage({ type: 'reset' })
     stopAllSources()
-    startAllSources(audioCtx, currentTimeSeconds)
+    startAllSources(audioCtx, currentTimeSeconds, false)
   }
 
   /** Suspend the AudioContext (freeze stems output) — call when master is paused. */
@@ -938,6 +943,12 @@ export function useStemPlayback(
 
   function getSampleRate(): number {
     return audioCtx?.sampleRate ?? 0
+  }
+
+  function getPlaybackOffset(): number | null {
+    if (!isActive.value || !audioCtx) return null
+    const elapsed = Math.max(0, audioCtx.currentTime - _timelineStartCtxTimeSeconds)
+    return _timelineStartOffsetSeconds + elapsed
   }
 
   function getOutputSamples(): number[] {
@@ -1118,6 +1129,8 @@ export function useStemPlayback(
       /* ignore */
     }
     preGainNode = null
+    _timelineStartOffsetSeconds = 0
+    _timelineStartCtxTimeSeconds = 0
   }
 
   function dispose(): void {
@@ -1152,6 +1165,7 @@ export function useStemPlayback(
     setMasterVolume,
     getOutputSamples,
     getSampleRate,
+    getPlaybackOffset,
     getDebugSnapshot,
     printDebugSnapshot,
     setSources,
