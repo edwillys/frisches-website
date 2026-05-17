@@ -1132,7 +1132,11 @@ async function runPlaybackStartAttempt(options: { warmUp?: boolean } = {}) {
     }
 
     const liveMasterTime = audioEl.value?.currentTime
-    if (stemPlayback.isActive.value && Number.isFinite(liveMasterTime)) {
+    if (
+      stemPlayback.isActive.value &&
+      typeof liveMasterTime === 'number' &&
+      Number.isFinite(liveMasterTime)
+    ) {
       stemPlayback.seek(liveMasterTime)
     }
 
@@ -1207,7 +1211,11 @@ function onProgress() {
 function onAudioPlaying() {
   markPlaybackProgress()
   const liveMasterTime = audioEl.value?.currentTime
-  if (stemPlayback.isActive.value && Number.isFinite(liveMasterTime)) {
+  if (
+    stemPlayback.isActive.value &&
+    typeof liveMasterTime === 'number' &&
+    Number.isFinite(liveMasterTime)
+  ) {
     // Re-anchor stems to the media element timeline on play/resume edges.
     stemPlayback.seek(liveMasterTime)
   }
