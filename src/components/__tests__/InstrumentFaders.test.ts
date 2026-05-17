@@ -41,7 +41,7 @@ describe('InstrumentFaders', () => {
 
   async function enableEditing(wrapper: ReturnType<typeof mount>) {
     await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
-    await wrapper.setProps({ stemsEnabled: true })
+    await wrapper.setProps({ stemsRequested: true, stemsEnabled: true })
     await nextTick()
   }
 
@@ -282,10 +282,137 @@ describe('InstrumentFaders', () => {
     expect(wrapper.emitted('enableStems')).toBeTruthy()
   })
 
+  it('shows the middle loading state while stems are still activating', async () => {
+    const wrapper = mount(InstrumentFaders, {
+      props: {
+        modelValue: true,
+        gains: defaultGains,
+        availability: defaultAvailability,
+        stemsModeAvailable: true,
+        stemsRequested: false,
+        stemsEnabled: false,
+        isStemsLoading: false,
+      },
+    })
+
+    const toggle = wrapper.find('[data-testid="stems-enable-toggle"]')
+    expect(toggle.classes()).not.toContain('is-enabled')
+    expect(toggle.classes()).not.toContain('is-loading')
+    expect(wrapper.find('.stems__activation-spinner').exists()).toBe(false)
+
+    await toggle.trigger('click')
+    expect(wrapper.emitted('enableStems')).toBeTruthy()
+
+    await wrapper.setProps({ stemsRequested: true, isStemsLoading: true })
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="mini-stems"]').classes()).toContain('is-active')
+    expect(toggle.classes()).not.toContain('is-enabled')
+    expect(toggle.classes()).toContain('is-loading')
+    expect(wrapper.find('.stems__activation-spinner').exists()).toBe(true)
+
+    await wrapper.setProps({ isStemsLoading: false, stemsRequested: true, stemsEnabled: true })
+    await nextTick()
+
+    expect(toggle.classes()).toContain('is-enabled')
+    expect(toggle.classes()).not.toContain('is-loading')
+    expect(wrapper.find('.stems__activation-spinner').exists()).toBe(false)
+  })
+
+  it('returns the switch to OFF immediately when loading is cancelled from the middle state', async () => {
+    const wrapper = mount(InstrumentFaders, {
+      props: {
+        modelValue: true,
+        gains: defaultGains,
+        availability: defaultAvailability,
+        stemsModeAvailable: true,
+        stemsRequested: true,
+        stemsEnabled: false,
+        isStemsLoading: true,
+      },
+    })
+
+    const toggle = wrapper.find('[data-testid="stems-enable-toggle"]')
+    expect(toggle.classes()).toContain('is-loading')
+    expect(toggle.classes()).not.toContain('is-enabled')
+    expect(wrapper.find('.stems__activation-spinner').exists()).toBe(true)
+
+    await toggle.trigger('click')
+    expect(wrapper.emitted('disableStems')).toBeTruthy()
+
+    await wrapper.setProps({ stemsRequested: false, stemsEnabled: false, isStemsLoading: true })
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="mini-stems"]').classes()).not.toContain('is-active')
+    expect(toggle.classes()).not.toContain('is-enabled')
+    expect(toggle.classes()).not.toContain('is-loading')
+    expect(wrapper.find('.stems__activation-spinner').exists()).toBe(true)
+  })
+
+  it('re-enters the middle state when turning stems back on while loading still continues', async () => {
+    const wrapper = mount(InstrumentFaders, {
+      props: {
+        modelValue: true,
+        gains: defaultGains,
+        availability: defaultAvailability,
+        stemsModeAvailable: true,
+        stemsRequested: false,
+        stemsEnabled: false,
+        isStemsLoading: true,
+      },
+    })
+
+    const toggle = wrapper.find('[data-testid="stems-enable-toggle"]')
+    expect(toggle.classes()).not.toContain('is-enabled')
+    expect(toggle.classes()).not.toContain('is-loading')
+    expect(wrapper.find('.stems__activation-spinner').exists()).toBe(true)
+
+    await toggle.trigger('click')
+
+    expect(wrapper.emitted('enableStems')).toBeTruthy()
+    expect(wrapper.emitted('disableStems')).toBeFalsy()
+
+    await wrapper.setProps({ stemsRequested: true, stemsEnabled: false, isStemsLoading: true })
+    await nextTick()
+
+    expect(toggle.classes()).not.toContain('is-enabled')
+    expect(toggle.classes()).toContain('is-loading')
+    expect(wrapper.find('.stems__activation-spinner').exists()).toBe(true)
+  })
+
+  it('goes straight to ON when turning stems back on after loading has already finished', async () => {
+    const wrapper = mount(InstrumentFaders, {
+      props: {
+        modelValue: true,
+        gains: defaultGains,
+        availability: defaultAvailability,
+        stemsModeAvailable: true,
+        stemsRequested: false,
+        stemsEnabled: false,
+        isStemsLoading: false,
+      },
+    })
+
+    const toggle = wrapper.find('[data-testid="stems-enable-toggle"]')
+    expect(toggle.classes()).not.toContain('is-enabled')
+    expect(toggle.classes()).not.toContain('is-loading')
+
+    await toggle.trigger('click')
+
+    expect(wrapper.emitted('enableStems')).toBeTruthy()
+
+    await wrapper.setProps({ stemsRequested: true, stemsEnabled: true, isStemsLoading: false })
+    await nextTick()
+
+    expect(toggle.classes()).toContain('is-enabled')
+    expect(toggle.classes()).not.toContain('is-loading')
+    expect(wrapper.find('.stems__activation-spinner').exists()).toBe(false)
+  })
+
   it('emits disableStems when toggling off', async () => {
     const wrapper = mountOpen()
     await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click') // enable
-    await wrapper.setProps({ stemsEnabled: true })
+    await wrapper.setProps({ stemsRequested: true, stemsEnabled: true })
     await nextTick()
     await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click') // disable
     const events = wrapper.emitted('disableStems')

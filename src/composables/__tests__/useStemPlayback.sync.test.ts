@@ -292,9 +292,9 @@ describe('useStemPlayback', () => {
 
   it('updateStemGain sets the stem GainNode value', async () => {
     const { playback } = await buildAndActivate()
-    // Graph order: outputGain(0), preGain(1), stemGain(2)
+    // Graph order: outputGain(0), outputVolumeGain(1), preGain(2), stemGain(3)
     playback.updateStemGain('guitar', 0.4)
-    const stemGainNode = mockCtx._gainNodes[2]
+    const stemGainNode = mockCtx._gainNodes[3]
     expect(stemGainNode?.gain.value).toBeCloseTo(0.4)
     playback.dispose()
   })
@@ -309,8 +309,8 @@ describe('useStemPlayback', () => {
     playback.setSources({ guitar: [fakeAudioPath] })
     await playback.activate(0)
 
-    // Graph order: outputGain(0), preGain(1), stemGain(2)
-    const stemGainNode = mockCtx._gainNodes[2]
+    // Graph order: outputGain(0), outputVolumeGain(1), preGain(2), stemGain(3)
+    const stemGainNode = mockCtx._gainNodes[3]
     expect(stemGainNode?.gain.value).toBe(0)
     playback.dispose()
   })
@@ -325,8 +325,8 @@ describe('useStemPlayback', () => {
     playback.setSources({ guitar: [fakeAudioPath] })
     await playback.activate(0)
 
-    // Graph order: outputGain(0), preGain(1), stemGain(2), itemGain[0](3)
-    const itemGainNode = mockCtx._gainNodes[3]
+    // Graph order: outputGain(0), outputVolumeGain(1), preGain(2), stemGain(3), itemGain[0](4)
+    const itemGainNode = mockCtx._gainNodes[4]
     expect(itemGainNode?.gain.value).toBe(0)
     playback.dispose()
   })
@@ -341,9 +341,9 @@ describe('useStemPlayback', () => {
     playback.setSources({ guitar: [fakeAudioPath, fakeAudioPath2] })
     await playback.activate(0)
 
-    // Graph order: outputGain(0), preGain(1), stemGain(2), itemGain[0](3), itemGain[1](4)
-    const itemGain0 = mockCtx._gainNodes[3]
-    const itemGain1 = mockCtx._gainNodes[4]
+    // Graph order: outputGain(0), outputVolumeGain(1), preGain(2), stemGain(3), itemGain[0](4), itemGain[1](5)
+    const itemGain0 = mockCtx._gainNodes[4]
+    const itemGain1 = mockCtx._gainNodes[5]
     expect(itemGain0?.gain.value).toBe(0)
     expect(itemGain1?.gain.value).toBe(1)
     playback.dispose()
@@ -358,12 +358,12 @@ describe('useStemPlayback', () => {
     playback.setSources({ guitar: [fakeAudioPath, fakeAudioPath2] })
     await playback.activate(0)
 
-    // Graph order: ..., stemGain(2), itemGain[0](3), itemGain[1](4)
+    // Graph order: ..., stemGain(3), itemGain[0](4), itemGain[1](5)
     playback.updateGroupItemGain('guitar', 0, 0)
-    expect(mockCtx._gainNodes[3]?.gain.value).toBe(0)
+    expect(mockCtx._gainNodes[4]?.gain.value).toBe(0)
 
     playback.updateGroupItemGain('guitar', 1, 0.6)
-    expect(mockCtx._gainNodes[4]?.gain.value).toBeCloseTo(0.6)
+    expect(mockCtx._gainNodes[5]?.gain.value).toBeCloseTo(0.6)
     playback.dispose()
   })
 
@@ -405,15 +405,15 @@ describe('useStemPlayback', () => {
     playback.setSources({ guitar: [fakeAudioPath] })
 
     // First activation: guitar = 1
-    // Graph order on first activation: outputGain(0), preGain(1), stemGain(2), itemGain[0](3)
+    // Graph order on first activation: outputGain(0), outputVolumeGain(1), preGain(2), stemGain(3), itemGain[0](4)
     await playback.activate(0)
-    expect(mockCtx._gainNodes[2]?.gain.value).toBe(1)
+    expect(mockCtx._gainNodes[3]?.gain.value).toBe(1)
     await playback.deactivate()
 
     // Second activation: guitar = 0 (muted — simulates user muting before re-enabling)
     // activate() calls _disposeGraph() internally which clears old references, then buildGraph()
     // and loadAllStems() append new gain nodes to the same AudioContext.
-    // Graph order on second activation: outputGain(4), preGain(5), stemGain(6), itemGain[0](7)
+    // Graph order on second activation: outputGain(5), outputVolumeGain(6), preGain(7), stemGain(8), itemGain[0](9)
     currentGuitarGain.value = 0
     await playback.activate(0)
     const gainNodesAfterReactivation = mockCtx._gainNodes

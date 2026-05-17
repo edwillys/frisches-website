@@ -506,6 +506,7 @@ describe('GlobalAudioPlayer', () => {
     await wrapper.find('[data-testid="mini-stems"]').trigger('click')
     await wrapper.vm.$nextTick()
     await wrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
     await wrapper.vm.$nextTick()
 
     expect(stemPlaybackMock.activate).toHaveBeenCalled()
@@ -578,6 +579,8 @@ describe('GlobalAudioPlayer', () => {
     const enableToggle = overlay.find('[data-testid="stems-enable-toggle"]')
     expect(enableToggle.exists()).toBe(true)
     await enableToggle.trigger('click')
+    await flushPromises()
+    await wrapper.vm.$nextTick()
 
     expect(stemsBtn.classes()).toContain('is-active')
 
@@ -600,6 +603,8 @@ describe('GlobalAudioPlayer', () => {
     expect(closeBtn.exists()).toBe(true)
 
     await enableToggle.trigger('click')
+    await flushPromises()
+    await wrapper.vm.$nextTick()
     expect(stemsBtn.classes()).not.toContain('is-active')
 
     await closeBtn.trigger('click')
@@ -642,6 +647,7 @@ describe('GlobalAudioPlayer', () => {
 
     const overlay = wrapper.find('[data-testid="stems-overlay"]')
     await overlay.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
     await wrapper.vm.$nextTick()
     await overlay.find('[data-testid="stem-guitar-expand"]').trigger('click')
     await wrapper.vm.$nextTick()
@@ -719,8 +725,11 @@ describe('GlobalAudioPlayer', () => {
 
     const firstOverlay = firstWrapper.find('[data-testid="stems-overlay"]')
     await firstOverlay.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
     await firstWrapper.vm.$nextTick()
     await firstOverlay.find('[data-testid="stem-guitar-mute"]').trigger('click')
+    await flushPromises()
+    await firstWrapper.vm.$nextTick()
 
     expect(audio.stemGains.guitar).toBe(0)
 
@@ -772,6 +781,7 @@ describe('GlobalAudioPlayer', () => {
 
     const firstOverlay = firstWrapper.find('[data-testid="stems-overlay"]')
     await firstOverlay.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
     await firstWrapper.vm.$nextTick()
     await firstOverlay.find('[data-testid="stem-guitar-expand"]').trigger('click')
     await firstWrapper.vm.$nextTick()
@@ -821,8 +831,11 @@ describe('GlobalAudioPlayer', () => {
     await firstWrapper.find('[data-testid="mini-stems"]').trigger('click')
     await firstWrapper.vm.$nextTick()
     await firstWrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
     await firstWrapper.vm.$nextTick()
     await firstWrapper.find('[data-testid="stem-guitar-mute"]').trigger('click')
+    await flushPromises()
+    await firstWrapper.vm.$nextTick()
 
     expect(audio.stemGains.guitar).toBe(0)
     firstWrapper.unmount()
@@ -1019,8 +1032,11 @@ describe('GlobalAudioPlayer', () => {
     await firstWrapper.find('[data-testid="mini-stems"]').trigger('click')
     await firstWrapper.vm.$nextTick()
     await firstWrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
     await firstWrapper.vm.$nextTick()
     await firstWrapper.find('[data-testid="stem-guitar-mute"]').trigger('click')
+    await flushPromises()
+    await firstWrapper.vm.$nextTick()
 
     expect(audio.stemGains.guitar).toBe(0)
     firstWrapper.unmount()
@@ -1064,10 +1080,13 @@ describe('GlobalAudioPlayer', () => {
     await firstWrapper.find('[data-testid="mini-stems"]').trigger('click')
     await firstWrapper.vm.$nextTick()
     await firstWrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
     await firstWrapper.vm.$nextTick()
     await firstWrapper.find('[data-testid="stem-guitar-expand"]').trigger('click')
     await firstWrapper.vm.$nextTick()
     await firstWrapper.find('[data-testid="stem-guitar-item-0-mute"]').trigger('click')
+    await flushPromises()
+    await firstWrapper.vm.$nextTick()
 
     expect(audio.stemGroupGains['guitar-0']).toBe(0)
     firstWrapper.unmount()
@@ -1151,6 +1170,7 @@ describe('GlobalAudioPlayer', () => {
     await firstWrapper.find('[data-testid="mini-stems"]').trigger('click')
     await firstWrapper.vm.$nextTick()
     await firstWrapper.find('[data-testid="stems-enable-toggle"]').trigger('click')
+    await flushPromises()
     await firstWrapper.vm.$nextTick()
     await firstWrapper.find('[data-testid="stem-guitar-mute"]').trigger('click')
 

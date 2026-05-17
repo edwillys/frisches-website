@@ -140,6 +140,7 @@ export type { StemAvailability }
 
 const props = defineProps<{
   modelValue: boolean
+  stemsRequested?: boolean
   stemsEnabled?: boolean
   isStemsLoading?: boolean
   gains: StemGains
@@ -213,12 +214,19 @@ const pendingIconActionTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const suppressedIconActionKeys = new Set<string>()
 
 watch(
-  [() => props.stemsEnabled, () => props.stemsModeAvailable],
-  ([enabled, available]) => {
-    isFaderEditingEnabled.value = Boolean(enabled) && (available ?? true)
+  [() => props.stemsRequested, () => props.stemsEnabled, () => props.stemsModeAvailable],
+  ([requested, enabled, available]) => {
+    const effectiveEnabled = requested ?? enabled
+    isFaderEditingEnabled.value = Boolean(effectiveEnabled) && (available ?? true)
   },
   { immediate: true }
 )
+
+const isStemModeRequested = computed(
+  () => Boolean(props.stemsRequested) && (props.stemsModeAvailable ?? true)
+)
+const isStemTogglePending = computed(() => isStemModeRequested.value && !!props.isStemsLoading)
+const isStemToggleEnabled = computed(() => isStemModeRequested.value && !props.isStemsLoading)
 
 function clamp01(v: number) {
   if (!Number.isFinite(v)) return 0
@@ -1023,14 +1031,14 @@ function toggleMute(stem: StemName) {
 }
 
 function toggleFaderEditing() {
-  // During first-time stem decode, a second tap should cancel the switch and keep normal mode.
-  if (!isFaderEditingEnabled.value && props.isStemsLoading) {
+  // While the switch is in the middle, a tap cancels the pending enable request.
+  if (isStemModeRequested.value && props.isStemsLoading) {
     emit('disableStems')
     return
   }
 
-  if (!isFaderEditingEnabled.value && !props.stemsModeAvailable) return
-  const nextEnabled = !isFaderEditingEnabled.value
+  if (!isStemModeRequested.value && !props.stemsModeAvailable) return
+  const nextEnabled = !isStemModeRequested.value
   if (nextEnabled) {
     emit('enableStems')
   } else {
@@ -1053,7 +1061,7 @@ function resetGains() {
   <div class="stems" :class="{ 'is-open': modelValue }" :style="groupDrawerCssVars">
     <button
       class="mini-player__btn mini-player__btn--stems"
-      :class="{ 'is-active': isFaderEditingEnabled }"
+      :class="{ 'is-active': isStemModeRequested }"
       type="button"
       :data-tooltip="t.faders.open"
       :aria-label="t.faders.open"
@@ -1076,19 +1084,19 @@ function resetGains() {
         <button
           class="stems__activation-toggle"
           :class="{
-            'is-enabled': isFaderEditingEnabled,
+            'is-enabled': isStemToggleEnabled,
             'is-unavailable': !stemsModeAvailable,
-            'is-loading': !isFaderEditingEnabled && !!isStemsLoading,
+            'is-loading': isStemTogglePending,
           }"
           type="button"
-          :aria-pressed="isFaderEditingEnabled"
+          :aria-pressed="isStemToggleEnabled"
           :aria-label="isStemsLoading ? 'Loading stems' : 'Enable stem mixing'"
           :disabled="!stemsModeAvailable && !isFaderEditingEnabled"
           data-testid="stems-enable-toggle"
           @click="toggleFaderEditing"
         >
           <span class="stems__activation-knob" aria-hidden="true" />
-          <span v-if="!isFaderEditingEnabled && isStemsLoading" class="stems__activation-spinner" />
+          <span v-if="isStemsLoading" class="stems__activation-spinner" />
         </button>
 
         <div class="stems__header-actions">

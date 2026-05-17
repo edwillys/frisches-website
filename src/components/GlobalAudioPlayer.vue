@@ -1828,7 +1828,8 @@ const audioDebugSnapshot = computed(() => {
         <div class="mini-player__actions">
           <InstrumentFaders
             v-model="showStemFaders"
-            :stems-enabled="stemPlayback.isActive.value"
+            :stems-requested="audioStore.stemMixEnabled"
+            :stems-enabled="audioStore.stemMixEnabled"
             :is-stems-loading="stemPlayback.isStemsLoading.value"
             :gains="audioStore.stemGains"
             :availability="currentStemAvailability"
