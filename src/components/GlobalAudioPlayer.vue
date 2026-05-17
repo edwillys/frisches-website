@@ -47,6 +47,8 @@ import volumeHighSvg from '@/assets/icons/volume-high.svg?raw'
 import { MINI_PLAYER_OPEN_LYRICS_EVENT } from '@/constants/events'
 
 type E2eAudioProbe = {
+  startFromMusic: (trackId: string) => void
+  seek: (seconds: number) => void
   readMasterLevel: () => number
   readStemLevel: () => number
   readCombinedLevel: () => number
@@ -60,6 +62,12 @@ type E2eAudioProbe = {
     stemsActive: boolean
     masterCurrentTime: number | null
     stemCurrentTime: number | null
+    audioPaused: boolean | null
+    audioCurrentTime: number | null
+    audioVolume: number | null
+    storeCurrentTime: number
+    storeIsPlaying: boolean
+    hasUserStartedPlayback: boolean
   }
 }
 
@@ -304,10 +312,23 @@ function readMasterOutputLevel() {
 }
 
 function installE2eAudioProbe() {
-  if (typeof window === 'undefined' || !import.meta.env.DEV) return
+  if (typeof window === 'undefined') return
+
+  // Keep this test-only surface off for normal production users while allowing
+  // CI preview-mode E2E runs (where import.meta.env.DEV is false).
+  const isAutomationSession = window.navigator.webdriver === true
+  const isLocalTestOrigin =
+    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  if (!import.meta.env.DEV && !isAutomationSession && !isLocalTestOrigin) return
 
   const runtimeWindow = window as RuntimeAudioWindow
   runtimeWindow.__FRISCHES_E2E_AUDIO__ = {
+    startFromMusic: (trackId: string) => {
+      audioStore.startFromMusic(trackId)
+    },
+    seek: (seconds: number) => {
+      audioStore.seek(seconds)
+    },
     readMasterLevel: () => readMasterOutputLevel(),
     readStemLevel: () => stemPlayback.getOutputLevel(),
     readCombinedLevel: () => Math.max(readMasterOutputLevel(), stemPlayback.getOutputLevel()),
@@ -332,6 +353,16 @@ function installE2eAudioProbe() {
             ? el.currentTime
             : null,
         stemCurrentTime: stemPlayback.getPlaybackOffset(),
+        audioPaused: typeof el?.paused === 'boolean' ? el.paused : null,
+        audioCurrentTime:
+          typeof el?.currentTime === 'number' && Number.isFinite(el.currentTime)
+            ? el.currentTime
+            : null,
+        audioVolume:
+          typeof el?.volume === 'number' && Number.isFinite(el.volume) ? el.volume : null,
+        storeCurrentTime: audioStore.currentTime,
+        storeIsPlaying: audioStore.isPlaying,
+        hasUserStartedPlayback: audioStore.hasUserStartedPlayback,
       }
     },
   }

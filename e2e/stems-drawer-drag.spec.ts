@@ -13,10 +13,20 @@ async function openStemsOverlayOnTojd(page: Page): Promise<Locator> {
 
   await page.locator('[data-testid="album-carousel"]').waitFor({ state: 'visible', timeout: 15000 })
 
-  await page.evaluate(async () => {
-    const { useAudioStore } = await import('/src/stores/audio.ts')
-    const store = useAudioStore()
-    store.startFromMusic('tftc:02-tojd')
+  await page.evaluate(() => {
+    const probe = (
+      window as Window & {
+        __FRISCHES_E2E_AUDIO__?: {
+          startFromMusic: (trackId: string) => void
+        }
+      }
+    ).__FRISCHES_E2E_AUDIO__
+
+    if (!probe || typeof probe.startFromMusic !== 'function') {
+      throw new Error('Missing __FRISCHES_E2E_AUDIO__ startFromMusic probe')
+    }
+
+    probe.startFromMusic('tftc:02-tojd')
   })
 
   const stemsToggle = page.locator('[data-testid="mini-stems"]')
