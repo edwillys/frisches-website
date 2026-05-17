@@ -92,6 +92,15 @@ export interface UiText {
     groupLabel: string
     muteToggle: (instrument: string) => string
     instrumentVolume: (instrument: string) => string
+    contextMenuMute: string
+    contextMenuSolo: string
+    contextMenuUnsolo: string
+    contextMenuSoloInGroup: string
+    contextMenuUnsoloInGroup: string
+    muteAll: string
+    unmuteAll: string
+    soloAll: string
+    unsoloAll: string
     unavailableSuffix: string
   }
   logo: {
@@ -255,6 +264,15 @@ const buildUiText = (locale: AppLocale): UiText => {
         buildInstrumentLabel(locale, instrument, messages.faders.muteToggleSuffix, 'mute'),
       instrumentVolume: (instrument) =>
         buildInstrumentLabel(locale, instrument, messages.faders.instrumentVolumePrefix, 'volume'),
+      contextMenuMute: messages.faders.contextMenuMute,
+      contextMenuSolo: messages.faders.contextMenuSolo,
+      contextMenuUnsolo: messages.faders.contextMenuUnsolo,
+      contextMenuSoloInGroup: messages.faders.contextMenuSoloInGroup,
+      contextMenuUnsoloInGroup: messages.faders.contextMenuUnsoloInGroup,
+      muteAll: messages.faders.muteAll,
+      unmuteAll: messages.faders.unmuteAll,
+      soloAll: messages.faders.soloAll,
+      unsoloAll: messages.faders.unsoloAll,
       unavailableSuffix: ` ${messages.faders.unavailableSuffix}`,
     },
     logo: {

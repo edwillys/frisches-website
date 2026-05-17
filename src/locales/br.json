@@ -120,6 +120,15 @@
     "groupLabel": "Faders de instrumentos",
     "muteToggleSuffix": "Silenciar",
     "instrumentVolumePrefix": "Volume de",
+    "contextMenuMute": "Silenciar",
+    "contextMenuSolo": "Solo",
+    "contextMenuUnsolo": "Remover solo",
+    "contextMenuSoloInGroup": "Solo no grupo",
+    "contextMenuUnsoloInGroup": "Remover solo no grupo",
+    "muteAll": "Silenciar tudo",
+    "unmuteAll": "Reativar tudo",
+    "soloAll": "Solo em tudo",
+    "unsoloAll": "Remover todos os solos",
     "unavailableSuffix": "(indisponível)"
   },
   "logo": {

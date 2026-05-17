@@ -1,4 +1,4 @@
-import stemMetadata from '@/assets/private/audio/metadata.json'
+import stemMetadata from '@/assets/metadata/stems/metadata.json'
 import type { AudioStemName } from '@/stores/audio'
 
 export type StemAvailability = Record<AudioStemName, boolean>
@@ -9,9 +9,22 @@ type StemManifestForceValue = StemForceMode | string
 export interface StemManifestEntry {
   path?: string
   force?: StemManifestForceValue
+  label?: string
+  shortLabel?: string
+  role?: string
+  type?: string
 }
 
-type StemManifestValue = string | StemManifestEntry
+export interface StemGroupItem {
+  label?: string
+  shortLabel?: string
+  role?: string
+  type?: string
+  path?: string
+  isAvailable: boolean
+}
+
+type StemManifestValue = string | StemManifestEntry | StemManifestEntry[]
 export type StemTrackEntry = Partial<Record<AudioStemName, StemManifestValue>>
 
 export interface StemAlbumManifest {
@@ -32,13 +45,14 @@ export const STEM_NAMES = [
   'brass',
   'percussion',
   'keyboard',
+  'strings',
 ] as const satisfies readonly AudioStemName[]
 
 const ASSETS_AUDIO_ROOT = '/src/assets/private/audio/'
-const stemAssetModules = import.meta.glob(
+export const stemAssetLoaders = import.meta.glob(
   '/src/assets/private/audio/**/*.{mp3,wav,ogg,flac,m4a,aac}'
 )
-const stemAssetPaths = new Set(Object.keys(stemAssetModules))
+const stemAssetPaths = new Set(Object.keys(stemAssetLoaders))
 const manifest = stemMetadata as StemManifest
 
 export function createStemAvailability(value: boolean): StemAvailability {
@@ -51,6 +65,7 @@ export function createStemAvailability(value: boolean): StemAvailability {
     brass: value,
     percussion: value,
     keyboard: value,
+    strings: value,
   }
 }
 
@@ -76,7 +91,7 @@ function hasValidStemFile(stemRoot: string | undefined, relativePath: string | u
 }
 
 function normalizeManifestEntry(entry: StemManifestValue | undefined): StemManifestEntry {
-  if (!entry) return {}
+  if (!entry || Array.isArray(entry)) return {}
   return typeof entry === 'string' ? { path: entry } : entry
 }
 
@@ -96,7 +111,10 @@ function normalizeStemForceMode(
 export function resolveStemEntryAvailability(
   entry: StemManifestValue | undefined,
   stemRoot?: string
-) {
+): boolean {
+  if (Array.isArray(entry)) {
+    return entry.some((e) => resolveStemEntryAvailability(e, stemRoot))
+  }
   const normalizedEntry = normalizeManifestEntry(entry)
   const force = normalizeStemForceMode(normalizedEntry.force)
 
@@ -138,4 +156,76 @@ export function resolveStemAvailability(trackId: string | null | undefined): Ste
   const trackEntry = albumEntry?.songs?.[trackAddress.songId]
 
   return resolveStemAvailabilityForTrackEntry(trackEntry, albumEntry?.stemRoot)
+}
+
+export function resolveStemGroupItems(
+  trackId: string | null | undefined
+): Partial<Record<AudioStemName, StemGroupItem[]>> {
+  if (!trackId) return {}
+
+  const trackAddress = splitTrackId(trackId)
+  if (!trackAddress) return {}
+
+  const albumEntry = manifest.stems?.[trackAddress.albumId]
+  const trackEntry = albumEntry?.songs?.[trackAddress.songId]
+  if (!trackEntry) return {}
+
+  const result: Partial<Record<AudioStemName, StemGroupItem[]>> = {}
+
+  for (const stemName of STEM_NAMES) {
+    const value = trackEntry[stemName]
+    if (!Array.isArray(value)) continue
+
+    result[stemName] = value.map((entry) => ({
+      label: entry.label,
+      shortLabel: entry.shortLabel,
+      role: entry.role,
+      type: entry.type,
+      path: buildStemAssetPath(albumEntry?.stemRoot, entry.path) || undefined,
+      isAvailable: resolveStemEntryAvailability(entry, albumEntry?.stemRoot),
+    }))
+  }
+
+  return result
+}
+
+export function resolveStemAudioSources(
+  trackId: string | null | undefined
+): Partial<Record<AudioStemName, string[]>> {
+  if (!trackId) return {}
+
+  const trackAddress = splitTrackId(trackId)
+  if (!trackAddress) return {}
+
+  const albumEntry = manifest.stems?.[trackAddress.albumId]
+  const trackEntry = albumEntry?.songs?.[trackAddress.songId]
+  if (!trackEntry) return {}
+
+  const result: Partial<Record<AudioStemName, string[]>> = {}
+
+  for (const stemName of STEM_NAMES) {
+    const value = trackEntry[stemName]
+    if (!value) continue
+
+    const entries: StemManifestEntry[] = Array.isArray(value)
+      ? value
+      : [normalizeManifestEntry(value)]
+
+    const paths: string[] = []
+
+    for (const entry of entries) {
+      const assetPath = buildStemAssetPath(albumEntry?.stemRoot, entry.path)
+      if (!assetPath) continue
+      const fullPath = `${ASSETS_AUDIO_ROOT}${assetPath}`
+      if (stemAssetPaths.has(fullPath)) {
+        paths.push(fullPath)
+      }
+    }
+
+    if (paths.length > 0) {
+      result[stemName] = paths
+    }
+  }
+
+  return result
 }

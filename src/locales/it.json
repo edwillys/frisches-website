@@ -120,6 +120,15 @@
     "groupLabel": "Mixer strumenti",
     "muteToggleSuffix": "Silenzia",
     "instrumentVolumePrefix": "Volume",
+    "contextMenuMute": "Silenzia",
+    "contextMenuSolo": "Solo",
+    "contextMenuUnsolo": "Togli solo",
+    "contextMenuSoloInGroup": "Solo nel gruppo",
+    "contextMenuUnsoloInGroup": "Togli solo nel gruppo",
+    "muteAll": "Silenzia tutti",
+    "unmuteAll": "Riattiva tutti",
+    "soloAll": "Solo tutti",
+    "unsoloAll": "Togli tutti i solo",
     "unavailableSuffix": "(non disponibile)"
   },
   "logo": {

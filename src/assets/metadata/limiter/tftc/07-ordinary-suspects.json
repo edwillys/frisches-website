@@ -1,0 +1,33 @@
+{
+  "alignment": {
+    "master_sample_rate_hz": 48000,
+    "offset_samples_applied": 0,
+    "offset_ms_applied": 0,
+    "status": "aligned_and_length_matched"
+  },
+  "limiter_settings": {
+    "python_pedalboard": {
+      "input_drive_db": -2.86,
+      "ceiling_db": -0.1,
+      "release_ms": 100
+    }
+  },
+  "metrics": {
+    "master": {
+      "lufs_i": -11,
+      "lra": 5.9,
+      "lufs_m_max": -7.5,
+      "lufs_s_max": -8.6
+    },
+    "mix": {
+      "lufs_i": -11,
+      "lra": 5.3,
+      "lufs_m_max": -8.1,
+      "lufs_s_max": -8.8
+    },
+    "deltas": {
+      "lufs_i": 0,
+      "lra": -0.6
+    }
+  }
+}

@@ -17,6 +17,9 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "generate:gallery": "node scripts/generate-gallery.js",
+    "limiter:metadata": "node scripts/limiter-metadata.js",
+    "limiter:metadata:all": "node scripts/run-limiter-metadata-all.js",
+    "limiter:metadata:all:verify": "node scripts/run-limiter-metadata-all.js --verify",
     "normalize:svg": "node scripts/normalize-svg.js src/assets",
     "sync:r2:up": "node scripts/sync-r2.mjs up",
     "sync:r2:down": "node scripts/sync-r2.mjs down",
@@ -37,6 +40,7 @@
     "primeicons": "^7.0.0",
     "primevue": "^4.5.5",
     "sharp": "^0.34.5",
+    "tmp": "^0.2.5",
     "vue": "^3.5.33",
     "vue-i18n": "^11.1.12",
     "vue-router": "^5.0.6"

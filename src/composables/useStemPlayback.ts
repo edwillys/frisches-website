@@ -1,0 +1,1175 @@
+/**
+ * useStemPlayback.ts
+ *
+ * Web Audio API composable that plays the sum of individual stem tracks through
+ * a JUCE-style limiter, and gracefully crossfades with the master <audio> element.
+ *
+ * Audio graph per active stem:
+ *   AudioBufferSourceNode(s) → itemGainNode(s) → stemGainNode → preGainNode
+ *                                                                      ↓
+ *                                                 JUCE limiter / fallback
+ *                                                                      ↓
+ *                                                              outputGainNode
+ *                                                                      ↓
+ *                                                          AudioContext.destination
+ *
+ * Crossfade strategy:
+ *  - Master volume: ramps via requestAnimationFrame (HTMLMediaElement.volume is not
+ *    an AudioParam — cannot use linearRampToValueAtTime).
+ *  - Stems output: ramps via linearRampToValueAtTime on outputGainNode.
+ */
+
+import { ref, type Ref, type ComputedRef } from 'vue'
+import type { AudioStemName } from '@/stores/audio'
+import { stemAssetLoaders } from '@/data/stems'
+import { type LimiterParams, DEFAULT_LIMITER_PARAMS } from '@/data/stemLimiter'
+
+const JUCE_LIMITER_PROCESSOR = 'juce-limiter-processor'
+const PRELOAD_FETCH_CONCURRENCY = 6
+const PRELOAD_DECODE_CONCURRENCY = 4
+const SILENT_STEM_GAIN_THRESHOLD = 0.001
+const juceLimiterModuleByContext = new WeakMap<AudioContext, Promise<boolean>>()
+let juceLimiterModuleUrl: string | null = null
+
+const JUCE_LIMITER_WORKLET_SOURCE = `
+function dbToGain(value, minDb = -200) {
+  return value <= minDb ? 0 : Math.pow(10, value / 20)
+}
+
+class BallisticsFilter {
+  constructor(sampleRate) {
+    this.expFactor = (-2 * Math.PI * 1000) / sampleRate
+    this.yold = [0, 0]
+    this.setAttackTime(1)
+    this.setReleaseTime(100)
+  }
+
+  setAttackTime(timeMs) {
+    this.cteAT = timeMs < 1e-3 ? 0 : Math.exp(this.expFactor / timeMs)
+  }
+
+  setReleaseTime(timeMs) {
+    this.cteRL = timeMs < 1e-3 ? 0 : Math.exp(this.expFactor / timeMs)
+  }
+
+  reset() {
+    this.yold[0] = 0
+    this.yold[1] = 0
+  }
+
+  processSample(channel, inputValue) {
+    const rectified = Math.abs(inputValue)
+    const cte = rectified > this.yold[channel] ? this.cteAT : this.cteRL
+    const result = rectified + cte * (this.yold[channel] - rectified)
+    this.yold[channel] = result
+    return result
+  }
+}
+
+class Compressor {
+  constructor(sampleRate, thresholdDb, ratio, attackMs, releaseMs) {
+    this.envelopeFilter = new BallisticsFilter(sampleRate)
+    this.setThreshold(thresholdDb)
+    this.setRatio(ratio)
+    this.setAttack(attackMs)
+    this.setRelease(releaseMs)
+  }
+
+  setThreshold(thresholdDb) {
+    this.threshold = dbToGain(thresholdDb)
+    this.thresholdInverse = this.threshold > 0 ? 1 / this.threshold : Number.POSITIVE_INFINITY
+  }
+
+  setRatio(ratio) {
+    this.ratioInverse = 1 / ratio
+  }
+
+  setAttack(attackMs) {
+    this.envelopeFilter.setAttackTime(attackMs)
+  }
+
+  setRelease(releaseMs) {
+    this.envelopeFilter.setReleaseTime(releaseMs)
+  }
+
+  reset() {
+    this.envelopeFilter.reset()
+  }
+
+  processSample(channel, inputValue) {
+    const env = this.envelopeFilter.processSample(channel, inputValue)
+    const gain = env < this.threshold ? 1 : Math.pow(env * this.thresholdInverse, this.ratioInverse - 1)
+    return gain * inputValue
+  }
+}
+
+class JuceLimiterCore {
+  constructor(sampleRate) {
+    this.firstStage = new Compressor(sampleRate, -10, 4, 2, 200)
+    this.secondStage = new Compressor(sampleRate, -0.1, 1000, 0.001, 100)
+    this.outputGain = 1
+    this.update({ threshold: -0.1, releaseMs: 100 })
+  }
+
+  update({ threshold, releaseMs }) {
+    this.secondStage.setThreshold(threshold)
+    this.secondStage.setRatio(1000)
+    this.secondStage.setAttack(0.001)
+    this.secondStage.setRelease(releaseMs)
+    this.outputGain = Math.pow(10, (10 * (1 - 0.25)) / 40) * dbToGain(-threshold, -100)
+  }
+
+  reset() {
+    this.firstStage.reset()
+    this.secondStage.reset()
+  }
+
+  processSample(channel, inputValue) {
+    const firstStage = this.firstStage.processSample(channel, inputValue)
+    const secondStage = this.secondStage.processSample(channel, firstStage) * this.outputGain
+    return Math.max(-1, Math.min(1, secondStage))
+  }
+}
+
+class JuceLimiterProcessor extends AudioWorkletProcessor {
+  constructor() {
+    super()
+    this.limiter = new JuceLimiterCore(sampleRate)
+    this.port.onmessage = (event) => {
+      if (event.data?.type === 'params') {
+        this.limiter.update({
+          threshold: event.data.threshold ?? -0.1,
+          releaseMs: event.data.releaseMs ?? 100,
+        })
+      } else if (event.data?.type === 'reset') {
+        this.limiter.reset()
+      }
+    }
+  }
+
+  process(inputs, outputs) {
+    const input = inputs[0]
+    const output = outputs[0]
+    if (!output || output.length === 0) return true
+
+    for (let channel = 0; channel < output.length; channel += 1) {
+      const inputChannel = input[channel] ?? input[0]
+      const outputChannel = output[channel]
+      for (let index = 0; index < outputChannel.length; index += 1) {
+        const sample = inputChannel?.[index] ?? 0
+        outputChannel[index] = this.limiter.processSample(channel, sample)
+      }
+    }
+
+    return true
+  }
+}
+
+registerProcessor('${JUCE_LIMITER_PROCESSOR}', JuceLimiterProcessor)
+`
+
+function getJuceLimiterModuleUrl() {
+  if (!juceLimiterModuleUrl) {
+    juceLimiterModuleUrl = URL.createObjectURL(
+      new Blob([JUCE_LIMITER_WORKLET_SOURCE], { type: 'text/javascript' })
+    )
+  }
+  return juceLimiterModuleUrl
+}
+
+async function ensureJuceLimiterWorklet(ctx: AudioContext): Promise<boolean> {
+  if (!('audioWorklet' in ctx) || !ctx.audioWorklet?.addModule) return false
+
+  let readyPromise = juceLimiterModuleByContext.get(ctx)
+  if (!readyPromise) {
+    readyPromise = ctx.audioWorklet.addModule(getJuceLimiterModuleUrl()).then(
+      () => true,
+      (error) => {
+        console.warn('[useStemPlayback] Falling back to DynamicsCompressorNode limiter.', error)
+        return false
+      }
+    )
+    juceLimiterModuleByContext.set(ctx, readyPromise)
+  }
+
+  return readyPromise
+}
+
+async function runWithConcurrency<T>(
+  items: readonly T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<void>
+): Promise<void> {
+  if (items.length === 0) return
+
+  let nextIndex = 0
+  const runWorker = async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex
+      nextIndex += 1
+      await worker(items[index]!, index)
+    }
+  }
+
+  const workerCount = Math.min(concurrency, items.length)
+  await Promise.all(Array.from({ length: workerCount }, () => runWorker()))
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+// Re-export so callers that only import from this module still work.
+export type { LimiterParams } from '@/data/stemLimiter'
+export { DEFAULT_LIMITER_PARAMS } from '@/data/stemLimiter'
+
+interface StemNode {
+  paths: string[]
+  buffers: Array<AudioBuffer | null>
+  sources: Array<AudioBufferSourceNode | null>
+  gainNode: GainNode
+  itemGains: GainNode[]
+}
+
+type StemAssetDebugStat = {
+  assetPath: string
+  resolvedUrl: string | null
+  transferredBytes: number
+  decodedBytes: number
+  durationSeconds: number | null
+  channels: number | null
+  sampleRate: number | null
+  fetchCount: number
+}
+
+type TimeDomainBuffer = Parameters<AnalyserNode['getFloatTimeDomainData']>[0]
+
+function sampleAnalyserRms(analyser: AnalyserNode | null, buffer: TimeDomainBuffer | null): number {
+  if (!analyser || !buffer) return 0
+  analyser.getFloatTimeDomainData(buffer)
+
+  let sumSquares = 0
+  for (const sample of buffer) {
+    sumSquares += sample * sample
+  }
+
+  return Math.sqrt(sumSquares / buffer.length)
+}
+
+function clamp01(value: number): number {
+  if (!Number.isFinite(value)) return 0
+  return Math.min(1, Math.max(0, value))
+}
+
+// ─── Module-level ArrayBuffer cache (shared across all composable instances) ──
+//
+// Splitting the expensive network fetch from the cheap CPU decode means stems
+// are pre-fetched in the background as soon as a track loads.  When the user
+// actually enables the stem overlay the only remaining work is decodeAudioData,
+// which typically takes < 100 ms per file.
+
+const _arrayBufferCache = new Map<string, Promise<ArrayBuffer | null>>()
+const _stemAssetDebugStats = new Map<string, StemAssetDebugStat>()
+
+function updateStemAssetDebugStat(
+  assetPath: string,
+  partial: Partial<StemAssetDebugStat>
+): StemAssetDebugStat {
+  const previous = _stemAssetDebugStats.get(assetPath)
+  const next: StemAssetDebugStat = {
+    assetPath,
+    resolvedUrl: previous?.resolvedUrl ?? null,
+    transferredBytes: previous?.transferredBytes ?? 0,
+    decodedBytes: previous?.decodedBytes ?? 0,
+    durationSeconds: previous?.durationSeconds ?? null,
+    channels: previous?.channels ?? null,
+    sampleRate: previous?.sampleRate ?? null,
+    fetchCount: previous?.fetchCount ?? 0,
+    ...partial,
+  }
+  _stemAssetDebugStats.set(assetPath, next)
+  return next
+}
+
+function estimateDecodedBufferBytes(buffer: AudioBuffer): number {
+  return buffer.numberOfChannels * buffer.length * 4
+}
+
+function _fetchArrayBuffer(assetPath: string): Promise<ArrayBuffer | null> {
+  if (_arrayBufferCache.has(assetPath)) return _arrayBufferCache.get(assetPath)!
+
+  const promise = (async (): Promise<ArrayBuffer | null> => {
+    const loader = stemAssetLoaders[assetPath]
+    if (!loader) {
+      console.warn(`[useStemPlayback] No asset loader for: ${assetPath}`)
+      return null
+    }
+    try {
+      const mod = await loader()
+      const url = (mod as { default: string }).default
+      const response = await fetch(url)
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const arrayBuffer = await response.arrayBuffer()
+      updateStemAssetDebugStat(assetPath, {
+        resolvedUrl: url,
+        transferredBytes:
+          (_stemAssetDebugStats.get(assetPath)?.transferredBytes ?? 0) + arrayBuffer.byteLength,
+        fetchCount: (_stemAssetDebugStats.get(assetPath)?.fetchCount ?? 0) + 1,
+      })
+      return arrayBuffer
+    } catch (err) {
+      console.warn(`[useStemPlayback] Failed to fetch: ${assetPath}`, err)
+      _arrayBufferCache.delete(assetPath) // allow retry on next attempt
+      return null
+    }
+  })()
+
+  _arrayBufferCache.set(assetPath, promise)
+  return promise
+}
+
+// ─── Composable ───────────────────────────────────────────────────────────────
+
+export function useStemPlayback(
+  masterAudioEl: Ref<HTMLAudioElement | null>,
+  stemGains: ComputedRef<Partial<Record<AudioStemName, number>>>,
+  groupGains: ComputedRef<Record<string, number>>,
+  limiterParams: LimiterParams = DEFAULT_LIMITER_PARAMS
+) {
+  let currentLimiterParams: LimiterParams = { ...limiterParams }
+  let audioCtx: AudioContext | null = null
+  const isActive = ref(false)
+  // True once stems are fully fetched+decoded and ready for instant activation.
+  const isStemsPrebuffered = ref(false)
+  // True while stems are being loaded (fetching/decoding).
+  const isStemsLoading = ref(false)
+  // True while a rAF-based master-volume fade is running (activate or deactivate).
+  // Used by callers to avoid snapping el.volume while a crossfade owns it.
+  const isMasterFading = ref(false)
+  let masterVolume = 1
+  // Generation counter: incremented on every new operation so in-flight
+  // activate/deactivate callbacks can detect they have been superseded.
+  let _opGen = 0
+  let _preloadGen = 0
+
+  // Per-instance decoded AudioBuffer cache.  AudioBuffers are tied to an
+  // AudioContext, so we invalidate whenever the context changes.
+  let _decodedCache = new Map<string, Promise<AudioBuffer | null>>()
+  let _decodedCacheCtx: AudioContext | null = null
+
+  function _getCachedDecodedBuffer(
+    ctx: AudioContext,
+    assetPath: string
+  ): Promise<AudioBuffer | null> {
+    if (ctx !== _decodedCacheCtx) {
+      _decodedCache = new Map()
+      _decodedCacheCtx = ctx
+    }
+    if (!_decodedCache.has(assetPath)) {
+      _decodedCache.set(assetPath, loadBuffer(ctx, assetPath))
+    }
+    return _decodedCache.get(assetPath)!
+  }
+
+  function isStemPathAudible(stemName: AudioStemName, index: number): boolean {
+    const stemGain = clamp01(stemGains.value[stemName] ?? 1)
+    if (stemGain <= SILENT_STEM_GAIN_THRESHOLD) return false
+    const itemGain = clamp01(groupGains.value[`${stemName}-${index}`] ?? 1)
+    return stemGain * itemGain > SILENT_STEM_GAIN_THRESHOLD
+  }
+
+  function getPreloadPathOrder(sources: Partial<Record<AudioStemName, string[]>>): string[] {
+    const audiblePaths: string[] = []
+    const silentPaths: string[] = []
+
+    for (const [stemName, paths] of Object.entries(sources) as [AudioStemName, string[]][]) {
+      paths?.forEach((path, index) => {
+        if (!path) return
+        if (isStemPathAudible(stemName, index)) {
+          audiblePaths.push(path)
+          return
+        }
+        silentPaths.push(path)
+      })
+    }
+
+    return [...audiblePaths, ...silentPaths]
+  }
+
+  function getLivePlaybackOffset(fallbackSeconds = 0, preferMasterClock = true): number {
+    if (preferMasterClock) {
+      const liveTime = masterAudioEl.value?.currentTime
+      if (typeof liveTime === 'number' && Number.isFinite(liveTime)) {
+        return liveTime
+      }
+    }
+    return fallbackSeconds
+  }
+
+  function ensureStemNode(
+    ctx: AudioContext,
+    stemName: AudioStemName,
+    paths: string[],
+    stemDestination: AudioNode
+  ): StemNode {
+    const existing = stemNodes.get(stemName)
+    if (existing) return existing
+
+    const stemGain = ctx.createGain()
+    stemGain.gain.value = clamp01(stemGains.value[stemName] ?? 1)
+    stemGain.connect(stemDestination)
+
+    const itemGains: GainNode[] = paths.map((_, idx) => {
+      const itemGain = ctx.createGain()
+      itemGain.gain.value = clamp01(groupGains.value[`${stemName}-${idx}`] ?? 1)
+      itemGain.connect(stemGain)
+      return itemGain
+    })
+
+    const node: StemNode = {
+      paths: [...paths],
+      buffers: paths.map(() => null),
+      sources: paths.map(() => null),
+      gainNode: stemGain,
+      itemGains,
+    }
+    stemNodes.set(stemName, node)
+    return node
+  }
+
+  async function ensureStemPathBuffer(
+    ctx: AudioContext,
+    stemName: AudioStemName,
+    index: number,
+    assetPath: string
+  ): Promise<AudioBuffer | null> {
+    const node = stemNodes.get(stemName)
+    if (!node) return null
+    const existing = node.buffers[index]
+    if (existing) return existing
+
+    const buffer = await _getCachedDecodedBuffer(ctx, assetPath)
+    if (!buffer) return null
+
+    const currentNode = stemNodes.get(stemName)
+    if (!currentNode || currentNode !== node || currentNode.paths[index] !== assetPath) {
+      return null
+    }
+
+    currentNode.buffers[index] = buffer
+    return buffer
+  }
+
+  const stemNodes = new Map<AudioStemName, StemNode>()
+  let outputGain: GainNode | null = null
+  let compressor: DynamicsCompressorNode | null = null
+  let limiterWorkletNode: AudioWorkletNode | null = null
+  let limiterNode: AudioNode | null = null
+  let preGainNode: GainNode | null = null
+  let outputVolumeGain: GainNode | null = null
+  let outputAnalyser: AnalyserNode | null = null
+  let outputAnalyserBuffer: TimeDomainBuffer | null = null
+
+  let stemSources: Partial<Record<AudioStemName, string[]>> = {}
+
+  // Ongoing rAF handles for master volume fades — cancel if a new fade starts
+  let _masterFadeRaf: number | null = null
+  let _timelineStartOffsetSeconds = 0
+  let _timelineStartCtxTimeSeconds = 0
+
+  // ─── AudioContext management ────────────────────────────────────────────────
+
+  function ensureContext(): AudioContext {
+    if (!audioCtx || audioCtx.state === 'closed') {
+      audioCtx = new AudioContext()
+    }
+    return audioCtx
+  }
+
+  // ─── Graph construction ─────────────────────────────────────────────────────
+
+  async function buildGraph(ctx: AudioContext): Promise<{
+    outputGain: GainNode
+    preGainNode: GainNode
+  }> {
+    const nextOutputGain = ctx.createGain()
+    nextOutputGain.gain.value = 0
+
+    const nextOutputVolumeGain = ctx.createGain()
+    nextOutputVolumeGain.gain.value = clamp01(masterVolume)
+
+    const nextOutputAnalyser = ctx.createAnalyser()
+    nextOutputAnalyser.fftSize = 2048
+    nextOutputAnalyser.smoothingTimeConstant = 0
+    nextOutputGain.connect(nextOutputVolumeGain)
+    nextOutputVolumeGain.connect(nextOutputAnalyser)
+    nextOutputAnalyser.connect(ctx.destination)
+
+    const nextPreGainNode = ctx.createGain()
+    nextPreGainNode.gain.value = Math.pow(10, currentLimiterParams.preGainDb / 20)
+
+    if (await ensureJuceLimiterWorklet(ctx)) {
+      limiterWorkletNode = new AudioWorkletNode(ctx, JUCE_LIMITER_PROCESSOR, {
+        numberOfInputs: 1,
+        numberOfOutputs: 1,
+        outputChannelCount: [2],
+      })
+      limiterWorkletNode.port.postMessage({
+        type: 'params',
+        threshold: currentLimiterParams.threshold,
+        releaseMs: currentLimiterParams.release * 1000,
+      })
+      limiterNode = limiterWorkletNode
+      limiterNode.connect(nextOutputGain)
+    } else {
+      compressor = ctx.createDynamicsCompressor()
+      compressor.threshold.value = currentLimiterParams.threshold
+      compressor.knee.value = currentLimiterParams.knee
+      compressor.ratio.value = currentLimiterParams.ratio
+      compressor.attack.value = currentLimiterParams.attack
+      compressor.release.value = currentLimiterParams.release
+      limiterNode = compressor
+      limiterNode.connect(nextOutputGain)
+    }
+
+    nextPreGainNode.connect(limiterNode)
+    outputGain = nextOutputGain
+    outputVolumeGain = nextOutputVolumeGain
+    preGainNode = nextPreGainNode
+    outputAnalyser = nextOutputAnalyser
+    outputAnalyserBuffer = new Float32Array(nextOutputAnalyser.fftSize) as TimeDomainBuffer
+
+    return {
+      outputGain: nextOutputGain,
+      preGainNode: nextPreGainNode,
+    }
+  }
+
+  // ─── Asset loading ──────────────────────────────────────────────────────────
+
+  async function loadBuffer(ctx: AudioContext, assetPath: string): Promise<AudioBuffer | null> {
+    // The fetch is cached at module level — only the decode step runs here.
+    const arrayBuffer = await _fetchArrayBuffer(assetPath)
+    if (!arrayBuffer) return null
+    try {
+      // decodeAudioData() detaches the buffer in some browsers, so pass a copy
+      // each time while keeping the cached original intact.
+      const decoded = await ctx.decodeAudioData(arrayBuffer.slice(0))
+      updateStemAssetDebugStat(assetPath, {
+        decodedBytes: estimateDecodedBufferBytes(decoded),
+        durationSeconds: decoded.duration,
+        channels: decoded.numberOfChannels,
+        sampleRate: decoded.sampleRate,
+      })
+      return decoded
+    } catch (err) {
+      console.warn(`[useStemPlayback] Failed to decode: ${assetPath}`, err)
+      return null
+    } finally {
+      // Once decode has populated the current-context cache we can release the
+      // compressed bytes for this asset to keep peak memory down.
+      _arrayBufferCache.delete(assetPath)
+    }
+  }
+
+  async function loadAudibleStemBuffers(
+    ctx: AudioContext,
+    sources: Partial<Record<AudioStemName, string[]>>,
+    stemDestination: AudioNode
+  ): Promise<void> {
+    const entries = Object.entries(sources) as [AudioStemName, string[]][]
+
+    await Promise.all(
+      entries.map(async ([stemName, paths]) => {
+        if (!paths?.length) return
+
+        ensureStemNode(ctx, stemName, paths, stemDestination)
+
+        await Promise.all(
+          paths.map(async (assetPath, index) => {
+            if (!isStemPathAudible(stemName, index)) return
+            await ensureStemPathBuffer(ctx, stemName, index, assetPath)
+          })
+        )
+      })
+    )
+  }
+
+  // ─── Source scheduling ──────────────────────────────────────────────────────
+
+  function startStemPathSource(
+    ctx: AudioContext,
+    node: StemNode,
+    index: number,
+    offsetSeconds: number
+  ) {
+    const buffer = node.buffers[index]
+    if (!buffer || node.sources[index]) return
+
+    const src = ctx.createBufferSource()
+    src.buffer = buffer
+
+    const dest = node.itemGains[index] ?? node.gainNode
+    src.connect(dest)
+
+    const safeOffset = Math.max(0, Math.min(offsetSeconds, buffer.duration - 0.001))
+    src.start(ctx.currentTime, safeOffset)
+    node.sources[index] = src
+  }
+
+  function syncAudibleStemSources(
+    ctx: AudioContext,
+    stemName: AudioStemName,
+    fallbackOffsetSeconds = 0,
+    preferMasterClock = true
+  ): void {
+    const node = stemNodes.get(stemName)
+    if (!node) return
+
+    node.paths.forEach((assetPath, index) => {
+      if (!isStemPathAudible(stemName, index)) return
+
+      const buffer = node.buffers[index]
+      if (buffer) {
+        startStemPathSource(
+          ctx,
+          node,
+          index,
+          getLivePlaybackOffset(fallbackOffsetSeconds, preferMasterClock)
+        )
+        return
+      }
+
+      void ensureStemPathBuffer(ctx, stemName, index, assetPath).then((loadedBuffer) => {
+        if (!loadedBuffer || audioCtx !== ctx || !isActive.value) return
+        if (!isStemPathAudible(stemName, index)) return
+        const currentNode = stemNodes.get(stemName)
+        if (!currentNode) return
+        startStemPathSource(
+          ctx,
+          currentNode,
+          index,
+          getLivePlaybackOffset(fallbackOffsetSeconds, preferMasterClock)
+        )
+      })
+    })
+  }
+
+  function startAllSources(
+    ctx: AudioContext,
+    offsetSeconds: number,
+    preferMasterClock = true
+  ): void {
+    const sharedOffset = getLivePlaybackOffset(offsetSeconds, preferMasterClock)
+    _timelineStartOffsetSeconds = sharedOffset
+    _timelineStartCtxTimeSeconds = ctx.currentTime
+    for (const [stemName] of stemNodes) {
+      syncAudibleStemSources(ctx, stemName, sharedOffset, false)
+    }
+  }
+
+  function stopAllSources(): void {
+    for (const [, node] of stemNodes) {
+      for (const src of node.sources) {
+        if (!src) continue
+        try {
+          src.stop()
+        } catch {
+          // already stopped
+        }
+      }
+      node.sources = node.sources.map(() => null)
+    }
+  }
+
+  // ─── Master volume fade helpers (rAF-based) ─────────────────────────────────
+
+  function _cancelMasterFade(): void {
+    if (_masterFadeRaf !== null) {
+      cancelAnimationFrame(_masterFadeRaf)
+      _masterFadeRaf = null
+      isMasterFading.value = false
+    }
+  }
+
+  function _fadeMasterVolume(
+    el: HTMLAudioElement,
+    from: number,
+    to: number,
+    durationMs: number
+  ): void {
+    _cancelMasterFade()
+    isMasterFading.value = true
+    const start = performance.now()
+    function tick(): void {
+      const elapsed = performance.now() - start
+      const t = Math.min(1, elapsed / durationMs)
+      el.volume = from + (to - from) * t
+      if (t < 1) {
+        _masterFadeRaf = requestAnimationFrame(tick)
+      } else {
+        _masterFadeRaf = null
+        isMasterFading.value = false
+      }
+    }
+    _masterFadeRaf = requestAnimationFrame(tick)
+  }
+
+  // ─── Activate / deactivate ──────────────────────────────────────────────────
+
+  const FADE_MS = 300
+
+  /**
+   * Switch from master-track playback to stems playback.
+   * @param currentTimeSeconds Current playback position to synchronise all stems to.
+   * @param getCurrentTimeSeconds Optional callback to read the freshest external
+   * playback timeline (e.g. playback bar/store) right before source start.
+   */
+  async function activate(
+    currentTimeSeconds: number,
+    getCurrentTimeSeconds?: () => number
+  ): Promise<void> {
+    if (Object.keys(stemSources).length === 0) return
+
+    // Increment generation — any superseded in-flight operation will bail when it
+    // checks the generation after its next `await`.
+    const gen = ++_opGen
+    _cancelMasterFade()
+
+    if (isActive.value) return // shouldn't happen in normal flow; handled by caller
+
+    // Force-clean any zombie nodes from a superseded deactivate timeout.
+    _disposeGraph()
+
+    const ctx = ensureContext()
+    if (ctx.state === 'suspended') {
+      await ctx.resume()
+    }
+    if (gen !== _opGen) return // superseded
+
+    const activeSources = stemSources
+    const graph = await buildGraph(ctx)
+    if (gen !== _opGen) {
+      _disposeGraph()
+      return
+    } // superseded after graph build
+
+    await loadAudibleStemBuffers(ctx, activeSources, graph.preGainNode)
+    if (gen !== _opGen) {
+      _disposeGraph()
+      return
+    } // superseded during load
+
+    if (stemNodes.size === 0) {
+      // Nothing loaded — bail out silently
+      _disposeGraph()
+      return
+    }
+
+    // Track-start in stems mode can activate directly without running explicit
+    // preload first. Once activate() has loaded buffers successfully, mark the
+    // current track as prebuffered so same-track toggles avoid loading UI.
+    isStemsPrebuffered.value = true
+
+    const latestRequestedTime = getCurrentTimeSeconds?.() ?? currentTimeSeconds
+    const startAt = Number.isFinite(latestRequestedTime) ? Math.max(0, latestRequestedTime) : 0
+
+    startAllSources(ctx, startAt, getCurrentTimeSeconds === undefined)
+
+    // Crossfade: stems in, master out
+    const now = ctx.currentTime
+    graph.outputGain.gain.setValueAtTime(0, now)
+    graph.outputGain.gain.linearRampToValueAtTime(1, now + FADE_MS / 1000)
+
+    const masterEl = masterAudioEl.value
+    if (masterEl) {
+      _fadeMasterVolume(masterEl, masterEl.volume, 0, FADE_MS)
+    }
+
+    if (gen === _opGen) {
+      isActive.value = true
+    } else {
+      // Superseded after sources started — tear down immediately
+      stopAllSources()
+      _disposeGraph()
+    }
+  }
+
+  /**
+   * Switch back from stems playback to master-track playback.
+   */
+  async function deactivate(): Promise<void> {
+    return deactivateWithOptions()
+  }
+
+  async function deactivateWithOptions(options?: {
+    restoreMasterVolume?: boolean
+    /** Target volume to restore the master element to (default 1). */
+    restoreToVolume?: number
+  }): Promise<void> {
+    // Always increment generation to cancel any in-flight activate.
+    const gen = ++_opGen
+    _cancelMasterFade()
+
+    // If nothing is active and no graph exists there is nothing to do.
+    if (!isActive.value && !outputGain) return
+
+    // Reflect intent immediately — callers and concurrent operations see updated
+    // state right away without waiting for the fade to finish.
+    isActive.value = false
+
+    const ctx = audioCtx
+    if (!ctx) return
+
+    // Crossfade: stems out, master in
+    const now = ctx.currentTime
+    const currentOutputGainValue = outputGain?.gain.value ?? 0
+    outputGain?.gain.setValueAtTime(currentOutputGainValue, now)
+    outputGain?.gain.linearRampToValueAtTime(0, now + FADE_MS / 1000)
+
+    const masterEl = masterAudioEl.value
+    if (masterEl && options?.restoreMasterVolume !== false) {
+      _fadeMasterVolume(masterEl, masterEl.volume, options?.restoreToVolume ?? 1, FADE_MS)
+    }
+
+    setTimeout(() => {
+      if (gen !== _opGen) return // superseded by a newer operation
+      stopAllSources()
+      _disposeGraph()
+    }, FADE_MS + 50)
+  }
+
+  function seek(currentTimeSeconds: number): void {
+    // seek is always allowed when stems are active — no transition lock
+    if (!isActive.value || !audioCtx) return
+    limiterWorkletNode?.port.postMessage({ type: 'reset' })
+    stopAllSources()
+    startAllSources(audioCtx, currentTimeSeconds, false)
+  }
+
+  /** Suspend the AudioContext (freeze stems output) — call when master is paused. */
+  function suspend(): void {
+    if (audioCtx?.state === 'running') {
+      void audioCtx.suspend()
+    }
+  }
+
+  /** Resume the AudioContext — call when master playback resumes. */
+  function resume(): void {
+    if (audioCtx?.state === 'suspended') {
+      void audioCtx.resume()
+    }
+  }
+
+  /**
+   * Pre-warm the audio pipeline so that enabling stems is near-instant.
+   * Call this as soon as the user starts playing audio — it resumes the
+   * AudioContext so stems can start playing immediately when enabled.
+   * Buffer pre-decoding happens earlier in setSources() / _preloadForSources().
+   */
+  async function warmUp(): Promise<void> {
+    if (!audioCtx) return // context created by _preloadForSources
+    // Best-effort resume; if activation is missing activate() will retry.
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {
+        /* retry in activate() */
+      })
+    }
+  }
+
+  function setLimiterParams(nextParams: Partial<LimiterParams> | null | undefined): void {
+    currentLimiterParams = {
+      ...DEFAULT_LIMITER_PARAMS,
+      ...(nextParams ?? {}),
+    }
+
+    if (preGainNode) {
+      preGainNode.gain.value = Math.pow(10, currentLimiterParams.preGainDb / 20)
+    }
+
+    if (limiterWorkletNode) {
+      limiterWorkletNode.port.postMessage({
+        type: 'params',
+        threshold: currentLimiterParams.threshold,
+        releaseMs: currentLimiterParams.release * 1000,
+      })
+    }
+
+    if (compressor) {
+      compressor.threshold.value = currentLimiterParams.threshold
+      compressor.knee.value = currentLimiterParams.knee
+      compressor.ratio.value = currentLimiterParams.ratio
+      compressor.attack.value = currentLimiterParams.attack
+      compressor.release.value = currentLimiterParams.release
+    }
+  }
+
+  // ─── Real-time gain updates ─────────────────────────────────────────────────
+
+  /** Update a stem's group-level gain in real time (while active). */
+  function updateStemGain(stem: AudioStemName, gain: number): void {
+    const node = stemNodes.get(stem)
+    if (node) {
+      node.gainNode.gain.value = clamp01(gain)
+    }
+
+    if (audioCtx && isActive.value && gain > SILENT_STEM_GAIN_THRESHOLD) {
+      syncAudibleStemSources(audioCtx, stem)
+    }
+  }
+
+  /** Update an individual item gain within a grouped stem (while active). */
+  function updateGroupItemGain(stem: AudioStemName, index: number, gain: number): void {
+    const node = stemNodes.get(stem)
+    const itemGain = node?.itemGains[index]
+    if (itemGain) {
+      itemGain.gain.value = clamp01(gain)
+    }
+
+    if (audioCtx && isActive.value && gain > SILENT_STEM_GAIN_THRESHOLD) {
+      syncAudibleStemSources(audioCtx, stem)
+    }
+  }
+
+  function getOutputLevel(): number {
+    if (!isActive.value) return 0
+    return sampleAnalyserRms(outputAnalyser, outputAnalyserBuffer)
+  }
+
+  function setMasterVolume(volume: number): void {
+    masterVolume = clamp01(volume)
+    if (outputVolumeGain) {
+      outputVolumeGain.gain.value = masterVolume
+    }
+  }
+
+  function getSampleRate(): number {
+    return audioCtx?.sampleRate ?? 0
+  }
+
+  function getPlaybackOffset(): number | null {
+    if (!isActive.value || !audioCtx) return null
+    const elapsed = Math.max(0, audioCtx.currentTime - _timelineStartCtxTimeSeconds)
+    return _timelineStartOffsetSeconds + elapsed
+  }
+
+  function getOutputSamples(): number[] {
+    if (!isActive.value || !outputAnalyser || !outputAnalyserBuffer) return []
+    outputAnalyser.getFloatTimeDomainData(outputAnalyserBuffer)
+    return Array.from(outputAnalyserBuffer)
+  }
+
+  function getDebugSnapshot() {
+    const currentTrackPaths = (Object.values(stemSources) as string[][]).flat().filter(Boolean)
+    const currentTrackPathSet = new Set(currentTrackPaths)
+    const allAssets = Array.from(_stemAssetDebugStats.values()).sort((a, b) =>
+      a.assetPath.localeCompare(b.assetPath)
+    )
+
+    const currentTrackAssets = allAssets.filter((asset) => currentTrackPathSet.has(asset.assetPath))
+    const currentCompressedCacheBytes = Array.from(currentTrackPathSet).reduce((sum, path) => {
+      if (!_arrayBufferCache.has(path)) return sum
+      return sum + (_stemAssetDebugStats.get(path)?.transferredBytes ?? 0)
+    }, 0)
+    const currentDecodedCacheBytes = Array.from(currentTrackPathSet).reduce((sum, path) => {
+      if (!_decodedCache.has(path)) return sum
+      return sum + (_stemAssetDebugStats.get(path)?.decodedBytes ?? 0)
+    }, 0)
+
+    return {
+      active: isActive.value,
+      prebuffered: isStemsPrebuffered.value,
+      currentTrackPaths,
+      currentTrackTransferredBytes: currentTrackAssets.reduce(
+        (sum, asset) => sum + asset.transferredBytes,
+        0
+      ),
+      currentTrackDecodedBytes: currentTrackAssets.reduce(
+        (sum, asset) => sum + asset.decodedBytes,
+        0
+      ),
+      currentCompressedCacheBytes,
+      currentDecodedCacheBytes,
+      totalTransferredBytes: allAssets.reduce((sum, asset) => sum + asset.transferredBytes, 0),
+      totalDecodedBytes: allAssets.reduce((sum, asset) => sum + asset.decodedBytes, 0),
+      assets: currentTrackAssets,
+    }
+  }
+
+  function printDebugSnapshot(reason = 'manual') {
+    const snapshot = getDebugSnapshot()
+    if (import.meta.env.DEV) {
+      console.debug(`[audio-debug] stems ${reason}`, snapshot)
+    }
+    return snapshot
+  }
+
+  // ─── Source management ──────────────────────────────────────────────────────
+
+  /**
+   * Replace the stem audio sources. If stems are currently active, deactivates first.
+   * Call this whenever the current track changes.
+   */
+  function setSources(sources: Partial<Record<AudioStemName, string[]>>): void {
+    ++_opGen
+    _cancelMasterFade()
+
+    if (isActive.value) {
+      void deactivate()
+    } else {
+      stopAllSources()
+      _disposeGraph()
+    }
+
+    // Evict ArrayBuffer cache entries that are no longer needed for the new track.
+    const nextPaths = new Set((Object.values(sources) as string[][]).flat().filter(Boolean))
+    for (const path of _arrayBufferCache.keys()) {
+      if (!nextPaths.has(path)) {
+        _arrayBufferCache.delete(path)
+      }
+    }
+    if (_decodedCache.size > 0) {
+      for (const path of _decodedCache.keys()) {
+        if (!nextPaths.has(path)) {
+          _decodedCache.delete(path)
+        }
+      }
+    }
+
+    stemSources = sources
+    isStemsPrebuffered.value = false
+    isStemsLoading.value = false
+    // Do not trigger preloading here. Preloading is now triggered on demand.
+  }
+
+  /**
+   * Preload stems for the current sources. Call when user requests stems mode for the first time.
+   * Sets isStemsLoading true while in progress, and isStemsPrebuffered true when done.
+   */
+  async function preloadStemsForCurrentSources(): Promise<void> {
+    isStemsLoading.value = true
+    const preloadGen = ++_preloadGen
+    const allPaths = getPreloadPathOrder(stemSources)
+    if (allPaths.length === 0) {
+      isStemsLoading.value = false
+      return
+    }
+
+    // Step 1: fetch audible paths first.
+    await runWithConcurrency(allPaths, PRELOAD_FETCH_CONCURRENCY, async (path) => {
+      await _fetchArrayBuffer(path)
+    })
+    if (preloadGen !== _preloadGen) {
+      isStemsLoading.value = false
+      return
+    }
+
+    // Step 2: create/reuse the AudioContext.
+    const ctx = ensureContext()
+    if (ctx.state === 'suspended') {
+      try {
+        await ctx.resume()
+      } catch {}
+    }
+
+    // Step 3: register the worklet module.
+    await ensureJuceLimiterWorklet(ctx)
+    if (preloadGen !== _preloadGen) {
+      isStemsLoading.value = false
+      return
+    }
+
+    // Step 4: decode audible paths first, then finish the rest in the background.
+    await runWithConcurrency(allPaths, PRELOAD_DECODE_CONCURRENCY, async (path) => {
+      await _getCachedDecodedBuffer(ctx, path)
+    })
+    if (preloadGen !== _preloadGen) {
+      isStemsLoading.value = false
+      return
+    }
+
+    isStemsPrebuffered.value = true
+    isStemsLoading.value = false
+    printDebugSnapshot('prebuffered')
+  }
+
+  // ─── Internal cleanup ───────────────────────────────────────────────────────
+
+  function _disposeGraph(): void {
+    stopAllSources()
+    stemNodes.clear()
+    try {
+      outputGain?.disconnect()
+    } catch {
+      /* ignore */
+    }
+    outputGain = null
+    try {
+      outputAnalyser?.disconnect()
+    } catch {
+      /* ignore */
+    }
+    try {
+      outputVolumeGain?.disconnect()
+    } catch {
+      /* ignore */
+    }
+    outputVolumeGain = null
+    outputAnalyser = null
+    outputAnalyserBuffer = null
+    try {
+      limiterNode?.disconnect()
+    } catch {
+      /* ignore */
+    }
+    compressor = null
+    limiterWorkletNode = null
+    limiterNode = null
+    try {
+      preGainNode?.disconnect()
+    } catch {
+      /* ignore */
+    }
+    preGainNode = null
+    _timelineStartOffsetSeconds = 0
+    _timelineStartCtxTimeSeconds = 0
+  }
+
+  function dispose(): void {
+    _cancelMasterFade()
+    ++_opGen // cancel any in-flight activate / deactivate
+    _disposeGraph()
+    try {
+      audioCtx?.close()
+    } catch {
+      // ignore
+    }
+    audioCtx = null
+    isActive.value = false
+  }
+
+  return {
+    isActive,
+    isStemsPrebuffered,
+    isStemsLoading,
+    isMasterFading,
+    activate,
+    deactivate,
+    deactivateWithOptions,
+    seek,
+    suspend,
+    resume,
+    warmUp,
+    setLimiterParams,
+    updateStemGain,
+    updateGroupItemGain,
+    getOutputLevel,
+    setMasterVolume,
+    getOutputSamples,
+    getSampleRate,
+    getPlaybackOffset,
+    getDebugSnapshot,
+    printDebugSnapshot,
+    setSources,
+    preloadStemsForCurrentSources,
+    dispose,
+  }
+}

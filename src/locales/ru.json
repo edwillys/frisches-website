@@ -120,6 +120,15 @@
     "groupLabel": "Микшер инструментов",
     "muteToggleSuffix": "Приглушить",
     "instrumentVolumePrefix": "Громкость",
+    "contextMenuMute": "Приглушить",
+    "contextMenuSolo": "Соло",
+    "contextMenuUnsolo": "Снять соло",
+    "contextMenuSoloInGroup": "Соло в группе",
+    "contextMenuUnsoloInGroup": "Снять соло в группе",
+    "muteAll": "Заглушить все",
+    "unmuteAll": "Включить все",
+    "soloAll": "Соло для всех",
+    "unsoloAll": "Снять все соло",
     "unavailableSuffix": "(недоступно)"
   },
   "logo": {
