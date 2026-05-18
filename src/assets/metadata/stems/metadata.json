@@ -221,14 +221,73 @@
           }
         },
         "05-witch-hunting": {
-          "drums": { "path": "./05-witch-hunting/drums.wav", "force": "auto" },
-          "guitar": { "path": "./05-witch-hunting/guitar.wav", "force": "auto" },
-          "bass": { "path": "./05-witch-hunting/bass.wav", "force": "auto" },
-          "vocals": { "path": "./05-witch-hunting/vocals.wav", "force": "auto" },
-          "flute": { "path": "./05-witch-hunting/flute.wav", "force": "auto" },
-          "brass": { "path": "./05-witch-hunting/brass.wav", "force": "auto" },
-          "percussion": { "path": "./05-witch-hunting/percussion.wav", "force": "auto" },
-          "keyboard": { "path": "./05-witch-hunting/keyboard.wav", "force": "auto" }
+          "drums": {
+            "label": "Drums",
+            "shortLabel": "Drums",
+            "path": "./05 - Witch Hunting/Witch Hunting - Drums.mp3"
+          },
+          "guitar": [
+            {
+              "label": "Guitar Base Left",
+              "shortLabel": "BaseL",
+              "role": "base",
+              "type": "electric",
+              "path": "./05 - Witch Hunting/Witch Hunting - Guitar BaseL.mp3"
+            },
+            {
+              "label": "Guitar Base Right",
+              "shortLabel": "BaseR",
+              "role": "base",
+              "type": "electric",
+              "path": "./05 - Witch Hunting/Witch Hunting - Guitar BaseR.mp3"
+            },
+            {
+              "label": "Guitar Overdub 1",
+              "shortLabel": "ODub1",
+              "role": "base",
+              "type": "electric",
+              "path": "./05 - Witch Hunting/Witch Hunting - Guitar ODub1.mp3"
+            },
+            {
+              "label": "Guitar Overdub 2",
+              "shortLabel": "ODub2",
+              "role": "base",
+              "type": "electric",
+              "path": "./05 - Witch Hunting/Witch Hunting - Guitar ODub2.mp3"
+            },
+            {
+              "label": "Guitar Solo",
+              "shortLabel": "Solo",
+              "role": "solo",
+              "type": "electric",
+              "path": "./05 - Witch Hunting/Witch Hunting - Guitar Solo.mp3"
+            }
+          ],
+          "bass": {
+            "label": "Bass",
+            "shortLabel": "Bass",
+            "path": "./05 - Witch Hunting/Witch Hunting - Bass.mp3"
+          },
+          "vocals": [
+            {
+              "label": "Vocals Lead",
+              "shortLabel": "Lead",
+              "role": "main",
+              "path": "./05 - Witch Hunting/Witch Hunting - Vox Main.mp3"
+            },
+            {
+              "label": "Vocals Double",
+              "shortLabel": "Double",
+              "role": "double",
+              "path": "./05 - Witch Hunting/Witch Hunting - Vox Double.mp3"
+            },
+            {
+              "label": "Vocals Backing",
+              "shortLabel": "Choir",
+              "role": "backing",
+              "path": "./05 - Witch Hunting/Witch Hunting - Vox Backing.mp3"
+            }
+          ]
         },
         "06-suits": {
           "drums": { "path": "./06-suits/drums.wav", "force": "auto" },
