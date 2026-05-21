@@ -99,7 +99,11 @@
   },
   "lyrics": {
     "syncToCurrent": "Se resynchroniser sur les paroles en cours",
-    "sync": "Synchroniser"
+    "sync": "Synchroniser",
+    "showChords": "Afficher les accords",
+    "hideChords": "Masquer les accords",
+    "collapseChords": "Réduire la rangée d'accords",
+    "expandChords": "Développer la rangée d'accords"
   },
   "about": {
     "subHeaderTitle": "Salut, nous c’est Frisches!",

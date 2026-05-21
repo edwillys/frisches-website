@@ -5,6 +5,36 @@ export interface Word {
   duration: number // ms (used for CSS transition-duration)
 }
 
+export type LyricsChordDiagramFret = number | 'x'
+
+export interface LyricsChordDiagram {
+  frets: LyricsChordDiagramFret[]
+  fingers?: Array<number | null>
+  baseFret?: number
+  barreFrets?: number[]
+  tuning?: string[]
+}
+
+export interface LyricsChordDefinition {
+  name: string
+  displayName?: string
+  diagram?: LyricsChordDiagram
+}
+
+export interface LyricsChordPlacement {
+  id: string
+  name: string
+  startTime: number // ms
+  endTime: number // ms
+  wordIndex?: number | null
+}
+
+export interface LyricsChordMetadata {
+  enabled?: boolean
+  source?: string
+  definitions?: Record<string, LyricsChordDefinition>
+}
+
 export type LyricsSectionType =
   | 'intro'
   | 'verse'
@@ -22,6 +52,7 @@ export interface Line {
   text: string // full line text
   words: Word[]
   section?: LyricsSectionType
+  chords?: LyricsChordPlacement[]
 }
 
 export interface LyricsData {
@@ -30,6 +61,24 @@ export interface LyricsData {
     totalDurationMs: number
     version: string
     credits?: string
+    chords?: LyricsChordMetadata
   }
   lyrics: Line[]
+}
+
+export interface ResolvedLyricsChord extends LyricsChordPlacement {
+  lineId: string
+  lineIndex: number
+  definition: LyricsChordDefinition | null
+}
+
+export interface ResolvedLyricsChords {
+  enabled: boolean
+  uniqueNames: string[]
+  definitionsByName: Record<string, LyricsChordDefinition>
+  timeline: ResolvedLyricsChord[]
+}
+
+export interface ResolvedLyricsData extends LyricsData {
+  resolvedChords: ResolvedLyricsChords
 }

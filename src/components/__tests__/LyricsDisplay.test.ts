@@ -5,6 +5,22 @@ import LyricsDisplay from '../LyricsDisplay.vue'
 import type { LyricsData } from '@/types/lyrics'
 
 describe('LyricsDisplay', () => {
+  function stubMatchMedia(matches: boolean) {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockImplementation(() => ({
+        matches,
+        media: '(min-width: 1100px)',
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }))
+    )
+  }
+
   const mockLyricsData: LyricsData = {
     meta: {
       title: 'Test Song',
@@ -48,8 +64,59 @@ describe('LyricsDisplay', () => {
     ],
   }
 
+  const mockChordLyricsData: LyricsData = {
+    meta: {
+      title: 'Chord Song',
+      totalDurationMs: 8000,
+      version: '1.0',
+      chords: {
+        enabled: true,
+        definitions: {
+          B7: {
+            name: 'B7',
+            diagram: {
+              frets: ['x', 2, 1, 2, 0, 2],
+            },
+          },
+        },
+      },
+    },
+    lyrics: [
+      {
+        id: 'line-1',
+        startTime: 1000,
+        endTime: 3000,
+        text: 'First line here',
+        words: [
+          { text: 'First', startTime: 1000, endTime: 1500, duration: 500 },
+          { text: 'line', startTime: 1500, endTime: 2000, duration: 500 },
+          { text: 'here', startTime: 2000, endTime: 3000, duration: 1000 },
+        ],
+        chords: [
+          {
+            id: 'line-1-b7',
+            name: 'B7',
+            startTime: 1000,
+            endTime: 3000,
+            wordIndex: 0,
+          },
+          {
+            id: 'line-1-b7-repeat',
+            name: 'B7',
+            startTime: 2000,
+            endTime: 3000,
+            wordIndex: 2,
+          },
+        ],
+      },
+    ],
+  }
+
   beforeEach(() => {
     vi.clearAllMocks()
+    stubMatchMedia(false)
+    // Clear chord preference so tests are not affected by prior localStorage state.
+    localStorage.removeItem('frisches:show-chords')
   })
 
   it('renders lyrics lines', () => {
@@ -388,5 +455,320 @@ describe('LyricsDisplay', () => {
     const line = wrapper.find('.lyrics-line')
     expect(line.exists()).toBe(true)
     expect(line.findAll('.lyrics-word')).toHaveLength(0)
+  })
+
+  it('shows the chord toggle only when chord metadata exists', () => {
+    const withChords = mount(LyricsDisplay, {
+      props: {
+        lyricsData: mockChordLyricsData,
+        currentTime: 1.25,
+        isPlaying: true,
+      },
+    })
+
+    const withoutChords = mount(LyricsDisplay, {
+      props: {
+        lyricsData: mockLyricsData,
+        currentTime: 1.25,
+        isPlaying: true,
+      },
+    })
+
+    expect(withChords.find('[data-testid="lyrics-chords-toggle"]').exists()).toBe(true)
+    expect(withChords.find('[data-testid="lyrics-chords-toggle"]').text()).toBe('C#')
+    expect(withoutChords.find('[data-testid="lyrics-chords-toggle"]').exists()).toBe(false)
+  })
+
+  it('renders inline chords and de-duplicated carousel chords after the chord toggle is enabled', async () => {
+    const wrapper = mount(LyricsDisplay, {
+      props: {
+        lyricsData: mockChordLyricsData,
+        currentTime: 1.25,
+        isPlaying: true,
+      },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="lyrics-chords-carousel"]').exists()).toBe(true)
+    expect(wrapper.findAll('.lyrics-inline-chord')).toHaveLength(2)
+    expect(wrapper.findAll('.lyrics-chords-carousel__item')).toHaveLength(1)
+    expect(wrapper.find('.lyrics-chords-carousel__item').classes()).toContain('is-active')
+  })
+
+  it('seeks to the chord time when an inline chord is clicked', async () => {
+    const wrapper = mount(LyricsDisplay, {
+      props: {
+        lyricsData: mockChordLyricsData,
+        currentTime: 0,
+        isPlaying: false,
+      },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    await wrapper.find('.lyrics-inline-chord').trigger('click')
+
+    expect(wrapper.emitted('seek')?.[0]).toEqual([1])
+  })
+
+  // ----- Req 2: Different chords on same line seek to their own times -----
+
+  it('seeks to the second chord startTime when the second inline chord is clicked', async () => {
+    const wrapper = mount(LyricsDisplay, {
+      props: {
+        lyricsData: mockChordLyricsData,
+        currentTime: 0,
+        isPlaying: false,
+      },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+
+    const chords = wrapper.findAll('.lyrics-inline-chord')
+    expect(chords).toHaveLength(2)
+
+    // First chord has startTime 1000ms => 1s, second has 2000ms => 2s
+    await chords[1]!.trigger('click')
+    expect(wrapper.emitted('seek')?.[0]).toEqual([2])
+  })
+
+  // ----- Req 3: showChords persists via localStorage -----
+
+  it('persists showChords=true to localStorage when toggled on', async () => {
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: mockChordLyricsData, currentTime: 0, isPlaying: false },
+    })
+
+    expect(localStorage.getItem('frisches:show-chords')).toBeNull()
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    expect(localStorage.getItem('frisches:show-chords')).toBe('true')
+  })
+
+  it('persists showChords=false to localStorage when toggled off', async () => {
+    localStorage.setItem('frisches:show-chords', 'true')
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: mockChordLyricsData, currentTime: 0, isPlaying: false },
+    })
+
+    // starts as true from localStorage
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    expect(localStorage.getItem('frisches:show-chords')).toBe('false')
+  })
+
+  it('does NOT reset showChords when the song title changes', async () => {
+    localStorage.setItem('frisches:show-chords', 'true')
+
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: mockChordLyricsData, currentTime: 0, isPlaying: false },
+    })
+
+    // showChords is true (loaded from localStorage)
+    expect(wrapper.find('[data-testid="lyrics-chords-toggle"]').attributes('aria-pressed')).toBe(
+      'true'
+    )
+
+    // Simulate a new song arriving (different title)
+    const newData = {
+      ...mockChordLyricsData,
+      meta: { ...mockChordLyricsData.meta, title: 'Another Song' },
+    }
+    await wrapper.setProps({ lyricsData: newData })
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="lyrics-chords-toggle"]').attributes('aria-pressed')).toBe(
+      'true'
+    )
+  })
+
+  // ----- Req 4: No strip title; collapse button next to toggle -----
+
+  it('does not render a lyrics-chords-strip header title', async () => {
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: mockChordLyricsData, currentTime: 0, isPlaying: false },
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    expect(wrapper.find('.lyrics-chords-strip__title').exists()).toBe(false)
+    expect(wrapper.find('.lyrics-chords-strip__header').exists()).toBe(false)
+  })
+
+  it('renders collapse button inside lyrics-chords-tools next to toggle', async () => {
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: mockChordLyricsData, currentTime: 0, isPlaying: false },
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+
+    const tools = wrapper.find('.lyrics-chords-tools')
+    expect(tools.exists()).toBe(true)
+    expect(tools.find('[data-testid="lyrics-chords-toggle"]').exists()).toBe(true)
+    expect(tools.find('[data-testid="lyrics-chords-collapse"]').exists()).toBe(true)
+  })
+
+  // ----- Chord selection: inline chord click -----
+
+  it('marks the clicked inline chord as active (is-active class)', async () => {
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: mockChordLyricsData, currentTime: 0, isPlaying: false },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    const inlineChords = wrapper.findAll('.lyrics-inline-chord')
+    expect(inlineChords).toHaveLength(2)
+
+    await inlineChords[0]!.trigger('click')
+    await nextTick()
+
+    expect(inlineChords[0]!.classes()).toContain('is-active')
+  })
+
+  it('marks the corresponding carousel item active when an inline chord is clicked', async () => {
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: mockChordLyricsData, currentTime: 0, isPlaying: false },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    await wrapper.find('.lyrics-inline-chord').trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('.lyrics-chords-carousel__item').classes()).toContain('is-active')
+  })
+
+  it('does not render the large active chord panel on narrow layouts', async () => {
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: mockChordLyricsData, currentTime: 0, isPlaying: false },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    await wrapper.find('.lyrics-inline-chord').trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('.lyrics-side-chord--right').exists()).toBe(false)
+    expect(wrapper.find('.lyrics-chords-carousel__item').classes()).toContain('is-active')
+  })
+
+  // ----- Chord selection: carousel click does NOT emit seek -----
+
+  it('does NOT emit seek when a carousel chord item is clicked', async () => {
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: mockChordLyricsData, currentTime: 0, isPlaying: false },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    await wrapper.find('.lyrics-chords-carousel__item').trigger('click')
+    await nextTick()
+
+    expect(wrapper.emitted('seek')).toBeFalsy()
+  })
+
+  it('marks the carousel chord item active when it is clicked', async () => {
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: mockChordLyricsData, currentTime: 0, isPlaying: false },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    const carouselItem = wrapper.find('.lyrics-chords-carousel__item')
+
+    await carouselItem.trigger('click')
+    await nextTick()
+
+    expect(carouselItem.classes()).toContain('is-active')
+  })
+
+  it('updates the selected chord display when playback moves to a new chord', async () => {
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: mockChordLyricsData, currentTime: 0, isPlaying: true },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    // currentTime = 1.5 => chord B7 at 1000ms is active
+    await wrapper.setProps({ currentTime: 1.5 })
+    await nextTick()
+
+    expect(wrapper.find('.lyrics-chords-carousel__item').classes()).toContain('is-active')
+    expect(wrapper.find('.lyrics-side-chord--right').exists()).toBe(false)
+  })
+
+  it('does not auto-scroll the top chord carousel when playback advances', async () => {
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: mockChordLyricsData, currentTime: 0, isPlaying: true },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+
+    const carousel = wrapper.find('.lyrics-chords-carousel').element as HTMLElement & {
+      scrollTo?: ReturnType<typeof vi.fn>
+    }
+    carousel.scrollTo = vi.fn()
+
+    await wrapper.setProps({ currentTime: 1.5 })
+    await nextTick()
+    await nextTick()
+
+    expect(carousel.scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('does not auto-scroll the desktop chord sidebar when playback advances', async () => {
+    stubMatchMedia(true)
+
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: mockChordLyricsData, currentTime: 0, isPlaying: true },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+
+    const sidebar = wrapper.find('.lyrics-chords-sidebar').element as HTMLElement & {
+      scrollTo?: ReturnType<typeof vi.fn>
+    }
+    sidebar.scrollTo = vi.fn()
+
+    await wrapper.setProps({ currentTime: 1.5 })
+    await nextTick()
+    await nextTick()
+
+    expect(sidebar.scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('does not highlight carousel or sidebar items in the large chord layout', async () => {
+    stubMatchMedia(true)
+
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: mockChordLyricsData, currentTime: 0, isPlaying: true },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    await wrapper.setProps({ currentTime: 1.5 })
+    await nextTick()
+
+    expect(wrapper.find('.lyrics-chords-carousel__item').classes()).not.toContain('is-active')
+    expect(wrapper.find('.lyrics-chords-sidebar__item').classes()).not.toContain('is-active')
+    expect(wrapper.find('.lyrics-side-chord--right').exists()).toBe(true)
+  })
+
+  it('renders the large active chord panel on desktop layouts', async () => {
+    stubMatchMedia(true)
+
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: mockChordLyricsData, currentTime: 0, isPlaying: false },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    await wrapper.find('.lyrics-inline-chord').trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('.lyrics-side-chord--right').exists()).toBe(true)
   })
 })

@@ -569,17 +569,39 @@ const handleKeydown = (e: KeyboardEvent) => {
 }
 
 const handleMiniPlayerOpenLyricsRequest = () => {
-  if (isAnimating.value) return
-
   const musicIndex = menuItems.findIndex((item) => item.route === '/music')
   if (musicIndex < 0) return
 
-  if (currentView.value === 'content' && selectedItem.value?.route === '/music') {
+  if (
+    !isAnimating.value &&
+    currentView.value === 'content' &&
+    selectedItem.value?.route === '/music'
+  ) {
     return
+  }
+
+  if (isAnimating.value) {
+    killBackgroundTransition()
+    gsap.killTweensOf(
+      [
+        ...getCardElements(),
+        contentPanelRef.value,
+        backButtonRef.value,
+        headerActionsRef.value,
+        headerTitleRef.value,
+      ].filter(Boolean)
+    )
+    stopAnimating()
+    // onComplete won't fire after killTweensOf, so clear the panel's GSAP inline styles
+    // manually so the content panel is visible when we immediately set currentView = 'content'.
+    if (contentPanelRef.value) {
+      gsap.set(contentPanelRef.value, { clearProps: 'opacity,y,transform' })
+    }
   }
 
   isCreditsOverlayOpen.value = false
   isHeaderNavOpen.value = false
+  contentReturnSelectedCard.value = null
 
   selectedCard.value = musicIndex
   hasMountedContentView.value = true
@@ -1220,6 +1242,9 @@ const playContentCloseAndCardsReturn = (opts?: { thenToLogo?: boolean }) => {
       cards.forEach((card) =>
         gsap.set(card, { clearProps: 'transform,visibility,zIndex,borderRadius,filter' })
       )
+      // Clear the content panel's GSAP inline styles so it renders at full opacity
+      // if the user navigates back to music (e.g. via mini-player lyrics button).
+      if (panel) gsap.set(panel, { clearProps: 'opacity,y,transform' })
       selectedCard.value = null
       currentView.value = 'cards'
       isCoverActive.value = false

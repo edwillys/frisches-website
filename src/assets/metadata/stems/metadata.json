@@ -232,14 +232,14 @@
               "shortLabel": "BaseL",
               "role": "base",
               "type": "electric",
-              "path": "./05 - Witch Hunting/Witch Hunting - Guitar BaseL.mp3"
+              "path": "./05 - Witch Hunting/Witch Hunting - GuitarL.mp3"
             },
             {
               "label": "Guitar Base Right",
               "shortLabel": "BaseR",
               "role": "base",
               "type": "electric",
-              "path": "./05 - Witch Hunting/Witch Hunting - Guitar BaseR.mp3"
+              "path": "./05 - Witch Hunting/Witch Hunting - GuitarR.mp3"
             },
             {
               "label": "Guitar Overdub 1",

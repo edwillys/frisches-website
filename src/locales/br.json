@@ -99,7 +99,11 @@
   },
   "lyrics": {
     "syncToCurrent": "Sincronizar com a letra atual",
-    "sync": "Sincronizar"
+    "sync": "Sincronizar",
+    "showChords": "Mostrar acordes",
+    "hideChords": "Ocultar acordes",
+    "collapseChords": "Recolher faixa de acordes",
+    "expandChords": "Expandir faixa de acordes"
   },
   "about": {
     "subHeaderTitle": "Olá, nós somos os Frisches!",

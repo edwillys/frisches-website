@@ -99,7 +99,11 @@
   },
   "lyrics": {
     "syncToCurrent": "Sync to current lyrics",
-    "sync": "Sync"
+    "sync": "Sync",
+    "showChords": "Show chords",
+    "hideChords": "Hide chords",
+    "collapseChords": "Collapse chord strip",
+    "expandChords": "Expand chord strip"
   },
   "about": {
     "subHeaderTitle": "Hi, we're Frisches!",

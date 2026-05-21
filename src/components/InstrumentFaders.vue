@@ -84,6 +84,8 @@ const GROUP_SHELL_PADDING_RIGHT_PX = 2
 const GROUP_SHELL_PADDING_BOTTOM_PX = 0
 const GROUP_SHELL_PADDING_LEFT_PX = 0
 const GROUP_SHELL_EXTENSION_BOTTOM_PX = 8
+const STEMS_EDGE_SCROLL_PADDING_PX =
+  GROUP_HANDLE_OVERHANG_PX + GROUP_SHELL_PADDING_LEFT_PX + GROUP_SHELL_PADDING_RIGHT_PX
 const GROUP_DRAWER_HORIZONTAL_PADDING_PX =
   GROUP_SHELL_PADDING_LEFT_PX + GROUP_SHELL_PADDING_RIGHT_PX
 const GROUP_STEM_TOP_PADDING_PX = 2
@@ -206,6 +208,7 @@ const suppressHandleClick = reactive<Partial<Record<StemName, boolean>>>({})
 const draggingGroupStem = ref<StemName | null>(null)
 const contextMenuState = ref<ContextMenuState | null>(null)
 const contextMenuEl = ref<HTMLElement | null>(null)
+const overlayEl = ref<HTMLElement | null>(null)
 
 const isFaderEditingEnabled = ref(false)
 let activeGroupDrag: GroupDragSession | null = null
@@ -346,6 +349,7 @@ const groupDrawerCssVars = computed(() => ({
   '--group-shell-padding-left': `${GROUP_SHELL_PADDING_LEFT_PX}px`,
   '--group-shell-top-overhang': `${GROUP_SHELL_TOP_OVERHANG_PX}px`,
   '--group-shell-extension-bottom': `${GROUP_SHELL_EXTENSION_BOTTOM_PX}px`,
+  '--stems-edge-scroll-padding': `${STEMS_EDGE_SCROLL_PADDING_PX}px`,
   '--group-handle-width': `${GROUP_HANDLE_WIDTH_PX}px`,
   '--group-handle-height': `${GROUP_HANDLE_HEIGHT_PX}px`,
   '--group-handle-overhang': `${GROUP_HANDLE_OVERHANG_PX}px`,
@@ -514,9 +518,13 @@ function applyGroupGainChange(stem: StemName, index: number, value: number) {
   emit('setGroupGain', stem, index, nextValue)
 }
 
-const allVisibleStemsMuted = computed(
-  () => visibleStems.value.length > 0 && visibleStems.value.every((stem) => stem.gain <= 0.001)
-)
+const hasAnyMutedFader = computed(() => {
+  if (visibleStems.value.some((stem) => stem.gain <= 0.001)) return true
+
+  return visibleStems.value.some((stem) =>
+    effectiveGroupItems(stem.key).some((_, index) => groupItemGain(stem.key, index) <= 0.001)
+  )
+})
 
 function clearAllIconActionTimers() {
   for (const timer of pendingIconActionTimers.values()) {
@@ -726,20 +734,22 @@ function runContextMenuAction(action: ContextMenuAction) {
   }
 }
 
-function toggleMuteAll() {
+function unmuteAll() {
   if (!isFaderEditingEnabled.value) return
 
   closeContextMenu()
   for (const stem of visibleStems.value) {
-    if (allVisibleStemsMuted.value) {
+    if (stem.gain <= 0.001) {
       const restore = clamp01(lastNonZeroGain[stem.key] ?? 1)
       applyStemGainChange(stem.key, restore > 0 ? restore : 1)
-      continue
     }
 
-    if (stem.gain > 0.001) {
-      lastNonZeroGain[stem.key] = stem.gain
-      applyStemGainChange(stem.key, 0)
+    for (const [index] of effectiveGroupItems(stem.key).entries()) {
+      if (groupItemGain(stem.key, index) > 0.001) continue
+
+      const key = groupItemKey(stem.key, index)
+      const restore = clamp01(lastNonZeroGroupGain[key] ?? 1)
+      applyGroupGainChange(stem.key, index, restore > 0 ? restore : 1)
     }
   }
 }
@@ -786,6 +796,15 @@ function groupDrawerStyle(stem: StemName) {
 function toggleGroup(stem: StemName) {
   delete groupPreviewWidth[stem]
   groupOpen[stem] = !groupOpen[stem]
+
+  if (groupOpen[stem]) {
+    void nextTick(() => {
+      const groupEl = overlayEl.value?.querySelector(
+        `[data-testid="stem-${stem}"]`
+      ) as HTMLElement | null
+      groupEl?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
+    })
+  }
 }
 
 function clearGroupDragSession() {
@@ -830,6 +849,15 @@ function onGroupHandlePointerUp() {
   if (didDrag) {
     groupOpen[stem] = currentWidth >= maxWidth / 2
     suppressHandleClick[stem] = true
+
+    if (groupOpen[stem]) {
+      void nextTick(() => {
+        const groupEl = overlayEl.value?.querySelector(
+          `[data-testid="stem-${stem}"]`
+        ) as HTMLElement | null
+        groupEl?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
+      })
+    }
   }
 
   delete groupPreviewWidth[stem]
@@ -1074,6 +1102,7 @@ function resetGains() {
 
     <div
       v-if="modelValue"
+      ref="overlayEl"
       class="stems__overlay"
       data-testid="stems-overlay"
       role="dialog"
@@ -1101,17 +1130,16 @@ function resetGains() {
 
         <div class="stems__header-actions">
           <button
-            class="stems__mode-btn stems__mode-btn--mute"
+            class="stems__mode-btn stems__mode-btn--mute-clear"
             type="button"
-            :class="{ 'is-active': allVisibleStemsMuted }"
-            :aria-label="allVisibleStemsMuted ? t.faders.unmuteAll : t.faders.muteAll"
-            :data-tooltip="allVisibleStemsMuted ? t.faders.unmuteAll : t.faders.muteAll"
-            :aria-pressed="allVisibleStemsMuted"
-            :disabled="!isFaderEditingEnabled"
+            :aria-label="t.faders.unmuteAll"
+            :data-tooltip="t.faders.unmuteAll"
+            :aria-pressed="false"
+            :disabled="!isFaderEditingEnabled || !hasAnyMutedFader"
             data-testid="stems-mute-all"
-            @click="toggleMuteAll"
+            @click="unmuteAll"
           >
-            <span aria-hidden="true">M</span>
+            <span aria-hidden="true">!M</span>
           </button>
 
           <button
@@ -1444,7 +1472,6 @@ function resetGains() {
     transform 140ms ease;
 }
 
-.stems__context-action:hover,
 .stems__context-action:focus-visible {
   background: rgba(255, 255, 255, 0.08);
   color: #ffffff;
@@ -1486,7 +1513,9 @@ function resetGains() {
     opacity 150ms ease;
 }
 
-.stems__mode-btn--mute {
+.stems__mode-btn--mute-clear {
+  min-width: 28px;
+  padding: 0 5px;
   color: rgba(255, 108, 108, 0.92);
 }
 
@@ -1509,6 +1538,12 @@ function resetGains() {
 .stems__mode-btn:disabled {
   opacity: 0.34;
   cursor: default;
+}
+
+.stems__mode-btn--mute-clear:not(:disabled):active {
+  background: rgba(255, 108, 108, 0.92);
+  border-color: rgba(255, 108, 108, 0.96);
+  color: #070707;
 }
 
 .stems__mode-btn--solo-clear:not(:disabled):active {
@@ -1646,22 +1681,16 @@ function resetGains() {
   overflow-x: auto;
   overflow-y: hidden;
   padding-top: var(--group-shell-top-overhang);
-  padding-bottom: 14px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.34) transparent;
+  /* extend bottom padding to fully reveal the group shell's ::before extension */
+  padding-bottom: var(--group-shell-extension-bottom);
+  /* keep edge groups fully reachable by matching the shell + handle geometry */
+  padding-inline: var(--stems-edge-scroll-padding);
+  scroll-padding-inline: var(--stems-edge-scroll-padding);
+  scrollbar-width: none;
 }
 
 .stems__grid::-webkit-scrollbar {
-  height: 4px;
-}
-
-.stems__grid::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.stems__grid::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.34);
-  border-radius: 999px;
+  display: none;
 }
 
 .stems__grid--disabled {
@@ -1674,6 +1703,7 @@ function resetGains() {
   display: flex;
   align-items: flex-end;
   flex-shrink: 0;
+  scroll-margin-inline: var(--stems-edge-scroll-padding);
 }
 
 .stem-group__main {
@@ -1715,10 +1745,6 @@ function resetGains() {
     border-color 180ms ease,
     background 180ms ease,
     box-shadow 220ms ease;
-}
-
-.stem-group__shell--grouped:hover::before {
-  border-color: rgba(255, 255, 255, 0.22);
 }
 
 .stem-group__shell--open::before {
@@ -1764,13 +1790,6 @@ function resetGains() {
 
 .stem-group__handle:active {
   cursor: grabbing;
-}
-
-.stem-group__handle:hover {
-  color: rgba(255, 255, 255, 0.78);
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.28);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .stem-group__handle.is-open {
@@ -1899,10 +1918,73 @@ function resetGains() {
   color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
   transition: color 150ms ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.stem__icon-btn:hover {
+@media (hover: hover) and (pointer: fine) {
+  .stems__context-action:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    transform: translateX(1px);
+  }
+
+  .stem-group__shell--grouped:hover::before {
+    border-color: rgba(255, 255, 255, 0.22);
+  }
+
+  .stem-group__handle:hover {
+    color: rgba(255, 255, 255, 0.78);
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.28);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+
+  .stem__icon-btn:hover {
+    color: var(--lyrics-album-contour);
+  }
+
+  .stems__grid--disabled .stem__icon-btn:hover {
+    color: rgba(255, 255, 255, 0.44);
+  }
+
+  .stem:hover .stem__slider::-webkit-slider-runnable-track {
+    background: linear-gradient(
+      90deg,
+      var(--lyrics-album-contour) 0%,
+      var(--lyrics-album-contour) var(--stem-percent, 100%),
+      rgba(255, 255, 255, 0.22) var(--stem-percent, 100%),
+      rgba(255, 255, 255, 0.22) 100%
+    );
+  }
+
+  .stems__grid--disabled .stem:hover .stem__slider::-webkit-slider-runnable-track {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.5) 0%,
+      rgba(255, 255, 255, 0.5) var(--stem-percent, 100%),
+      rgba(255, 255, 255, 0.16) var(--stem-percent, 100%),
+      rgba(255, 255, 255, 0.16) 100%
+    );
+  }
+
+  .stem:hover .stem__slider::-moz-range-progress {
+    background: var(--lyrics-album-contour);
+  }
+
+  .stems__grid--disabled .stem:hover .stem__slider::-moz-range-progress {
+    background: rgba(255, 255, 255, 0.5);
+  }
+}
+
+.stem__icon-btn:active {
   color: var(--lyrics-album-contour);
+}
+
+.stem-group__handle:active {
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .stem__solo-badge {
@@ -1933,10 +2015,6 @@ function resetGains() {
 
 .stem__icon-btn:disabled {
   cursor: default;
-}
-
-.stems__grid--disabled .stem__icon-btn:hover {
-  color: rgba(255, 255, 255, 0.44);
 }
 
 .mini-player__btn--stems {
@@ -1986,7 +2064,7 @@ function resetGains() {
   );
 }
 
-.stem:hover .stem__slider::-webkit-slider-runnable-track {
+.stem__slider:active::-webkit-slider-runnable-track {
   background: linear-gradient(
     90deg,
     var(--lyrics-album-contour) 0%,
@@ -1996,7 +2074,7 @@ function resetGains() {
   );
 }
 
-.stems__grid--disabled .stem:hover .stem__slider::-webkit-slider-runnable-track {
+.stems__grid--disabled .stem__slider:active::-webkit-slider-runnable-track {
   background: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0.5) 0%,
@@ -2025,11 +2103,11 @@ function resetGains() {
   background: rgba(255, 255, 255, 0.92);
 }
 
-.stem:hover .stem__slider::-moz-range-progress {
+.stem__slider:active::-moz-range-progress {
   background: var(--lyrics-album-contour);
 }
 
-.stems__grid--disabled .stem:hover .stem__slider::-moz-range-progress {
+.stems__grid--disabled .stem__slider:active::-moz-range-progress {
   background: rgba(255, 255, 255, 0.5);
 }
 

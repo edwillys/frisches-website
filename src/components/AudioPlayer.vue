@@ -1152,22 +1152,27 @@ watch(currentTrack, async (newTrack, oldTrack) => {
 
 /* Lyrics View */
 .lyrics-view {
+  --lyrics-overlay-close-top: 8px;
+  --lyrics-overlay-close-right: 8px;
+  --lyrics-overlay-close-size: 40px;
+  --lyrics-overlay-close-z-index: 20;
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 5px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   position: relative;
+  min-height: 0;
 }
 
 .lyrics-view__close {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 10;
-  width: 40px;
-  height: 40px;
+  top: var(--lyrics-overlay-close-top);
+  right: var(--lyrics-overlay-close-right);
+  z-index: var(--lyrics-overlay-close-z-index);
+  width: var(--lyrics-overlay-close-size);
+  height: var(--lyrics-overlay-close-size);
   border-radius: 50%;
   background: transparent;
   border: none;
