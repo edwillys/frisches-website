@@ -1414,10 +1414,9 @@ function resetGains() {
 
 .stems__overlay {
   position: absolute;
-  right: 0;
+  right: -2rem;
   bottom: calc(100% + 10px);
   left: auto;
-  transform: none;
   max-width: min(92vw, 38rem);
   padding: 10px 10px 10px;
   background: rgba(0, 0, 0, 0.92);
@@ -1431,10 +1430,10 @@ function resetGains() {
 .stems__overlay::after {
   content: '';
   position: absolute;
-  right: 14px;
-  bottom: -6px;
-  width: 12px;
-  height: 12px;
+  right: 2.5rem;
+  bottom: -0.375rem;
+  width: 0.75rem;
+  height: 0.75rem;
   transform: rotate(45deg);
   background: rgba(0, 0, 0, 0.92);
   border-right: 1px solid rgba(255, 255, 255, 0.12);
@@ -1974,17 +1973,17 @@ function resetGains() {
   .stems__grid--disabled .stem:hover .stem__slider::-moz-range-progress {
     background: rgba(255, 255, 255, 0.5);
   }
-}
 
-.stem__icon-btn:active {
-  color: var(--lyrics-album-contour);
-}
+  .stem__icon-btn:active {
+    color: var(--lyrics-album-contour);
+  }
 
-.stem-group__handle:active {
-  color: rgba(255, 255, 255, 0.78);
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.28);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  .stem-group__handle:active {
+    color: rgba(255, 255, 255, 0.78);
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.28);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
 }
 
 .stem__solo-badge {
