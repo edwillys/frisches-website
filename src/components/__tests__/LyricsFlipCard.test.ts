@@ -17,6 +17,7 @@ const card: LyricsAlbumCard = {
       title: 'Witch Hunting',
       lyricsPath: '/lyrics/witch-hunting.json',
       credits: 'Written by: Edgar Lubicz',
+      hasChords: true,
     },
   ],
 }
@@ -71,13 +72,55 @@ const chordLyricsResponse = {
 
 type MountedWrapper = ReturnType<typeof mount>
 
+function stubAnimationFrame() {
+  let nextHandle = 1
+  const callbacks = new Map<number, FrameRequestCallback>()
+
+  vi.stubGlobal(
+    'requestAnimationFrame',
+    vi.fn((callback: FrameRequestCallback) => {
+      const handle = nextHandle
+      nextHandle += 1
+      callbacks.set(handle, callback)
+      return handle
+    })
+  )
+
+  vi.stubGlobal(
+    'cancelAnimationFrame',
+    vi.fn((handle: number) => {
+      callbacks.delete(handle)
+    })
+  )
+
+  return {
+    async flush() {
+      const pending = [...callbacks.values()]
+      callbacks.clear()
+      for (const callback of pending) {
+        callback(performance.now())
+      }
+      await flushPromises()
+    },
+  }
+}
+
 async function openLyricsDetail(wrapper: MountedWrapper) {
   await wrapper.find('.lyrics-flip-card__row').trigger('click')
   await flushPromises()
 }
 
+async function waitForAnimationFrame() {
+  if (typeof requestAnimationFrame !== 'function') return
+
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => resolve())
+  })
+}
+
 async function enableChords(wrapper: MountedWrapper) {
   await wrapper.find('[data-testid="lyrics-card-chords-toggle"]').trigger('click')
+  await waitForAnimationFrame()
   await flushPromises()
 }
 
@@ -129,6 +172,65 @@ describe('LyricsFlipCard', () => {
     expect(controls.find('[data-testid="lyrics-card-chords-toggle"]').exists()).toBe(true)
     // Expand button is now a bottom-right absolute button, not inside floating-controls
     expect(wrapper.find('[data-testid="lyrics-card-expand"]').exists()).toBe(true)
+  })
+
+  it('does not reserve the compact rail slot before the lyrics detail is opened', async () => {
+    localStorage.setItem('frisches:show-chords', 'true')
+
+    const wrapper = mount(LyricsFlipCard, {
+      props: { card },
+      attachTo: document.body,
+    })
+
+    await flushPromises()
+
+    const vm = wrapper.vm as unknown as Record<string, unknown>
+    expect(vm.reserveCompactChordRailSlot).toBe(false)
+    expect(vm.compactChordRailFlipped).toBe(false)
+    expect(vm.showCompactChordRail).toBe(false)
+  })
+
+  it('mounts the compact rail before flipping it in when chords are toggled on', async () => {
+    const raf = stubAnimationFrame()
+    const wrapper = mount(LyricsFlipCard, {
+      props: { card },
+      attachTo: document.body,
+    })
+
+    await openLyricsDetail(wrapper)
+
+    const vm = wrapper.vm as unknown as Record<string, unknown>
+    await wrapper.find('[data-testid="lyrics-card-chords-toggle"]').trigger('click')
+
+    expect(vm.reserveCompactChordRailSlot).toBe(true)
+    expect(vm.compactChordRailFlipped).toBe(false)
+    expect(vm.showCompactChordRail).toBe(false)
+
+    await raf.flush()
+
+    expect(vm.compactChordRailFlipped).toBe(true)
+    expect(vm.showCompactChordRail).toBe(true)
+  })
+
+  it('mounts the compact rail before flipping it in when chords are already persisted on', async () => {
+    localStorage.setItem('frisches:show-chords', 'true')
+    const raf = stubAnimationFrame()
+    const wrapper = mount(LyricsFlipCard, {
+      props: { card },
+      attachTo: document.body,
+    })
+
+    const vm = wrapper.vm as unknown as Record<string, unknown>
+    await wrapper.find('.lyrics-flip-card__row').trigger('click')
+
+    expect(vm.reserveCompactChordRailSlot).toBe(true)
+    expect(vm.compactChordRailFlipped).toBe(false)
+    expect(vm.showCompactChordRail).toBe(false)
+
+    await raf.flush()
+
+    expect(vm.compactChordRailFlipped).toBe(true)
+    expect(vm.showCompactChordRail).toBe(true)
   })
 
   it('exposes showCompactChordRail=true when chords are enabled in normal mode', async () => {

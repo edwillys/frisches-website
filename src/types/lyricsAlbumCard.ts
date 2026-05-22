@@ -3,6 +3,7 @@ export interface LyricsAlbumTrack {
   title: string
   lyricsPath: string
   credits: string
+  hasChords: boolean | null
 }
 
 export interface LyricsAlbumCard {

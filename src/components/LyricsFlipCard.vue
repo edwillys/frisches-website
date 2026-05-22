@@ -60,10 +60,12 @@ const selectedChordId = ref<string | null>(null)
 const chordCarousel = ref<HTMLElement | null>(null)
 const chordCarouselSidebar = ref<HTMLElement | null>(null)
 const isExpandedDesktop = ref(false)
+const compactChordRailFlipReady = ref(false)
 
 const lyricsCache = ref<Record<string, CachedLyrics>>({})
 
 let activeFetchController: AbortController | null = null
+let compactChordRailFrame: number | null = null
 
 const cardStyle = computed(() => ({
   '--lyrics-card-tone-base': props.card.themeColor,
@@ -84,13 +86,33 @@ const selectedChord = computed(() => {
   }
 })
 
+const selectedTrackSupportsChords = computed(
+  () => selectedTrack.value?.hasChords === true || hasChordData.value
+)
+
+const compactChordRailRequested = computed(
+  () => showChords.value && !isChordRailCollapsed.value && !props.isExpanded
+)
+
+const compactChordRailEligible = computed(
+  () => compactChordRailRequested.value && isFlipped.value && selectedTrackSupportsChords.value
+)
+
 const showCompactChordRail = computed(
+  () => compactChordRailFlipped.value && selectedTrackSupportsChords.value
+)
+
+const reserveCompactChordRailSlot = computed(() => compactChordRailEligible.value)
+
+const compactChordRailFlipped = computed(
+  () => compactChordRailEligible.value && compactChordRailFlipReady.value
+)
+
+const compactChordRailLoading = computed(
   () =>
-    hasChordData.value &&
-    showChords.value &&
-    !isChordRailCollapsed.value &&
-    !props.isExpanded &&
-    isFlipped.value
+    compactChordRailFlipped.value &&
+    isLoadingLyrics.value &&
+    selectedTrack.value?.hasChords === true
 )
 
 const showExpandedChordPanel = computed(
@@ -111,6 +133,28 @@ function syncExpandedDesktop(matches: boolean) {
 
 function onExpandedDesktopChange(event: MediaQueryListEvent) {
   syncExpandedDesktop(event.matches)
+}
+
+function cancelCompactChordRailFrame() {
+  if (compactChordRailFrame === null) return
+  if (typeof cancelAnimationFrame === 'function') {
+    cancelAnimationFrame(compactChordRailFrame)
+  }
+  compactChordRailFrame = null
+}
+
+function scheduleCompactChordRailFlipIn() {
+  cancelCompactChordRailFrame()
+
+  if (typeof requestAnimationFrame !== 'function') {
+    compactChordRailFlipReady.value = true
+    return
+  }
+
+  compactChordRailFrame = requestAnimationFrame(() => {
+    compactChordRailFrame = null
+    compactChordRailFlipReady.value = true
+  })
 }
 
 const SECTION_BREAK_GAP_MS = 900
@@ -208,6 +252,10 @@ const formatLyricsText = (data: LyricsData, fallbackTitle: string) => {
 }
 
 const loadLyricsForTrack = async (track: LyricsAlbumTrack) => {
+  lyricsTitle.value = track.title
+  lyricsText.value = ''
+  lyricsData.value = null
+
   const cached = lyricsCache.value[track.trackId]
   if (cached) {
     lyricsTitle.value = cached.title
@@ -227,6 +275,7 @@ const loadLyricsForTrack = async (track: LyricsAlbumTrack) => {
     if (!response.ok) {
       lyricsTitle.value = track.title
       lyricsText.value = t.value.music.noLyricsForTrack
+      lyricsData.value = null
       return
     }
 
@@ -372,6 +421,23 @@ watch(
 )
 
 watch(
+  compactChordRailEligible,
+  (isEligible, wasEligible) => {
+    if (!isEligible) {
+      cancelCompactChordRailFrame()
+      compactChordRailFlipReady.value = false
+      return
+    }
+
+    if (!wasEligible) {
+      compactChordRailFlipReady.value = false
+      scheduleCompactChordRailFlipIn()
+    }
+  },
+  { immediate: true }
+)
+
+watch(
   [() => showCompactChordRail.value, () => selectedChordId.value, () => props.isExpanded],
   ([shouldCenterRail, chordName, expanded]) => {
     if (!chordName) return
@@ -407,6 +473,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  cancelCompactChordRailFrame()
+
   if (!expandedDesktopQuery) return
 
   if (typeof expandedDesktopQuery.removeEventListener === 'function') {
@@ -419,6 +487,9 @@ onBeforeUnmount(() => {
 
 defineExpose({
   showCompactChordRail,
+  reserveCompactChordRailSlot,
+  compactChordRailFlipped,
+  compactChordRailLoading,
   carouselChords,
   selectedChordId,
   handleChordSelection,

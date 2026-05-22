@@ -882,6 +882,19 @@ describe('InstrumentFaders', () => {
     expect(wrapper.emitted('setGain')).toBeUndefined()
   })
 
+  it('suppresses hover styling after a touch slider interaction', async () => {
+    const wrapper = mountOpen()
+    await enableEditing(wrapper)
+
+    const stem = wrapper.find('[data-testid="stem-drums"] .stem')
+    const slider = wrapper.find('[data-testid="stem-drums"] .stem__slider')
+
+    await slider.trigger('pointerdown', { pointerType: 'touch' })
+    await slider.trigger('pointerup', { pointerType: 'touch' })
+
+    expect(stem.classes()).toContain('suppress-hover')
+  })
+
   it('does not emit setGain when fader editing is disabled', async () => {
     const wrapper = mountOpen()
     await wrapper.find('[data-testid="stem-drums-mute"]').trigger('click')

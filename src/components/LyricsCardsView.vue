@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 
 import { useLyricsCards } from '@/composables/useLyricsCards'
+import AnimatedLoadingGlyph from './AnimatedLoadingGlyph.vue'
 import ChordFretboard from './ChordFretboard.vue'
 import LyricsFlipCard from './LyricsFlipCard.vue'
 import type { ResolvedLyricsChord } from '@/types/lyrics'
@@ -24,6 +25,8 @@ const lyricsCards = useLyricsCards()
 const isExpanded = ref(false)
 const cardRef = ref<InstanceType<typeof LyricsFlipCard> | null>(null)
 const chordRailRef = ref<HTMLElement | null>(null)
+const stageRef = ref<HTMLElement | null>(null)
+const mainCardCellRef = ref<HTMLElement | null>(null)
 
 function toggleExpand() {
   isExpanded.value = !isExpanded.value
@@ -42,6 +45,12 @@ function handleStageClick(event: MouseEvent) {
 // Access state exposed from LyricsFlipCard via the component instance proxy.
 // The instance proxy auto-unwraps reactive refs, so these are plain values.
 const showRail = computed<boolean>(() => cardRef.value?.showCompactChordRail ?? false)
+
+const reserveRailSlot = computed<boolean>(() => cardRef.value?.reserveCompactChordRailSlot ?? false)
+
+const isRailFlipped = computed<boolean>(() => cardRef.value?.compactChordRailFlipped ?? false)
+
+const isRailLoading = computed<boolean>(() => cardRef.value?.compactChordRailLoading ?? false)
 
 const railChords = computed<ResolvedLyricsChord[]>(() => cardRef.value?.carouselChords ?? [])
 
@@ -69,11 +78,33 @@ watch(
   },
   { immediate: true }
 )
+
+watch([reserveRailSlot, isExpanded], ([isReserved, expanded], [wasReserved]) => {
+  if (expanded || isReserved === wasReserved) return
+
+  const stage = stageRef.value
+  const cardCell = mainCardCellRef.value
+  if (!stage || !cardCell) return
+
+  const initialLeft = cardCell.getBoundingClientRect().left
+
+  void nextTick(() => {
+    const nextStage = stageRef.value
+    const nextCardCell = mainCardCellRef.value
+    if (!nextStage || !nextCardCell || isExpanded.value) return
+
+    const delta = nextCardCell.getBoundingClientRect().left - initialLeft
+    if (Math.abs(delta) > 0.5) {
+      nextStage.scrollLeft += delta
+    }
+  })
+})
 </script>
 
 <template>
   <section class="lyrics-cards" data-testid="lyrics-cards-view">
     <div
+      ref="stageRef"
       class="lyrics-cards__stage"
       :class="{ 'lyrics-cards__stage--expanded': isExpanded }"
       data-testid="lyrics-cards-carousel"
@@ -81,59 +112,103 @@ watch(
     >
       <div
         v-if="lyricsCards"
-        class="lyrics-cards__cell"
-        :class="{ 'lyrics-cards__cell--expanded': isExpanded }"
-        data-about-card
+        class="lyrics-cards__track"
+        :class="{
+          'lyrics-cards__track--expanded': isExpanded,
+          'lyrics-cards__track--rail-reserved': reserveRailSlot && !isExpanded,
+        }"
       >
-        <LyricsFlipCard
-          ref="cardRef"
-          :card="lyricsCards"
-          :back-signal="props.backSignal"
-          :can-expand="true"
-          :is-expanded="isExpanded"
-          @detail-open-change="emit('detail-open-change', $event)"
-          @toggle-expand="toggleExpand"
-        />
-      </div>
-
-      <Transition name="chord-rail-flip">
         <div
-          v-if="lyricsCards && showRail && !isExpanded"
+          ref="mainCardCellRef"
+          class="lyrics-cards__cell"
+          :class="{ 'lyrics-cards__cell--expanded': isExpanded }"
+          data-about-card
+        >
+          <LyricsFlipCard
+            ref="cardRef"
+            :card="lyricsCards"
+            :back-signal="props.backSignal"
+            :can-expand="true"
+            :is-expanded="isExpanded"
+            @detail-open-change="emit('detail-open-change', $event)"
+            @toggle-expand="toggleExpand"
+          />
+        </div>
+
+        <div
+          v-if="reserveRailSlot && !isExpanded"
           class="lyrics-cards__cell lyrics-cards__cell--rail"
           data-about-card
         >
-          <aside
+          <article
             class="lyrics-chord-rail-card"
+            :class="{ 'lyrics-chord-rail-card--flipped': isRailFlipped }"
             :style="{ '--rail-tone': lyricsCards.themeColor }"
             data-testid="lyrics-chord-rail-card"
             aria-label="Chord diagrams"
           >
-            <div ref="chordRailRef" class="lyrics-chord-rail" data-testid="lyrics-card-chords-rail">
-              <button
-                v-for="chord in railChords"
-                :key="chord.name"
-                class="lyrics-chord-rail__item"
-                :class="{ 'is-active': chord.name === activeChordId }"
-                :data-chord-name="chord.name"
-                type="button"
-                @click="handleRailChordClick(chord.name, $event)"
+            <div class="lyrics-chord-rail-card__inner">
+              <section
+                class="lyrics-chord-rail-card__face lyrics-chord-rail-card__face--front"
+                :aria-hidden="isRailFlipped"
+              />
+
+              <section
+                class="lyrics-chord-rail-card__face lyrics-chord-rail-card__face--back"
+                :aria-hidden="!isRailFlipped"
               >
-                <ChordFretboard
-                  :name="chord.definition?.displayName ?? chord.name"
-                  :diagram="chord.definition?.diagram ?? null"
-                  compact
-                />
-              </button>
+                <div
+                  v-if="isRailLoading"
+                  class="lyrics-chord-rail__loading"
+                  data-testid="lyrics-card-chords-rail-loading"
+                >
+                  <AnimatedLoadingGlyph :size="28" :stroke-width="2.1" />
+                </div>
+                <div
+                  v-else-if="showRail"
+                  ref="chordRailRef"
+                  class="lyrics-chord-rail"
+                  data-testid="lyrics-card-chords-rail"
+                >
+                  <button
+                    v-for="chord in railChords"
+                    :key="chord.name"
+                    class="lyrics-chord-rail__item"
+                    :class="{ 'is-active': chord.name === activeChordId }"
+                    :data-chord-name="chord.name"
+                    type="button"
+                    @click="handleRailChordClick(chord.name, $event)"
+                  >
+                    <ChordFretboard
+                      :name="chord.definition?.displayName ?? chord.name"
+                      :diagram="chord.definition?.diagram ?? null"
+                      compact
+                    />
+                  </button>
+                </div>
+              </section>
             </div>
-          </aside>
+          </article>
         </div>
-      </Transition>
+      </div>
     </div>
   </section>
 </template>
 
 <style scoped>
 .lyrics-cards {
+  --lyrics-cards-card-width: var(--about-card-width-desktop);
+  --lyrics-cards-card-width-mobile: var(--about-card-width-mobile);
+  --lyrics-cards-cell-max-width: calc(100vw - 2rem);
+  --lyrics-cards-cell-width: min(
+    var(--lyrics-cards-card-width),
+    var(--lyrics-cards-cell-max-width)
+  );
+  --lyrics-cards-padding-block: clamp(0.2rem, 0.8vw, 0.5rem);
+  --lyrics-cards-padding-inline: clamp(0.4rem, 1vw, 0.8rem);
+  --lyrics-cards-carousel-gap: var(--about-card-gap);
+  --lyrics-cards-carousel-scroll-padding: var(--about-track-inline-padding);
+  --lyrics-cards-carousel-min-height: 300px;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -141,18 +216,18 @@ watch(
   height: 100%;
   min-height: 0;
   margin: 0 auto;
-  padding: 0;
+  padding: var(--lyrics-cards-padding-block) var(--lyrics-cards-padding-inline);
   box-sizing: border-box;
-  overflow-x: hidden;
 }
 
 .lyrics-cards__stage {
   display: flex;
   align-items: flex-start;
   justify-content: center;
+  gap: var(--lyrics-cards-carousel-gap);
   width: 100%;
   height: 100%;
-  min-height: 0;
+  min-height: var(--lyrics-cards-carousel-min-height);
   overflow-x: auto;
   overflow-y: auto;
   scroll-snap-type: x mandatory;
@@ -160,14 +235,17 @@ watch(
   overscroll-behavior-x: contain;
   overscroll-behavior-y: contain;
   touch-action: pan-x pan-y;
-  padding-inline: var(--about-track-inline-padding);
+  padding-inline: var(--lyrics-cards-carousel-scroll-padding);
   padding-block: 0.4rem calc(var(--mini-player-offset, 0px) + 0.4rem);
   scrollbar-width: none;
+  scrollbar-gutter: stable both-edges;
 }
 
 .lyrics-cards__stage--expanded {
   align-items: stretch;
   justify-content: flex-start;
+  gap: 0;
+  min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   box-sizing: border-box;
@@ -178,9 +256,22 @@ watch(
   display: none;
 }
 
+.lyrics-cards__track {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--lyrics-cards-carousel-gap);
+  min-width: max-content;
+}
+
+.lyrics-cards__track--expanded {
+  width: 100%;
+  min-width: 100%;
+  gap: 0;
+}
+
 .lyrics-cards__cell {
-  flex: 0 0 min(var(--about-card-width-desktop), calc(100vw - 2rem));
-  width: min(var(--about-card-width-desktop), calc(100vw - 2rem));
+  flex: 0 0 var(--lyrics-cards-cell-width);
+  width: var(--lyrics-cards-cell-width);
   min-height: 0;
   display: flex;
   align-items: center;
@@ -200,20 +291,60 @@ watch(
 
 .lyrics-cards__cell--rail {
   align-items: stretch;
+  position: relative;
+}
+
+.lyrics-cards__cell--rail:empty {
+  min-height: calc(var(--lyrics-cards-cell-width) / (5 / 8));
 }
 
 /* ── Chord rail card ── */
-/*
- * Same card appearance AND dimensions as .lyrics-flip-card (standard site card).
- * Width + aspect-ratio mirrors the lyrics flip card exactly.
- */
 .lyrics-chord-rail-card {
   width: 100%;
+  height: 100%;
   aspect-ratio: var(--about-card-aspect-ratio);
+  border: 0;
+  background: transparent;
+  padding: 0;
+  perspective: 1200px;
+}
+
+.lyrics-chord-rail-card__inner {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.56s cubic-bezier(0.2, 0.7, 0.3, 1);
+  transform-style: preserve-3d;
+}
+
+.lyrics-chord-rail-card--flipped .lyrics-chord-rail-card__inner {
+  transform: rotateY(180deg);
+}
+
+.lyrics-chord-rail-card__face {
+  position: absolute;
+  inset: 0;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 1rem;
+  box-sizing: border-box;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+  overflow: hidden;
+}
+
+.lyrics-chord-rail-card__face--front {
+  transform: rotateY(0deg) translateZ(1px);
+  background: transparent;
+}
+
+.lyrics-chord-rail-card__face--back {
+  transform: rotateY(180deg) translateZ(1px);
   border: 1px solid
     color-mix(in srgb, var(--rail-tone, var(--lyrics-album-contour)) 55%, transparent 45%);
-  border-radius: 1rem;
   background:
     linear-gradient(160deg, rgba(19, 5, 65, 0.985), rgba(45, 45, 68, 0.982)),
     linear-gradient(180deg, rgba(139, 79, 125, 0.18), rgba(10, 10, 18, 0.08));
@@ -221,11 +352,27 @@ watch(
     0 18px 40px rgba(0, 0, 0, 0.5),
     0 0 12px color-mix(in srgb, var(--rail-tone, var(--lyrics-album-contour)) 22%, transparent 78%),
     inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
   padding: 0.55rem 0.45rem;
-  box-sizing: border-box;
+}
+
+.lyrics-chord-rail-card:not(.lyrics-chord-rail-card--flipped) .lyrics-chord-rail-card__face--back {
+  visibility: hidden;
+}
+
+.lyrics-chord-rail-card--flipped .lyrics-chord-rail-card__face--front {
+  visibility: hidden;
+}
+
+.lyrics-chord-rail-card--flipped .lyrics-chord-rail-card__face--back {
+  visibility: visible;
+}
+
+.lyrics-chord-rail__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
 }
 
 /* ── Vertical scrollable chord grid ── */
@@ -280,32 +427,28 @@ watch(
 }
 
 /* ── Flip-in / flip-out animation for the chord rail card ── */
-.chord-rail-flip-enter-active,
-.chord-rail-flip-leave-active {
-  transition: transform 0.56s cubic-bezier(0.2, 0.7, 0.3, 1);
-  transform-origin: left center;
+@media (min-width: 1051px) {
+  .lyrics-cards__track--rail-reserved {
+    transform: translateX(
+      calc((var(--lyrics-cards-cell-width) + var(--lyrics-cards-carousel-gap)) / 2)
+    );
+  }
 }
 
-.chord-rail-flip-enter-from {
-  transform: rotateY(-90deg);
-}
-
-.chord-rail-flip-enter-to {
-  transform: rotateY(0deg);
-}
-
-.chord-rail-flip-leave-from {
-  transform: rotateY(0deg);
-}
-
-.chord-rail-flip-leave-to {
-  transform: rotateY(90deg);
+@media (max-width: 1050px) {
+  .lyrics-cards__stage {
+    justify-content: flex-start;
+  }
 }
 
 @media (max-width: 767px) {
+  .lyrics-cards {
+    --lyrics-cards-card-width: var(--lyrics-cards-card-width-mobile);
+  }
+
   .lyrics-cards__cell {
-    flex-basis: min(var(--about-card-width-mobile), calc(100vw - 2rem));
-    width: min(var(--about-card-width-mobile), calc(100vw - 2rem));
+    flex-basis: var(--lyrics-cards-cell-width);
+    width: var(--lyrics-cards-cell-width);
   }
 
   .lyrics-chord-rail-card {

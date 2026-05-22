@@ -216,6 +216,14 @@ let longPressTimer: ReturnType<typeof setTimeout> | null = null
 const pendingIconActionTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const suppressedIconActionKeys = new Set<string>()
 
+// Explicit pressed-state tracking – replaces CSS :active to prevent the stuck-highlight
+// bug in Firefox (and touch-emulation modes) where :active is not cleared on pointerup.
+const pressedIconKeys = reactive(new Set<string>())
+const pressedSliderKeys = reactive(new Set<string>())
+// Suppresses the sticky :hover colour that browsers apply after a touch tap by
+// synthesising mouse-enter events.  Cleared when the real pointer actually leaves.
+const suppressHoverKeys = reactive(new Set<string>())
+
 watch(
   [() => props.stemsRequested, () => props.stemsEnabled, () => props.stemsModeAvailable],
   ([requested, enabled, available]) => {
@@ -1083,6 +1091,77 @@ function resetGains() {
   clearAllSoloTargets()
   emit('resetGains')
 }
+
+// ─── Explicit press-state handlers (fix stuck :active on touch / Firefox) ──────────────────
+
+function onStemIconPointerDown(stem: StemName, event: PointerEvent) {
+  pressedIconKeys.add(iconTargetKey(stem))
+  scheduleLongPress(stem, null, event)
+}
+
+function onStemIconPointerUpAll(stem: StemName, event: PointerEvent) {
+  pressedIconKeys.delete(iconTargetKey(stem))
+  if (event.pointerType === 'touch') {
+    suppressHoverKeys.add(iconTargetKey(stem))
+  }
+  onStemIconPointerUp(stem, event)
+}
+
+function onStemIconPointerCancelLeave(stem: StemName, event: PointerEvent) {
+  pressedIconKeys.delete(iconTargetKey(stem))
+  if (event.pointerType === 'touch') {
+    // Keep hover suppressed – synthetic mouse-enter will fire next and must not glow.
+    suppressHoverKeys.add(iconTargetKey(stem))
+  } else {
+    // Real pointer has left – safe to restore hover behaviour.
+    suppressHoverKeys.delete(iconTargetKey(stem))
+  }
+  clearLongPressTimer()
+}
+
+function onGroupItemIconPointerDown(stem: StemName, index: number, event: PointerEvent) {
+  pressedIconKeys.add(iconTargetKey(stem, index))
+  scheduleLongPress(stem, index, event)
+}
+
+function onGroupItemIconPointerUpAll(stem: StemName, index: number, event: PointerEvent) {
+  pressedIconKeys.delete(iconTargetKey(stem, index))
+  if (event.pointerType === 'touch') {
+    suppressHoverKeys.add(iconTargetKey(stem, index))
+  }
+  onGroupItemIconPointerUp(stem, index, event)
+}
+
+function onGroupItemIconPointerCancelLeave(stem: StemName, index: number, event: PointerEvent) {
+  pressedIconKeys.delete(iconTargetKey(stem, index))
+  if (event.pointerType === 'touch') {
+    suppressHoverKeys.add(iconTargetKey(stem, index))
+  } else {
+    suppressHoverKeys.delete(iconTargetKey(stem, index))
+  }
+  clearLongPressTimer()
+}
+
+function onSliderPointerDown(key: string, event: PointerEvent) {
+  pressedSliderKeys.add(key)
+  if (event.pointerType !== 'touch') {
+    suppressHoverKeys.delete(key)
+  }
+}
+
+function onSliderPointerUpOrCancel(key: string, event: PointerEvent) {
+  pressedSliderKeys.delete(key)
+  if (event.pointerType === 'touch') {
+    suppressHoverKeys.add(key)
+  }
+}
+
+function onSliderPointerLeave(key: string, event: PointerEvent) {
+  pressedSliderKeys.delete(key)
+  if (event.pointerType !== 'touch') {
+    suppressHoverKeys.delete(key)
+  }
+}
 </script>
 
 <template>
@@ -1218,10 +1297,15 @@ function resetGains() {
                       'stem--dimmed': isStemDimmed(stem.key),
                       'stem--unavailable': !stem.isAvailable,
                       'stem--group-parent': hasGroupItems(stem.key),
+                      'suppress-hover': suppressHoverKeys.has(iconTargetKey(stem.key)),
                     }"
                   >
                     <button
                       class="stem__icon-btn"
+                      :class="{
+                        'is-pressed': pressedIconKeys.has(iconTargetKey(stem.key)),
+                        'suppress-hover': suppressHoverKeys.has(iconTargetKey(stem.key)),
+                      }"
                       type="button"
                       :data-tooltip="stem.tooltip"
                       :aria-label="t.faders.muteToggle(stem.title)"
@@ -1230,10 +1314,10 @@ function resetGains() {
                       :data-testid="`stem-${stem.key}-mute`"
                       @click="onStemIconClick(stem.key, $event)"
                       @contextmenu="openStemContextMenu(stem.key, $event)"
-                      @pointerdown="scheduleLongPress(stem.key, null, $event)"
-                      @pointerup="onStemIconPointerUp(stem.key, $event)"
-                      @pointercancel="clearLongPressTimer"
-                      @pointerleave="clearLongPressTimer"
+                      @pointerdown="onStemIconPointerDown(stem.key, $event)"
+                      @pointerup="onStemIconPointerUpAll(stem.key, $event)"
+                      @pointercancel="onStemIconPointerCancelLeave(stem.key, $event)"
+                      @pointerleave="onStemIconPointerCancelLeave(stem.key, $event)"
                     >
                       <span class="stem__icon" aria-hidden="true" v-html="stem.icon" />
                       <span v-if="isStemMuted(stem.key)" class="stem__mute-badge" aria-hidden="true"
@@ -1247,7 +1331,11 @@ function resetGains() {
                       >
                     </button>
 
-                    <div class="stem__slider-wrap" :style="{ '--stem-percent': stem.percent }">
+                    <div
+                      class="stem__slider-wrap"
+                      :class="{ 'is-slider-pressed': pressedSliderKeys.has(stem.key) }"
+                      :style="{ '--stem-percent': stem.percent }"
+                    >
                       <input
                         class="stem__slider"
                         type="range"
@@ -1257,6 +1345,10 @@ function resetGains() {
                         :value="stem.gain"
                         :disabled="!isFaderEditingEnabled || !stem.isAvailable"
                         :aria-label="t.faders.instrumentVolume(stem.title)"
+                        @pointerdown="onSliderPointerDown(stem.key, $event)"
+                        @pointerup="onSliderPointerUpOrCancel(stem.key, $event)"
+                        @pointercancel="onSliderPointerUpOrCancel(stem.key, $event)"
+                        @pointerleave="onSliderPointerLeave(stem.key, $event)"
                         @input="onInput(stem.key, $event)"
                       />
                     </div>
@@ -1277,11 +1369,18 @@ function resetGains() {
                     >
                       <div
                         class="stem stem--child"
-                        :class="{ 'stem--dimmed': isGroupItemDimmed(stem.key, idx) }"
+                        :class="{
+                          'stem--dimmed': isGroupItemDimmed(stem.key, idx),
+                          'suppress-hover': suppressHoverKeys.has(iconTargetKey(stem.key, idx)),
+                        }"
                         :data-testid="`stem-${stem.key}-item-${idx}`"
                       >
                         <button
                           class="stem__icon-btn"
+                          :class="{
+                            'is-pressed': pressedIconKeys.has(iconTargetKey(stem.key, idx)),
+                            'suppress-hover': suppressHoverKeys.has(iconTargetKey(stem.key, idx)),
+                          }"
                           type="button"
                           :data-tooltip="groupItemAriaLabel(stem.title, item, idx)"
                           :aria-label="groupItemAriaLabel(stem.title, item, idx)"
@@ -1290,10 +1389,10 @@ function resetGains() {
                           :data-testid="`stem-${stem.key}-item-${idx}-mute`"
                           @click="onGroupItemIconClick(stem.key, idx, $event)"
                           @contextmenu="openGroupItemContextMenu(stem.key, idx, $event)"
-                          @pointerdown="scheduleLongPress(stem.key, idx, $event)"
-                          @pointerup="onGroupItemIconPointerUp(stem.key, idx, $event)"
-                          @pointercancel="clearLongPressTimer"
-                          @pointerleave="clearLongPressTimer"
+                          @pointerdown="onGroupItemIconPointerDown(stem.key, idx, $event)"
+                          @pointerup="onGroupItemIconPointerUpAll(stem.key, idx, $event)"
+                          @pointercancel="onGroupItemIconPointerCancelLeave(stem.key, idx, $event)"
+                          @pointerleave="onGroupItemIconPointerCancelLeave(stem.key, idx, $event)"
                         >
                           <span
                             class="stem__icon"
@@ -1323,6 +1422,9 @@ function resetGains() {
 
                         <div
                           class="stem__slider-wrap"
+                          :class="{
+                            'is-slider-pressed': pressedSliderKeys.has(groupItemKey(stem.key, idx)),
+                          }"
                           :style="{ '--stem-percent': groupItemPercent(stem.key, idx) }"
                         >
                           <input
@@ -1334,6 +1436,16 @@ function resetGains() {
                             :value="groupItemGain(stem.key, idx)"
                             :disabled="!isFaderEditingEnabled"
                             :aria-label="groupItemAriaLabel(stem.title, item, idx)"
+                            @pointerdown="onSliderPointerDown(groupItemKey(stem.key, idx), $event)"
+                            @pointerup="
+                              onSliderPointerUpOrCancel(groupItemKey(stem.key, idx), $event)
+                            "
+                            @pointercancel="
+                              onSliderPointerUpOrCancel(groupItemKey(stem.key, idx), $event)
+                            "
+                            @pointerleave="
+                              onSliderPointerLeave(groupItemKey(stem.key, idx), $event)
+                            "
                             @input="onGroupItemInput(stem.key, idx, $event)"
                           />
                         </div>
@@ -1938,15 +2050,15 @@ function resetGains() {
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
   }
 
-  .stem__icon-btn:hover {
+  .stem__icon-btn:not(.suppress-hover):hover {
     color: var(--lyrics-album-contour);
   }
 
-  .stems__grid--disabled .stem__icon-btn:hover {
+  .stems__grid--disabled .stem__icon-btn:not(.suppress-hover):hover {
     color: rgba(255, 255, 255, 0.44);
   }
 
-  .stem:hover .stem__slider::-webkit-slider-runnable-track {
+  .stem:not(.suppress-hover):hover .stem__slider::-webkit-slider-runnable-track {
     background: linear-gradient(
       90deg,
       var(--lyrics-album-contour) 0%,
@@ -1956,7 +2068,9 @@ function resetGains() {
     );
   }
 
-  .stems__grid--disabled .stem:hover .stem__slider::-webkit-slider-runnable-track {
+  .stems__grid--disabled
+    .stem:not(.suppress-hover):hover
+    .stem__slider::-webkit-slider-runnable-track {
     background: linear-gradient(
       90deg,
       rgba(255, 255, 255, 0.5) 0%,
@@ -1966,15 +2080,15 @@ function resetGains() {
     );
   }
 
-  .stem:hover .stem__slider::-moz-range-progress {
+  .stem:not(.suppress-hover):hover .stem__slider::-moz-range-progress {
     background: var(--lyrics-album-contour);
   }
 
-  .stems__grid--disabled .stem:hover .stem__slider::-moz-range-progress {
+  .stems__grid--disabled .stem:not(.suppress-hover):hover .stem__slider::-moz-range-progress {
     background: rgba(255, 255, 255, 0.5);
   }
 
-  .stem__icon-btn:active {
+  .stem__icon-btn.is-pressed {
     color: var(--lyrics-album-contour);
   }
 
@@ -2063,7 +2177,7 @@ function resetGains() {
   );
 }
 
-.stem__slider:active::-webkit-slider-runnable-track {
+.stem__slider-wrap.is-slider-pressed .stem__slider::-webkit-slider-runnable-track {
   background: linear-gradient(
     90deg,
     var(--lyrics-album-contour) 0%,
@@ -2073,7 +2187,9 @@ function resetGains() {
   );
 }
 
-.stems__grid--disabled .stem__slider:active::-webkit-slider-runnable-track {
+.stems__grid--disabled
+  .stem__slider-wrap.is-slider-pressed
+  .stem__slider::-webkit-slider-runnable-track {
   background: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0.5) 0%,
@@ -2102,11 +2218,11 @@ function resetGains() {
   background: rgba(255, 255, 255, 0.92);
 }
 
-.stem__slider:active::-moz-range-progress {
+.stem__slider-wrap.is-slider-pressed .stem__slider::-moz-range-progress {
   background: var(--lyrics-album-contour);
 }
 
-.stems__grid--disabled .stem__slider:active::-moz-range-progress {
+.stems__grid--disabled .stem__slider-wrap.is-slider-pressed .stem__slider::-moz-range-progress {
   background: rgba(255, 255, 255, 0.5);
 }
 
