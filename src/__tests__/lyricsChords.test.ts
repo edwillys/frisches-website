@@ -56,7 +56,6 @@ describe('lyricsChords', () => {
         ...baseLyrics.meta,
         chords: {
           enabled: true,
-          format: 'chordpro',
           source: `[Verse 1]\nF#m7\nLegend says that\nF#m6/E             B7\nWhen you cast your magic spells`,
         },
       },

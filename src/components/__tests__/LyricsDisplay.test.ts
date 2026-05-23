@@ -707,15 +707,16 @@ describe('LyricsDisplay', () => {
     await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
 
     const carousel = wrapper.find('.lyrics-chords-carousel').element as HTMLElement & {
-      scrollTo?: ReturnType<typeof vi.fn>
+      scrollTo?: HTMLElement['scrollTo']
     }
-    carousel.scrollTo = vi.fn()
+    const scrollToMock = vi.fn() as unknown as HTMLElement['scrollTo']
+    carousel.scrollTo = scrollToMock
 
     await wrapper.setProps({ currentTime: 1.5 })
     await nextTick()
     await nextTick()
 
-    expect(carousel.scrollTo).not.toHaveBeenCalled()
+    expect(scrollToMock).not.toHaveBeenCalled()
   })
 
   it('does not auto-scroll the desktop chord sidebar when playback advances', async () => {
@@ -729,15 +730,16 @@ describe('LyricsDisplay', () => {
     await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
 
     const sidebar = wrapper.find('.lyrics-chords-sidebar').element as HTMLElement & {
-      scrollTo?: ReturnType<typeof vi.fn>
+      scrollTo?: HTMLElement['scrollTo']
     }
-    sidebar.scrollTo = vi.fn()
+    const scrollToMock = vi.fn() as unknown as HTMLElement['scrollTo']
+    sidebar.scrollTo = scrollToMock
 
     await wrapper.setProps({ currentTime: 1.5 })
     await nextTick()
     await nextTick()
 
-    expect(sidebar.scrollTo).not.toHaveBeenCalled()
+    expect(scrollToMock).not.toHaveBeenCalled()
   })
 
   it('does not highlight carousel or sidebar items in the large chord layout', async () => {
