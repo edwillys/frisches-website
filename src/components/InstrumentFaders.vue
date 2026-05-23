@@ -801,16 +801,23 @@ function groupDrawerStyle(stem: StemName) {
   }
 }
 
+function scrollGroupIntoView(stem: StemName) {
+  const groupEl = overlayEl.value?.querySelector(
+    `[data-testid="stem-${stem}"]`
+  ) as HTMLElement | null
+
+  if (typeof groupEl?.scrollIntoView !== 'function') return
+
+  groupEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
+}
+
 function toggleGroup(stem: StemName) {
   delete groupPreviewWidth[stem]
   groupOpen[stem] = !groupOpen[stem]
 
   if (groupOpen[stem]) {
     void nextTick(() => {
-      const groupEl = overlayEl.value?.querySelector(
-        `[data-testid="stem-${stem}"]`
-      ) as HTMLElement | null
-      groupEl?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
+      scrollGroupIntoView(stem)
     })
   }
 }
@@ -860,10 +867,7 @@ function onGroupHandlePointerUp() {
 
     if (groupOpen[stem]) {
       void nextTick(() => {
-        const groupEl = overlayEl.value?.querySelector(
-          `[data-testid="stem-${stem}"]`
-        ) as HTMLElement | null
-        groupEl?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
+        scrollGroupIntoView(stem)
       })
     }
   }
