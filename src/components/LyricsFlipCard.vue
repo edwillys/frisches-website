@@ -818,6 +818,7 @@ defineExpose({
   font-family: 'Space Mono', monospace;
   font-size: var(--about-card-title-font-size);
   letter-spacing: 0em;
+  min-width: 10rem;
 }
 
 .lyrics-flip-card__subtitle,
@@ -826,6 +827,7 @@ defineExpose({
   font-size: 0.68rem;
   letter-spacing: 0.03em;
   color: var(--color-text-secondary);
+  min-width: 12rem;
 }
 
 .lyrics-flip-card__rows {
