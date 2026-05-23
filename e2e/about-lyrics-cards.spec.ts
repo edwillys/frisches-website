@@ -126,4 +126,25 @@ test.describe('about lyrics cards', () => {
 
     expect(metrics.scrollWidth).toBeGreaterThan(metrics.clientWidth)
   })
+
+  test('mobile keeps the normal lyrics card roughly vertically centered before expand', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await openLyricsCard(page)
+
+    const card = page.locator('.lyrics-flip-card')
+    await expect(card).toBeVisible()
+
+    const box = await card.boundingBox()
+    expect(box).not.toBeNull()
+
+    const viewport = page.viewportSize()
+    expect(viewport).not.toBeNull()
+
+    const topGap = box!.y
+    const bottomGap = viewport!.height - (box!.y + box!.height)
+
+    expect(Math.abs(topGap - bottomGap)).toBeLessThanOrEqual(90)
+  })
 })

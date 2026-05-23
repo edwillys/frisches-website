@@ -10,6 +10,7 @@ import { useAboutSubSection } from '@/composables/useAboutSubSection'
 interface AboutViewState {
   activeSubmenu: AboutSubmenuKey
   canGoBack: boolean
+  isLyricsExpanded: boolean
 }
 
 interface Props {
@@ -39,18 +40,21 @@ const storyOpenSignal = ref(0)
 const lyricsBackSignal = ref(0)
 const isStoryOpen = ref(false)
 const isLyricsDetailOpen = ref(false)
+const isLyricsExpanded = ref(false)
 const openStoryAfterEntry = ref(false)
 
 const resetAboutState = () => {
   const needsReset =
     isStoryOpen.value ||
     isLyricsDetailOpen.value ||
+    isLyricsExpanded.value ||
     openStoryAfterEntry.value ||
     activeSection.value !== 'entry'
   if (!needsReset) return
 
   isStoryOpen.value = false
   isLyricsDetailOpen.value = false
+  isLyricsExpanded.value = false
   openStoryAfterEntry.value = false
   membersViewKey.value += 1
   lyricsViewKey.value += 1
@@ -209,15 +213,17 @@ watch(activeSection, (section, previousSection) => {
 
   if (section !== 'lyrics') {
     isLyricsDetailOpen.value = false
+    isLyricsExpanded.value = false
   }
 })
 
 watch(
-  [activeSection, isStoryOpen, isLyricsDetailOpen],
+  [activeSection, isStoryOpen, isLyricsDetailOpen, isLyricsExpanded],
   () => {
     emit('state-change', {
       activeSubmenu: activeSubmenu.value,
       canGoBack: showGlobalBackButton.value,
+      isLyricsExpanded: isLyricsExpanded.value,
     })
   },
   { immediate: true }
@@ -248,11 +254,16 @@ onBeforeUnmount(() => {
 defineExpose({
   goBackOneStep,
   navigateToSubmenu,
+  isLyricsExpanded,
 })
 </script>
 
 <template>
-  <section class="about-view" data-testid="about-view">
+  <section
+    class="about-view"
+    :class="{ 'about-view--lyrics-expanded': isLyricsExpanded }"
+    data-testid="about-view"
+  >
     <div
       ref="sectionsContainerRef"
       class="about-view__sections"
@@ -304,6 +315,7 @@ defineExpose({
             :is-active="props.isActive && activeSection === 'lyrics'"
             :back-signal="lyricsBackSignal"
             @detail-open-change="isLyricsDetailOpen = $event"
+            @expand-change="isLyricsExpanded = $event"
           />
         </div>
       </div>
@@ -319,6 +331,10 @@ defineExpose({
   overflow-y: auto;
 }
 
+.about-view--lyrics-expanded {
+  overflow: hidden;
+}
+
 .about-view__sections {
   width: min(100%, var(--about-track-max-width));
   margin-inline: auto;
@@ -326,6 +342,11 @@ defineExpose({
   position: relative;
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+.about-view--lyrics-expanded .about-view__sections {
+  width: 100%;
+  max-width: none;
 }
 
 .about-view__section {
@@ -338,6 +359,12 @@ defineExpose({
   opacity: 1;
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+.about-view--lyrics-expanded .about-view__section,
+.about-view--lyrics-expanded .about-view__carousel-shell {
+  align-items: stretch;
+  justify-content: stretch;
 }
 
 .about-view__carousel-shell {

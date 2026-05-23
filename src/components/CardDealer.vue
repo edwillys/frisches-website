@@ -238,6 +238,8 @@ const isAboutActive = computed(
   () => currentView.value === 'content' && selectedItemMatchesSection('about')
 )
 
+const isLyricsExpanded = computed(() => aboutViewRef.value?.isLyricsExpanded ?? false)
+
 const isMusicActive = computed(
   () => currentView.value === 'content' && selectedItemMatchesSection('music')
 )
@@ -2542,7 +2544,11 @@ onBeforeUnmount(() => {
         <div class="card-dealer__content-overlay"></div>
 
         <!-- Actual content -->
-        <div ref="contentPanelRef" class="card-dealer__content-container">
+        <div
+          ref="contentPanelRef"
+          class="card-dealer__content-container"
+          :class="{ 'card-dealer__content-container--lyrics-expanded': isLyricsExpanded }"
+        >
           <!-- Music Player (lazy-mount + keep alive via v-show) -->
           <div
             v-if="hasMountedMusic"

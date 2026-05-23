@@ -204,7 +204,7 @@ function isTopChordActive(chordName: string) {
 }
 
 function isSidebarChordActive(chordName: string) {
-  return isLargeChordLayout.value ? isChordActive(chordName) : false
+  return !isLargeChordLayout.value && isChordActive(chordName)
 }
 
 function findChordButton(chordName: string): HTMLElement | null {

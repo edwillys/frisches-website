@@ -187,6 +187,9 @@ function createLyricsFlipCardStub(initialState?: {
     template: `
       <div data-testid="lyrics-flip-card-stub">
         <button data-testid="lyrics-card-expand" @click="emit('toggle-expand')">expand</button>
+        <button data-testid="stub-close-detail" @click="emit('detail-open-change', false)">
+          close detail
+        </button>
         <button
           data-testid="stub-toggle-reserve"
           @click="reserveCompactChordRailSlot = !reserveCompactChordRailSlot"
@@ -237,6 +240,30 @@ describe('LyricsCardsView', () => {
     await wrapper.find('[data-testid="lyrics-card-expand"]').trigger('click')
 
     expect(wrapper.find('.lyrics-cards__cell').classes()).toContain('lyrics-cards__cell--expanded')
+  })
+
+  it('collapses expanded mode when the detail view closes', async () => {
+    const wrapper = mount(LyricsCardsView, {
+      global: {
+        stubs: {
+          LyricsFlipCard: createLyricsFlipCardStub(),
+        },
+      },
+    })
+
+    await wrapper.find('[data-testid="lyrics-card-expand"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('.lyrics-cards__cell').classes()).toContain('lyrics-cards__cell--expanded')
+
+    await wrapper.find('[data-testid="stub-close-detail"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('.lyrics-cards__cell').classes()).not.toContain(
+      'lyrics-cards__cell--expanded'
+    )
+    expect(wrapper.emitted('detail-open-change')).toEqual([[false]])
+    expect(wrapper.emitted('expand-change')).toEqual([[true], [false]])
   })
 
   // ----- Req 9: Click outside the card collapses expanded state -----

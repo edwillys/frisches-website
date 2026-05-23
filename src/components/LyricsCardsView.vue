@@ -19,10 +19,15 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   (e: 'detail-open-change', isOpen: boolean): void
+  (e: 'expand-change', isExpanded: boolean): void
 }>()
 
 const lyricsCards = useLyricsCards()
 const isExpanded = ref(false)
+
+watch(isExpanded, (val) => {
+  emit('expand-change', val)
+})
 const cardRef = ref<InstanceType<typeof LyricsFlipCard> | null>(null)
 const chordRailRef = ref<HTMLElement | null>(null)
 const stageRef = ref<HTMLElement | null>(null)
@@ -39,6 +44,14 @@ function handleStageClick(event: MouseEvent) {
   if (cardEl && !cardEl.contains(event.target as Node)) {
     isExpanded.value = false
   }
+}
+
+function handleDetailOpenChange(isOpen: boolean) {
+  if (!isOpen && isExpanded.value) {
+    isExpanded.value = false
+  }
+
+  emit('detail-open-change', isOpen)
 }
 
 // --- Chord rail (sibling card) ---
@@ -102,7 +115,11 @@ watch([reserveRailSlot, isExpanded], ([isReserved, expanded], [wasReserved]) => 
 </script>
 
 <template>
-  <section class="lyrics-cards" data-testid="lyrics-cards-view">
+  <section
+    class="lyrics-cards"
+    :class="{ 'lyrics-cards--expanded': isExpanded }"
+    data-testid="lyrics-cards-view"
+  >
     <div
       ref="stageRef"
       class="lyrics-cards__stage"
@@ -130,7 +147,7 @@ watch([reserveRailSlot, isExpanded], ([isReserved, expanded], [wasReserved]) => 
             :back-signal="props.backSignal"
             :can-expand="true"
             :is-expanded="isExpanded"
-            @detail-open-change="emit('detail-open-change', $event)"
+            @detail-open-change="handleDetailOpenChange"
             @toggle-expand="toggleExpand"
           />
         </div>
@@ -220,6 +237,10 @@ watch([reserveRailSlot, isExpanded], ([isReserved, expanded], [wasReserved]) => 
   box-sizing: border-box;
 }
 
+.lyrics-cards--expanded {
+  padding: 0;
+}
+
 .lyrics-cards__stage {
   display: flex;
   align-items: flex-start;
@@ -250,6 +271,7 @@ watch([reserveRailSlot, isExpanded], ([isReserved, expanded], [wasReserved]) => 
   overflow-y: auto;
   box-sizing: border-box;
   padding-inline: 0;
+  padding-block: 0 var(--mini-player-offset, 0px);
 }
 
 .lyrics-cards__stage::-webkit-scrollbar {
@@ -444,6 +466,10 @@ watch([reserveRailSlot, isExpanded], ([isReserved, expanded], [wasReserved]) => 
 @media (max-width: 767px) {
   .lyrics-cards {
     --lyrics-cards-card-width: var(--lyrics-cards-card-width-mobile);
+  }
+
+  .lyrics-cards:not(.lyrics-cards--expanded) .lyrics-cards__stage {
+    align-items: center;
   }
 
   .lyrics-cards__cell {

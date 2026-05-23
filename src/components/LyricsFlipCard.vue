@@ -395,7 +395,7 @@ function handleChordSelection(chordName: string, event?: MouseEvent) {
   centerChord(chordName)
 }
 
-function handleCardKeydown(event: KeyboardEvent) {
+function handleGlobalEscapeCapture(event: KeyboardEvent) {
   if (event.key !== 'Escape' || !isFlipped.value) return
 
   event.preventDefault()
@@ -466,23 +466,25 @@ onMounted(() => {
 
   if (typeof expandedDesktopQuery.addEventListener === 'function') {
     expandedDesktopQuery.addEventListener('change', onExpandedDesktopChange)
-    return
+  } else {
+    expandedDesktopQuery.addListener(onExpandedDesktopChange)
   }
 
-  expandedDesktopQuery.addListener(onExpandedDesktopChange)
+  window.addEventListener('keydown', handleGlobalEscapeCapture, true)
 })
 
 onBeforeUnmount(() => {
   cancelCompactChordRailFrame()
 
-  if (!expandedDesktopQuery) return
-
-  if (typeof expandedDesktopQuery.removeEventListener === 'function') {
-    expandedDesktopQuery.removeEventListener('change', onExpandedDesktopChange)
-    return
+  if (expandedDesktopQuery) {
+    if (typeof expandedDesktopQuery.removeEventListener === 'function') {
+      expandedDesktopQuery.removeEventListener('change', onExpandedDesktopChange)
+    } else {
+      expandedDesktopQuery.removeListener(onExpandedDesktopChange)
+    }
   }
 
-  expandedDesktopQuery.removeListener(onExpandedDesktopChange)
+  window.removeEventListener('keydown', handleGlobalEscapeCapture, true)
 })
 
 defineExpose({
@@ -504,7 +506,6 @@ defineExpose({
       'lyrics-flip-card--expanded': props.isExpanded,
     }"
     :style="cardStyle"
-    @keydown="handleCardKeydown"
   >
     <div class="lyrics-flip-card__inner">
       <section
@@ -594,7 +595,13 @@ defineExpose({
 
         <!-- Expanded left sidebar: multi-column vertical chord grid (large screens, replaces top strip) -->
         <div
-          v-if="hasChordData && showChords && !isChordRailCollapsed && props.isExpanded"
+          v-if="
+            hasChordData &&
+            showChords &&
+            !isChordRailCollapsed &&
+            props.isExpanded &&
+            isExpandedDesktop
+          "
           ref="chordCarouselSidebar"
           class="lyrics-flip-card__chord-sidebar"
           data-testid="lyrics-card-chord-strip"
@@ -618,7 +625,13 @@ defineExpose({
 
         <!-- Expanded top horizontal strip: shown on small screens only (hidden by CSS at large widths) -->
         <div
-          v-if="hasChordData && showChords && !isChordRailCollapsed && props.isExpanded"
+          v-if="
+            hasChordData &&
+            showChords &&
+            !isChordRailCollapsed &&
+            props.isExpanded &&
+            !isExpandedDesktop
+          "
           ref="chordCarousel"
           class="lyrics-flip-card__chord-strip"
           data-testid="lyrics-card-chord-strip-top"
@@ -640,16 +653,20 @@ defineExpose({
           </button>
         </div>
 
+        <!-- Chord panel: absolutely positioned within the face on large expanded screens -->
+        <aside
+          v-if="showExpandedChordPanel && selectedChord"
+          class="lyrics-flip-card__chord-panel"
+          data-testid="lyrics-card-chord-panel"
+        >
+          <ChordFretboard :name="selectedChord.name" :diagram="selectedChord.diagram" large />
+        </aside>
+
         <div v-if="isLoadingLyrics" class="lyrics-flip-card__loading">
           <AnimatedLoadingGlyph :size="28" :stroke-width="2.1" />
         </div>
         <template v-else>
-          <div
-            class="lyrics-flip-card__content-area"
-            :class="{
-              'lyrics-flip-card__content-area--expanded-layout': showExpandedChordPanel,
-            }"
-          >
+          <div class="lyrics-flip-card__content-area">
             <div class="lyrics-flip-card__lyrics-pane">
               <div v-if="hasChordData && showChords" class="lyrics-flip-card__lyrics-rich">
                 <div
@@ -684,14 +701,6 @@ defineExpose({
 
               <pre v-else class="lyrics-flip-card__lyrics-text">{{ lyricsText }}</pre>
             </div>
-
-            <aside
-              v-if="showExpandedChordPanel && selectedChord"
-              class="lyrics-flip-card__chord-panel"
-              data-testid="lyrics-card-chord-panel"
-            >
-              <ChordFretboard :name="selectedChord.name" :diagram="selectedChord.diagram" large />
-            </aside>
           </div>
         </template>
       </section>
@@ -706,7 +715,6 @@ defineExpose({
   --card-border-r: 1rem;
   --card-controls-reserve: clamp(4.75rem, 24vw, 7.5rem);
   --lyrics-pane-max: 31rem;
-  --lyrics-expanded-chord-w: 22rem;
   --about-card-title-font-size: clamp(1.1rem, 1vw, 1.2rem);
   --lyrics-card-contour: var(--lyrics-album-contour);
   width: min(var(--about-card-width-desktop), calc(100vw - 2rem));
@@ -718,6 +726,11 @@ defineExpose({
 }
 
 .lyrics-flip-card--expanded {
+  --card-expanded-sidebar-w: clamp(7rem, 22vw, 21rem);
+  --card-expanded-chord-w: clamp(12rem, 18vw, 18rem);
+  --card-expanded-content-max-w: 52rem;
+  --card-expanded-side-padding-top: clamp(4.25rem, 10vh, 6rem);
+  --card-expanded-mobile-top-clearance: clamp(4.75rem, 14vw, 5.5rem);
   width: 100%;
   height: 100%;
   aspect-ratio: auto;
@@ -980,16 +993,7 @@ defineExpose({
   min-width: 0;
   min-height: 0;
   display: flex;
-}
-
-.lyrics-flip-card__chord-panel {
-  min-height: 0;
-  border: 1px solid color-mix(in srgb, var(--lyrics-card-contour) 44%, transparent 56%);
-  border-radius: calc(var(--card-border-r) - 0.12rem);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
-    rgba(15, 9, 42, 0.44);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  justify-content: center;
 }
 
 .lyrics-flip-card__chord-item {
@@ -1011,14 +1015,6 @@ defineExpose({
   transform: translateX(-1px);
 }
 
-.lyrics-flip-card__chord-panel {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  align-self: center;
-  padding: clamp(0.75rem, 1.6vw, 1.1rem);
-}
-
 /* ── Chord sidebar: visible in expanded mode on large screens ── */
 .lyrics-flip-card__chord-sidebar {
   /* Hidden by default; CSS below reveals it at the appropriate breakpoint */
@@ -1026,9 +1022,9 @@ defineExpose({
 }
 
 .lyrics-flip-card__chord-sidebar-item {
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: none;
   border-radius: 0.72rem;
-  background: rgba(255, 255, 255, 0.04);
+  background: transparent;
   color: var(--color-text);
   padding: 0.42rem 0.48rem;
   cursor: pointer;
@@ -1036,14 +1032,12 @@ defineExpose({
   align-items: center;
   justify-content: center;
   transition:
-    border-color 0.2s ease,
-    background 0.2s ease,
+    box-shadow 0.2s ease,
     transform 0.2s ease;
 }
 
 .lyrics-flip-card__chord-sidebar-item.is-active {
-  border-color: var(--lyrics-card-tone-base);
-  background: color-mix(in srgb, var(--lyrics-card-tone-base) 18%, rgba(255, 255, 255, 0.06));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lyrics-card-tone-base) 54%, transparent 46%);
   transform: translateX(2px);
 }
 
@@ -1194,92 +1188,105 @@ defineExpose({
 
 .lyrics-flip-card--expanded .lyrics-flip-card__lyrics-rich,
 .lyrics-flip-card--expanded .lyrics-flip-card__lyrics-text {
-  padding-inline: max(0.35rem, calc(50% - 16rem));
+  flex: 0 1 auto;
+  width: 100%;
+  max-width: min(100%, var(--card-expanded-content-max-w));
+  margin-inline: auto;
+  padding-inline: 0.35rem;
 }
 
 .lyrics-flip-card--expanded .lyrics-flip-card__title {
   font-size: clamp(1.75rem, 2.5vw, 2.3rem);
 }
 
-/* In 2-col layout, lyrics fill the left column — no centering restriction */
-.lyrics-flip-card--expanded
-  .lyrics-flip-card__content-area--expanded-layout
-  .lyrics-flip-card__lyrics-rich,
-.lyrics-flip-card--expanded
-  .lyrics-flip-card__content-area--expanded-layout
-  .lyrics-flip-card__lyrics-text {
-  padding-inline: 0.35rem;
-}
-
+/* ── Expanded large-screen: sidebar + chord panel absolutely overlaid (matches LyricsDisplay) ── */
 @media (min-width: 1100px) {
-  .lyrics-flip-card__content-area--expanded-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(18rem, var(--lyrics-expanded-chord-w));
-    align-items: stretch;
-  }
-}
-
-/* ── Expanded large-screen: left chord sidebar replaces top strip ── */
-@media (min-width: 1100px) {
-  /* Restructure the expanded back-face as a grid: [sidebar] [header+lyrics+chord-panel] */
+  /* Face stays flex-column; sidebar and chord panel float over it */
   .lyrics-flip-card--expanded .lyrics-flip-card__face--back {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-rows: auto auto 1fr;
     padding: 0;
     gap: 0;
   }
 
-  /* Sidebar spans all rows on the left */
+  /* Sidebar: absolute left, no dark background, no divider */
   .lyrics-flip-card--expanded .lyrics-flip-card__chord-sidebar {
     display: grid;
-    /* Fill as many fretboard columns as fit */
-    grid-template-columns: repeat(auto-fill, calc(6 * 0.88rem + 2 * 0.48rem));
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--card-expanded-sidebar-w);
+    grid-template-columns: repeat(auto-fit, minmax(calc(6 * 0.88rem + 2 * 0.52rem), 1fr));
     align-content: start;
-    gap: 0.42rem;
-    grid-row: 1 / -1;
-    grid-column: 1;
+    gap: 0.45rem;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 0.9rem calc(0.42rem / 2) 0.9rem 0.85rem;
+    padding: var(--card-expanded-side-padding-top) 0.75rem 0.85rem;
     scrollbar-width: none;
-    border-right: 1px solid rgba(255, 255, 255, 0.07);
-    background: rgba(0, 0, 0, 0.15);
     scroll-padding-block: 50%;
+    overscroll-behavior-y: contain;
+    z-index: 3;
   }
 
   .lyrics-flip-card--expanded .lyrics-flip-card__chord-sidebar::-webkit-scrollbar {
     display: none;
   }
 
-  /* Header, floating controls, expand btn, content area live in column 2 */
+  /* Sidebar items: no fill border, only a subtle ring on the active item */
+  .lyrics-flip-card--expanded .lyrics-flip-card__chord-sidebar-item {
+    border: none;
+    background: transparent;
+  }
+
+  .lyrics-flip-card--expanded .lyrics-flip-card__chord-sidebar-item.is-active {
+    box-shadow: inset 0 0 0 1px
+      color-mix(in srgb, var(--lyrics-card-tone-base) 54%, transparent 46%);
+    transform: translateX(2px);
+  }
+
+  /* Chord panel: absolute right, no box border */
+  .lyrics-flip-card--expanded .lyrics-flip-card__chord-panel {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--card-expanded-chord-w);
+    padding: var(--card-expanded-side-padding-top) 0.75rem 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(270deg, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.04));
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  /* Header: indent past both sidebar and chord panel */
   .lyrics-flip-card--expanded .lyrics-flip-card__back-header {
-    grid-column: 2;
-    grid-row: 1;
     padding: var(--card-pad-expanded);
+    padding-left: calc(var(--card-expanded-sidebar-w) + 1rem);
+    padding-right: calc(var(--card-expanded-chord-w) + 1rem);
     min-height: 3.8rem;
-    padding-inline: clamp(5rem, 12vw, 9rem);
   }
 
-  .lyrics-flip-card--expanded .lyrics-flip-card__floating-controls {
-    grid-column: 2;
-    grid-row: 1;
-    top: var(--card-pad-expanded);
-    right: var(--card-pad-expanded);
-  }
-
-  .lyrics-flip-card--expanded .lyrics-flip-card__expand-btn {
-    grid-column: 2;
-    grid-row: 1 / -1; /* positioned absolutely within the card */
-  }
-
+  /* Content area: indent past sidebar (left) and chord panel (right) */
   .lyrics-flip-card--expanded .lyrics-flip-card__loading,
   .lyrics-flip-card--expanded .lyrics-flip-card__content-area {
-    grid-column: 2;
-    grid-row: 2 / -1;
     padding: 0 var(--card-pad-expanded) var(--card-pad-expanded);
+    padding-left: calc(var(--card-expanded-sidebar-w) + 0.75rem);
+    padding-right: calc(var(--card-expanded-chord-w) + 0.75rem);
   }
 
-  /* Top horizontal strip is hidden when the sidebar is shown */
+  .lyrics-flip-card--expanded .lyrics-flip-card__lyrics-rich,
+  .lyrics-flip-card--expanded .lyrics-flip-card__lyrics-text {
+    width: 100%;
+    max-width: min(100%, var(--card-expanded-content-max-w));
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  /* Top strip hidden — sidebar takes its role */
   .lyrics-flip-card--expanded .lyrics-flip-card__chord-strip {
     display: none;
   }
@@ -1297,8 +1304,33 @@ defineExpose({
     --card-controls-reserve: clamp(4rem, 34vw, 6rem);
   }
 
+  .lyrics-flip-card--expanded {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+  }
+
+  .lyrics-flip-card--expanded .lyrics-flip-card__face {
+    padding-top: var(--card-expanded-mobile-top-clearance);
+  }
+
+  .lyrics-flip-card--expanded .lyrics-flip-card__floating-controls {
+    top: var(--card-expanded-mobile-top-clearance);
+  }
+
+  .lyrics-flip-card--expanded .lyrics-flip-card__back-header {
+    min-height: 0;
+    padding-inline: clamp(4.1rem, 18vw, 5.8rem);
+  }
+
   .lyrics-flip-card__back-header {
     min-height: 3.25rem;
+  }
+
+  .lyrics-flip-card--expanded .lyrics-flip-card__line-content,
+  .lyrics-flip-card--expanded .lyrics-flip-card__lyrics-text {
+    font-size: clamp(1rem, 4.5vw, 1.3rem);
+    line-height: 1.45;
   }
 }
 </style>

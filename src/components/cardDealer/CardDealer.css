@@ -908,6 +908,14 @@
   overflow-y: auto;
 }
 
+.card-dealer__content-container--lyrics-expanded {
+  padding: 0;
+}
+
+.card-dealer__content-container--lyrics-expanded .card-dealer__about-content {
+  max-width: none;
+}
+
 .card-dealer__music-content {
   display: flex;
   align-items: stretch;

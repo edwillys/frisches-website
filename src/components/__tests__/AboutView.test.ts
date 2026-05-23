@@ -104,7 +104,52 @@ describe('AboutView', () => {
 
     const emitted = wrapper.emitted('state-change') ?? []
     expect(emitted.length).toBeGreaterThan(0)
-    expect(emitted[0]?.[0]).toEqual({ activeSubmenu: 'none', canGoBack: false })
+    expect(emitted[0]?.[0]).toEqual({
+      activeSubmenu: 'none',
+      canGoBack: false,
+      isLyricsExpanded: false,
+    })
+
+    wrapper.unmount()
+  })
+
+  it('widens the about layout when the lyrics card enters expanded mode', async () => {
+    const wrapper = mount(AboutView, {
+      props: { isActive: true },
+      global: {
+        stubs: {
+          AboutEntryCard: {
+            template:
+              '<button data-testid="open-lyrics" @click="$emit(\'open-lyrics\')">lyrics</button>',
+          },
+          AboutMembersView: {
+            template: '<div data-testid="members-stub" />',
+          },
+          LyricsCardsView: {
+            template:
+              '<button data-testid="expand-lyrics" @click="$emit(\'expand-change\', true)">expand</button>',
+          },
+        },
+      },
+    })
+
+    await wrapper.find('[data-testid="open-lyrics"]').trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    await wrapper.find('[data-testid="expand-lyrics"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="about-view"]').classes()).toContain(
+      'about-view--lyrics-expanded'
+    )
+
+    const emitted = wrapper.emitted('state-change') ?? []
+    expect(emitted.at(-1)?.[0]).toEqual({
+      activeSubmenu: 'lyrics',
+      canGoBack: true,
+      isLyricsExpanded: true,
+    })
 
     wrapper.unmount()
   })
