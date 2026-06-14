@@ -76,7 +76,7 @@
     "vite-imagetools": "^10.0.0",
     "vitest": "^4.1.5",
     "vue-tsc": "^3.2.8",
-    "wrangler": "^4.86.0"
+    "wrangler": "^4.90.0"
   },
   "lint-staged": {
     "src/**/*.{ts,js,vue}": [

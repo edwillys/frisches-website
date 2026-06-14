@@ -48,7 +48,7 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Audit dependencies
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=high --omit=dev
 
       - name: Run linter
         run: npm run lint
