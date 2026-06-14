@@ -509,7 +509,7 @@ onUnmounted(() => {
 <template>
   <div class="lyrics-display">
     <aside
-      v-if="hasChordData && showChords && !isChordRailCollapsed"
+      v-if="isLargeChordLayout && hasChordData && showChords && !isChordRailCollapsed"
       ref="chordCarouselSidebar"
       class="lyrics-chords-sidebar"
     >
