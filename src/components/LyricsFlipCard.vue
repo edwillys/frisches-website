@@ -81,10 +81,19 @@ const selectedChord = computed(() => {
   const entry = carouselChords.value.find((c) => c.name === selectedChordId.value)
   if (!entry) return null
   return {
-    name: entry.definition?.displayName ?? entry.name,
+    name: entry.definition?.displayName ?? entry.definition?.name ?? entry.name,
     diagram: entry.definition?.diagram ?? null,
   }
 })
+
+function chordLabel(chord: {
+  name: string
+  definition?: { name: string; displayName?: string } | null
+}) {
+  const resolvedDefinition =
+    chord.definition ?? lyricsData.value?.resolvedChords.definitionsByName[chord.name] ?? null
+  return resolvedDefinition?.displayName ?? resolvedDefinition?.name ?? chord.name
+}
 
 const selectedTrackSupportsChords = computed(
   () => selectedTrack.value?.hasChords === true || hasChordData.value
@@ -158,6 +167,7 @@ function scheduleCompactChordRailFlipIn() {
 }
 
 const SECTION_BREAK_GAP_MS = 900
+const SHOULD_USE_LYRICS_CACHE = !import.meta.env.DEV
 
 const hasChordData = computed(() =>
   Boolean(
@@ -256,7 +266,7 @@ const loadLyricsForTrack = async (track: LyricsAlbumTrack) => {
   lyricsText.value = ''
   lyricsData.value = null
 
-  const cached = lyricsCache.value[track.trackId]
+  const cached = SHOULD_USE_LYRICS_CACHE ? lyricsCache.value[track.trackId] : undefined
   if (cached) {
     lyricsTitle.value = cached.title
     lyricsText.value = cached.text
@@ -271,7 +281,13 @@ const loadLyricsForTrack = async (track: LyricsAlbumTrack) => {
   isLoadingLyrics.value = true
 
   try {
-    const response = await fetch(track.lyricsPath, { signal: controller.signal })
+    const requestUrl = import.meta.env.DEV
+      ? `${track.lyricsPath}${track.lyricsPath.includes('?') ? '&' : '?'}t=${Date.now()}`
+      : track.lyricsPath
+    const response = await fetch(requestUrl, {
+      signal: controller.signal,
+      cache: import.meta.env.DEV ? 'no-store' : 'default',
+    })
     if (!response.ok) {
       lyricsTitle.value = track.title
       lyricsText.value = t.value.music.noLyricsForTrack
@@ -283,13 +299,15 @@ const loadLyricsForTrack = async (track: LyricsAlbumTrack) => {
     const normalized = normalizeLyricsData(json)
     const { title, text } = formatLyricsText(normalized, track.title)
 
-    lyricsCache.value = {
-      ...lyricsCache.value,
-      [track.trackId]: {
-        title,
-        text,
-        data: normalized,
-      },
+    if (SHOULD_USE_LYRICS_CACHE) {
+      lyricsCache.value = {
+        ...lyricsCache.value,
+        [track.trackId]: {
+          title,
+          text,
+          data: normalized,
+        },
+      }
     }
 
     lyricsTitle.value = title
@@ -326,7 +344,10 @@ const showTrackList = () => {
 
 function lineWordChords(line: Line, wordIndex: number) {
   if (!showChords.value) return []
-  return (line.chords ?? []).filter((chord) => (chord.wordIndex ?? 0) === wordIndex)
+  return (line.chords ?? []).filter(
+    (chord) =>
+      (chord.rowIndex ?? 0) === 0 && (chord.columnIndex ?? chord.wordIndex ?? 0) === wordIndex
+  )
 }
 
 function isSelectedChord(chordName: string) {
@@ -616,7 +637,7 @@ defineExpose({
             @click="handleChordSelection(chord.name, $event)"
           >
             <ChordFretboard
-              :name="chord.definition?.displayName ?? chord.name"
+              :name="chordLabel(chord)"
               :diagram="chord.definition?.diagram ?? null"
               compact
             />
@@ -646,7 +667,7 @@ defineExpose({
             @click="handleChordSelection(chord.name, $event)"
           >
             <ChordFretboard
-              :name="chord.definition?.displayName ?? chord.name"
+              :name="chordLabel(chord)"
               :diagram="chord.definition?.diagram ?? null"
               compact
             />
@@ -676,25 +697,30 @@ defineExpose({
                   :class="{ 'has-break-before': entry.hasBreakBefore }"
                 >
                   <div class="lyrics-flip-card__line-content">
-                    <span
-                      v-for="(word, wordIndex) in entry.line.words"
-                      :key="`${entry.line.id}-${wordIndex}`"
-                      class="lyrics-flip-card__word-stack"
-                    >
-                      <span class="lyrics-flip-card__word-chords">
-                        <button
-                          v-for="chord in lineWordChords(entry.line, wordIndex)"
-                          :key="chord.id"
-                          class="lyrics-flip-card__inline-chord"
-                          :class="{ 'is-active': isSelectedChord(chord.name) }"
-                          type="button"
-                          @click="handleChordSelection(chord.name, $event)"
-                        >
-                          {{ chord.name }}
-                        </button>
+                    <template v-if="entry.line.words.length > 0">
+                      <span
+                        v-for="(word, wordIndex) in entry.line.words"
+                        :key="`${entry.line.id}-${wordIndex}`"
+                        class="lyrics-flip-card__word-stack"
+                      >
+                        <span class="lyrics-flip-card__word-chords">
+                          <button
+                            v-for="chord in lineWordChords(entry.line, wordIndex)"
+                            :key="chord.id"
+                            class="lyrics-flip-card__inline-chord"
+                            :class="{ 'is-active': isSelectedChord(chord.name) }"
+                            type="button"
+                            @click="handleChordSelection(chord.name, $event)"
+                          >
+                            {{ chordLabel(chord) }}
+                          </button>
+                        </span>
+                        <span class="lyrics-flip-card__word">{{ word.text }}</span>
                       </span>
-                      <span class="lyrics-flip-card__word">{{ word.text }}</span>
-                    </span>
+                    </template>
+                    <template v-else>
+                      <span class="lyrics-flip-card__word">{{ entry.line.text }}</span>
+                    </template>
                   </div>
                 </div>
               </div>

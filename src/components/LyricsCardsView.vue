@@ -197,7 +197,7 @@ watch([reserveRailSlot, isExpanded], ([isReserved, expanded], [wasReserved]) => 
                     @click="handleRailChordClick(chord.name, $event)"
                   >
                     <ChordFretboard
-                      :name="chord.definition?.displayName ?? chord.name"
+                      :name="chord.definition?.displayName ?? chord.definition?.name ?? chord.name"
                       :diagram="chord.definition?.diagram ?? null"
                       compact
                     />

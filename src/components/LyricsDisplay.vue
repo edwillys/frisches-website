@@ -80,10 +80,11 @@ function clearResyncTimer() {
 
 function isActiveLineInSyncWindow(): boolean {
   if (!lyricsContainer.value) return false
-  if (activeLineIndex.value === -1) return false
+  const targetIndex = activeLineIndex.value >= 0 ? activeLineIndex.value : anchorLineIndex.value
+  if (targetIndex === -1) return false
 
   const activeElement = lyricsContainer.value.querySelector(
-    `[data-line-index="${activeLineIndex.value}"]`
+    `[data-line-index="${targetIndex}"]`
   ) as HTMLElement | null
   if (!activeElement) return false
 
@@ -105,6 +106,7 @@ const activeChord = computed(() => {
 })
 
 const activeChordName = computed(() => activeChord.value?.name ?? null)
+const activeChordId = computed(() => activeChord.value?.id ?? null)
 
 // Tracks the chord highlighted in the carousel/sidebar and inline lyrics.
 // Updated from playback (see activeChordName watch) and manual carousel/inline clicks.
@@ -116,10 +118,21 @@ const selectedChord = computed(() => {
   if (!chord) return null
 
   return {
-    name: chord.definition?.displayName ?? chord.name,
+    name: chord.definition?.displayName ?? chord.definition?.name ?? chord.name,
     diagram: chord.definition?.diagram ?? null,
   }
 })
+
+function chordLabel(chord: {
+  name: string
+  definition?: { name: string; displayName?: string } | null
+}) {
+  const resolvedDefinition =
+    chord.definition ??
+    resolvedLyricsData.value?.resolvedChords.definitionsByName[chord.name] ??
+    null
+  return resolvedDefinition?.displayName ?? resolvedDefinition?.name ?? chord.name
+}
 
 const activeLine = computed(() => {
   if (!resolvedLyricsData.value) return null
@@ -192,19 +205,119 @@ function handleLineClick(line: Line) {
 
 function lineWordChords(line: Line, wordIndex: number) {
   if (!showChords.value) return []
-  return (line.chords ?? []).filter((chord) => (chord.wordIndex ?? 0) === wordIndex)
+  return (line.chords ?? []).filter(
+    (chord) =>
+      (chord.rowIndex ?? 0) === 0 && (chord.columnIndex ?? chord.wordIndex ?? 0) === wordIndex
+  )
 }
 
-function isChordActive(chordName: string) {
-  return selectedChordId.value === chordName
+function isInstrumentalLine(line: Line): boolean {
+  return Boolean(line.instrumental || (line.words.length === 0 && (line.chords?.length ?? 0) > 0))
+}
+
+function instrumentalRows(line: Line): number {
+  if (!isInstrumentalLine(line)) return 0
+  if (!showChords.value) return 1
+  return Math.max(1, line.instrumental?.rows ?? 1)
+}
+
+function instrumentalColumns(line: Line): number {
+  if (!isInstrumentalLine(line)) return 0
+  if (!showChords.value) return 1
+  const fromMeta = line.instrumental?.columns
+  if (typeof fromMeta === 'number' && fromMeta > 0) return fromMeta
+
+  const maxColumn = Math.max(
+    0,
+    ...(line.chords ?? []).map((chord) => chord.columnIndex ?? chord.wordIndex ?? 0)
+  )
+  return Math.max(1, maxColumn + 1)
+}
+
+function instrumentalCellLabel(line: Line): string {
+  return line.text ?? ''
+}
+
+function instrumentalMode(
+  line: Line
+): 'textNone' | 'textOnce' | 'textOncePerRow' | 'textOncePerColumn' {
+  if (!showChords.value) return 'textOnce'
+  return line.instrumental?.mode ?? 'textOncePerColumn'
+}
+
+function shouldRenderInstrumentalLabel(line: Line, rowIndex: number, columnIndex: number): boolean {
+  const mode = instrumentalMode(line)
+  if (mode === 'textNone') return false
+  if (mode === 'textOnce') return rowIndex === 0 && columnIndex === 0
+  if (mode === 'textOncePerRow') return columnIndex === 0
+  return rowIndex === 0
+}
+
+function instrumentalCellAllChords(line: Line, rowIndex: number, columnIndex: number) {
+  return (line.chords ?? []).filter(
+    (chord) =>
+      (chord.rowIndex ?? 0) === rowIndex &&
+      (chord.columnIndex ?? chord.wordIndex ?? 0) === columnIndex
+  )
+}
+
+function instrumentalLabelState(
+  line: Line,
+  rowIndex: number,
+  columnIndex: number
+): 'future' | 'active' | 'past' {
+  const mode = instrumentalMode(line)
+
+  if (mode === 'textOnce') {
+    if (currentTimeMs.value < line.startTime) return 'future'
+    if (currentTimeMs.value <= line.endTime) return 'active'
+    return 'past'
+  }
+
+  let scopedChords = instrumentalCellAllChords(line, rowIndex, columnIndex)
+  if (mode === 'textOncePerRow') {
+    scopedChords = (line.chords ?? []).filter((chord) => (chord.rowIndex ?? 0) === rowIndex)
+  }
+
+  const startTime =
+    scopedChords.length > 0
+      ? Math.min(...scopedChords.map((chord) => chord.startTime))
+      : line.startTime
+  const endTime =
+    scopedChords.length > 0 ? Math.max(...scopedChords.map((chord) => chord.endTime)) : line.endTime
+
+  if (currentTimeMs.value < startTime) return 'future'
+  if (currentTimeMs.value <= endTime) return 'active'
+  return 'past'
+}
+
+function isTextOnceMode(line: Line): boolean {
+  return instrumentalMode(line) === 'textOnce'
+}
+
+function instrumentalCells(
+  line: Line,
+  rowIndex: number
+): Array<{ rowIndex: number; columnIndex: number }> {
+  const columns = instrumentalColumns(line)
+  return Array.from({ length: columns }, (_, columnIndex) => ({ rowIndex, columnIndex }))
+}
+
+function instrumentalCellChords(line: Line, rowIndex: number, columnIndex: number) {
+  if (!showChords.value) return []
+  return instrumentalCellAllChords(line, rowIndex, columnIndex)
+}
+
+function isChordActive(chord: { id: string; name: string }) {
+  return activeChordId.value === chord.id
 }
 
 function isTopChordActive(chordName: string) {
-  return !isLargeChordLayout.value && isChordActive(chordName)
+  return !isLargeChordLayout.value && selectedChordId.value === chordName
 }
 
 function isSidebarChordActive(chordName: string) {
-  return !isLargeChordLayout.value && isChordActive(chordName)
+  return !isLargeChordLayout.value && selectedChordId.value === chordName
 }
 
 function findChordButton(chordName: string): HTMLElement | null {
@@ -388,16 +501,15 @@ function handleScroll() {
 
 function syncToActiveLine() {
   isSyncMode.value = true
-  scrollToActiveLine()
+  const targetIndex = activeLineIndex.value >= 0 ? activeLineIndex.value : anchorLineIndex.value
+  scrollToLineIndex(targetIndex)
 }
 
-function scrollToActiveLine() {
-  if (!lyricsContainer.value || activeLineIndex.value === -1) return
+function scrollToLineIndex(lineIndex: number) {
+  if (!lyricsContainer.value || lineIndex === -1) return
 
   nextTick(() => {
-    const activeElement = lyricsContainer.value?.querySelector(
-      `[data-line-index="${activeLineIndex.value}"]`
-    )
+    const activeElement = lyricsContainer.value?.querySelector(`[data-line-index="${lineIndex}"]`)
     if (activeElement) {
       const el = activeElement as HTMLElement & { scrollIntoView?: (options?: unknown) => void }
       if (typeof el.scrollIntoView === 'function') {
@@ -423,7 +535,8 @@ watch(activeLineIndex, (newIndex, oldIndex) => {
   if (newIndex === oldIndex) return
 
   if (isSyncMode.value) {
-    scrollToActiveLine()
+    const targetIndex = newIndex >= 0 ? newIndex : anchorLineIndex.value
+    scrollToLineIndex(targetIndex)
     return
   }
 
@@ -523,7 +636,7 @@ onUnmounted(() => {
         @click.stop="handleCarouselSelect(chord)"
       >
         <ChordFretboard
-          :name="chord.definition?.displayName ?? chord.name"
+          :name="chordLabel(chord)"
           :diagram="chord.definition?.diagram ?? null"
           compact
         />
@@ -591,7 +704,7 @@ onUnmounted(() => {
             @click.stop="handleCarouselSelect(chord)"
           >
             <ChordFretboard
-              :name="chord.definition?.displayName ?? chord.name"
+              :name="chordLabel(chord)"
               :diagram="chord.definition?.diagram ?? null"
               compact
             />
@@ -617,32 +730,101 @@ onUnmounted(() => {
             @click="handleLineClick(line)"
           >
             <div class="lyrics-line-content">
-              <span
-                v-for="(word, wordIndex) in line.words"
-                :key="`${line.id}-${wordIndex}`"
-                class="lyrics-word-stack"
-              >
-                <span v-if="showChords" class="lyrics-word-chords">
-                  <button
-                    v-for="chord in lineWordChords(line, wordIndex)"
-                    :key="chord.id"
-                    class="lyrics-inline-chord"
-                    :class="{ 'is-active': isChordActive(chord.name) }"
-                    type="button"
-                    @click.stop="handleInlineChordSeek(chord)"
+              <template v-if="isInstrumentalLine(line)">
+                <div class="lyrics-instrumental" :class="{ 'no-chords': !showChords }">
+                  <div
+                    v-if="
+                      showChords &&
+                      isTextOnceMode(line) &&
+                      instrumentalCellLabel(line) &&
+                      shouldRenderInstrumentalLabel(line, 0, 0)
+                    "
+                    class="lyrics-instrumental-heading"
                   >
-                    {{ chord.name }}
-                  </button>
-                </span>
+                    <span
+                      class="lyrics-instrumental-glyph"
+                      :class="{
+                        'is-active': instrumentalLabelState(line, 0, 0) === 'active',
+                        'is-past': instrumentalLabelState(line, 0, 0) === 'past',
+                      }"
+                      >{{ instrumentalCellLabel(line) }}</span
+                    >
+                  </div>
+                  <div
+                    v-for="rowIndex in instrumentalRows(line)"
+                    :key="`${line.id}-row-${rowIndex - 1}`"
+                    class="lyrics-instrumental-row"
+                  >
+                    <span
+                      v-for="cell in instrumentalCells(line, rowIndex - 1)"
+                      :key="`${line.id}-${cell.rowIndex}-${cell.columnIndex}`"
+                      class="lyrics-instrumental-cell"
+                    >
+                      <span v-if="showChords" class="lyrics-word-chords">
+                        <button
+                          v-for="chord in instrumentalCellChords(
+                            line,
+                            cell.rowIndex,
+                            cell.columnIndex
+                          )"
+                          :key="chord.id"
+                          class="lyrics-inline-chord"
+                          :class="{ 'is-active': isChordActive(chord) }"
+                          type="button"
+                          @click.stop="handleInlineChordSeek(chord)"
+                        >
+                          {{ chordLabel(chord) }}
+                        </button>
+                      </span>
+                      <span
+                        v-if="
+                          (!showChords || !isTextOnceMode(line)) &&
+                          instrumentalCellLabel(line) &&
+                          shouldRenderInstrumentalLabel(line, cell.rowIndex, cell.columnIndex)
+                        "
+                        class="lyrics-instrumental-glyph"
+                        :class="{
+                          'is-active':
+                            instrumentalLabelState(line, cell.rowIndex, cell.columnIndex) ===
+                            'active',
+                          'is-past':
+                            instrumentalLabelState(line, cell.rowIndex, cell.columnIndex) ===
+                            'past',
+                        }"
+                        >{{ instrumentalCellLabel(line) }}</span
+                      >
+                    </span>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
                 <span
-                  class="lyrics-word"
-                  :class="{
-                    'is-active': index === activeLineIndex && isWordActive(word),
-                    'is-past': index === activeLineIndex && isPastWord(word),
-                  }"
-                  >{{ word.text }}</span
+                  v-for="(word, wordIndex) in line.words"
+                  :key="`${line.id}-${wordIndex}`"
+                  class="lyrics-word-stack"
                 >
-              </span>
+                  <span v-if="showChords" class="lyrics-word-chords">
+                    <button
+                      v-for="chord in lineWordChords(line, wordIndex)"
+                      :key="chord.id"
+                      class="lyrics-inline-chord"
+                      :class="{ 'is-active': isChordActive(chord) }"
+                      type="button"
+                      @click.stop="handleInlineChordSeek(chord)"
+                    >
+                      {{ chordLabel(chord) }}
+                    </button>
+                  </span>
+                  <span
+                    class="lyrics-word"
+                    :class="{
+                      'is-active': index === activeLineIndex && isWordActive(word),
+                      'is-past': index === activeLineIndex && isPastWord(word),
+                    }"
+                    >{{ word.text }}</span
+                  >
+                </span>
+              </template>
             </div>
           </div>
         </div>
@@ -687,6 +869,9 @@ onUnmounted(() => {
       var(--lyrics-floating-tools-strip-gap)
   );
   --lyrics-text-column-width: clamp(17rem, 84%, 38rem);
+  --lyrics-muted-opacity: 0.5;
+  --lyrics-base-color: var(--color-text);
+  --lyrics-highlight-color: var(--album-theme-color, var(--color-neon-cyan));
   position: relative;
   display: grid;
   /* default: single-column, 2 rows — [sticky] [lyrics] */
@@ -890,7 +1075,7 @@ onUnmounted(() => {
 }
 
 .lyrics-content::after {
-  min-height: calc(var(--mini-player-offset, 0px) + clamp(5rem, 16vh, 9rem));
+  min-height: calc(var(--mini-player-offset, 0px) + clamp(7rem, 22vh, 12rem));
 }
 
 .lyrics-content__body {
@@ -923,11 +1108,15 @@ onUnmounted(() => {
 }
 
 .lyrics-line.is-past .lyrics-line-content {
-  color: var(--album-theme-color, var(--color-neon-cyan));
+  color: var(--lyrics-highlight-color);
 }
 
 .lyrics-line.is-future {
-  opacity: 0.5;
+  opacity: 1;
+}
+
+.lyrics-line.is-future .lyrics-word {
+  opacity: var(--lyrics-muted-opacity);
 }
 
 .lyrics-line.is-active {
@@ -939,7 +1128,7 @@ onUnmounted(() => {
   font-size: 28px;
   font-weight: 700;
   line-height: 1.5;
-  color: var(--color-text);
+  color: var(--lyrics-base-color);
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-start;
@@ -955,6 +1144,65 @@ onUnmounted(() => {
   margin-right: 0.3em;
 }
 
+.lyrics-instrumental {
+  display: flex;
+  flex-direction: column;
+  gap: 0.42rem;
+  width: 100%;
+}
+
+.lyrics-instrumental-heading {
+  display: flex;
+  align-items: center;
+  padding: 0.1rem 0.35rem;
+}
+
+.lyrics-instrumental-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.lyrics-instrumental-cell {
+  min-width: 4.5rem;
+  padding: 0.15rem 0.35rem 0.1rem;
+  border-radius: 0.35rem;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  opacity: 1;
+}
+
+.lyrics-instrumental.no-chords .lyrics-instrumental-cell {
+  justify-content: center;
+  min-height: 0;
+}
+
+.lyrics-instrumental-glyph {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.45em;
+  line-height: 1.1;
+  min-height: 1.2em;
+  letter-spacing: 0.12em;
+  color: var(--lyrics-base-color);
+  opacity: var(--lyrics-muted-opacity);
+  transition: opacity 0.2s ease;
+}
+
+.lyrics-instrumental-glyph.is-past,
+.lyrics-instrumental-glyph.is-active {
+  opacity: 1;
+  color: var(--lyrics-highlight-color);
+}
+
+.lyrics-instrumental-cell.is-past .lyrics-instrumental-glyph,
+.lyrics-instrumental-cell.is-active .lyrics-instrumental-glyph {
+  color: var(--lyrics-highlight-color);
+}
+
 .lyrics-inline-chord {
   background: transparent;
   border: none;
@@ -964,7 +1212,8 @@ onUnmounted(() => {
   font-weight: 800;
   letter-spacing: 0.02em;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--lyrics-base-color);
+  opacity: var(--lyrics-muted-opacity);
 }
 
 /* ── Large-screen layout: vertical chord sidebar on the left ────────────── */
@@ -1063,13 +1312,15 @@ onUnmounted(() => {
 }
 
 .lyrics-line.is-active .lyrics-word {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--lyrics-base-color);
+  opacity: 1;
 }
 
 /* Past + current word are orange (album theme, falls back to cyan). */
 .lyrics-word.is-past,
 .lyrics-word.is-active {
-  color: var(--album-theme-color, var(--color-neon-cyan)) !important;
+  color: var(--lyrics-highlight-color) !important;
+  opacity: 1;
 }
 
 /* Sync Button */
@@ -1097,8 +1348,8 @@ onUnmounted(() => {
 
 .sync-button:hover {
   background: rgba(18, 18, 18, 1);
-  border-color: var(--color-neon-cyan);
-  color: var(--color-neon-cyan);
+  border-color: var(--album-theme-color, var(--color-neon-cyan));
+  color: var(--album-theme-color, var(--color-neon-cyan));
   transform: translateX(-50%) scale(1.05);
 }
 
@@ -1144,7 +1395,7 @@ onUnmounted(() => {
   }
 
   .lyrics-content::after {
-    min-height: calc(var(--mini-player-offset, 0px) + clamp(4.5rem, 14vh, 7rem));
+    min-height: calc(var(--mini-player-offset, 0px) + clamp(6.5rem, 20vh, 10rem));
   }
 
   .lyrics-line-content {

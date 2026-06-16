@@ -19,17 +19,6 @@ type OutputLevelStats = {
   stemsActive: boolean
 }
 
-type WaveformSnapshot = {
-  master: number[]
-  stem: number[]
-}
-
-type WaveformChunk = {
-  samples: number[]
-  storeTime: number
-  sampleRate: number
-}
-
 type PairedWaveformChunk = {
   master: number[]
   stem: number[]
@@ -164,86 +153,6 @@ async function sampleOutputLevels(
       }
     },
     { probeDurationMs: durationMs, probeSampleEveryMs: sampleEveryMs }
-  )
-}
-
-async function captureWaveformSnapshots(
-  page: Page,
-  durationMs = 1400,
-  sampleEveryMs = 10
-): Promise<WaveformSnapshot[]> {
-  return page.evaluate(
-    async ({ probeDurationMs, probeSampleEveryMs }) => {
-      const probe = (
-        window as Window & {
-          __FRISCHES_E2E_AUDIO__?: {
-            readMasterSamples: () => number[]
-            readStemSamples: () => number[]
-          }
-        }
-      ).__FRISCHES_E2E_AUDIO__
-
-      if (!probe) {
-        throw new Error('Missing __FRISCHES_E2E_AUDIO__ waveform probe')
-      }
-
-      const snapshots: WaveformSnapshot[] = []
-      const startedAt = performance.now()
-
-      while (performance.now() - startedAt < probeDurationMs) {
-        snapshots.push({
-          master: probe.readMasterSamples(),
-          stem: probe.readStemSamples(),
-        })
-        await new Promise((resolve) => setTimeout(resolve, probeSampleEveryMs))
-      }
-
-      return snapshots
-    },
-    { probeDurationMs: durationMs, probeSampleEveryMs: sampleEveryMs }
-  )
-}
-
-async function captureWaveformChunk(
-  page: Page,
-  source: 'master' | 'stem',
-  durationMs = 2500,
-  sampleEveryMs = 20
-): Promise<WaveformChunk> {
-  return page.evaluate(
-    async ({ probeDurationMs, probeSampleEveryMs, sourceName }) => {
-      const probe = (
-        window as Window & {
-          __FRISCHES_E2E_AUDIO__?: {
-            readMasterSamples: () => number[]
-            readStemSamples: () => number[]
-            readSampleRate: () => number
-          }
-        }
-      ).__FRISCHES_E2E_AUDIO__
-
-      if (!probe) {
-        throw new Error('Missing __FRISCHES_E2E_AUDIO__ waveform probe')
-      }
-
-      const samples: number[] = []
-      const storeTime = (await import('/src/stores/audio.ts')).useAudioStore().currentTime
-      const startedAt = performance.now()
-
-      while (performance.now() - startedAt < probeDurationMs) {
-        const nextSamples =
-          sourceName === 'master' ? probe.readMasterSamples() : probe.readStemSamples()
-        samples.push(...nextSamples)
-        await new Promise((resolve) => setTimeout(resolve, probeSampleEveryMs))
-      }
-
-      return {
-        samples,
-        storeTime,
-        sampleRate: probe.readSampleRate(),
-      }
-    },
-    { probeDurationMs: durationMs, probeSampleEveryMs: sampleEveryMs, sourceName: source }
   )
 }
 

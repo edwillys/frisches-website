@@ -56,6 +56,16 @@ function resolveStartTime(line: Line, wordIndex: number | null): number {
   return line.words[wordIndex]?.startTime ?? line.startTime
 }
 
+function resolvePlacementWordIndex(line: Line, placement: LyricsChordPlacement): number | null {
+  if (typeof placement.columnIndex === 'number') {
+    return line.words[placement.columnIndex] ? placement.columnIndex : null
+  }
+  if (typeof placement.wordIndex === 'number') {
+    return line.words[placement.wordIndex] ? placement.wordIndex : null
+  }
+  return null
+}
+
 function resolveFallbackEndTime(line: Line, wordIndex: number | null): number {
   if (wordIndex == null) return line.endTime
   return Math.max(line.words[wordIndex]?.endTime ?? line.endTime, line.startTime)
@@ -68,7 +78,8 @@ function withResolvedEndTimes(
   const sorted = [...placements].sort((left, right) => left.startTime - right.startTime)
 
   return sorted.map((placement, index) => {
-    const fallbackEndTime = resolveFallbackEndTime(line, placement.wordIndex ?? null)
+    const resolvedWordIndex = resolvePlacementWordIndex(line, placement)
+    const fallbackEndTime = resolveFallbackEndTime(line, resolvedWordIndex)
     const nextStartTime = sorted[index + 1]?.startTime ?? line.endTime
     const endTime = nextStartTime > placement.startTime ? nextStartTime : fallbackEndTime
 
@@ -126,6 +137,8 @@ function parseChordSourceForLines(
           name: token.name,
           startTime: resolveStartTime(line, wordIndex),
           endTime: line.endTime,
+          rowIndex: 0,
+          columnIndex: wordIndex,
           wordIndex,
         }
       })
@@ -146,16 +159,17 @@ function resolveDefinitionsByName(
 ): Record<string, LyricsChordDefinition> {
   const definitionsByName = Object.fromEntries(
     Object.entries(metadata?.definitions ?? {}).map(([key, definition]) => {
-      const name = trimChordName(definition.name || key)
-      return [name, { ...definition, name }]
+      const definitionKey = trimChordName(key)
+      const displayName = trimChordName(definition.name || definitionKey)
+      return [definitionKey, { ...definition, name: displayName }]
     })
   ) as Record<string, LyricsChordDefinition>
 
   for (const line of lines) {
     for (const chord of line.chords ?? []) {
-      const name = trimChordName(chord.name)
-      if (!name || definitionsByName[name]) continue
-      definitionsByName[name] = { name }
+      const definitionKey = trimChordName(chord.name)
+      if (!definitionKey || definitionsByName[definitionKey]) continue
+      definitionsByName[definitionKey] = { name: definitionKey }
     }
   }
 
@@ -167,14 +181,30 @@ function normalizeLineChords(
   placements: LyricsChordPlacement[]
 ): LyricsChordPlacement[] {
   const normalized = placements
-    .map((placement, index) => ({
-      ...placement,
-      id: placement.id?.trim() || `${line.id}-chord-${index}`,
-      name: trimChordName(placement.name),
-      startTime: placement.startTime,
-      endTime: placement.endTime,
-      wordIndex: placement.wordIndex ?? null,
-    }))
+    .map((placement, index) => {
+      const hasRowIndex = typeof placement.rowIndex === 'number'
+      const hasColumnIndex = typeof placement.columnIndex === 'number'
+      const normalizedWordIndex: number | null =
+        typeof placement.wordIndex === 'number'
+          ? placement.wordIndex
+          : hasColumnIndex
+            ? (placement.columnIndex ?? null)
+            : null
+
+      return {
+        ...placement,
+        id: placement.id?.trim() || `${line.id}-chord-${index}`,
+        name: trimChordName(placement.name),
+        startTime:
+          typeof placement.startTime === 'number'
+            ? placement.startTime
+            : resolveStartTime(line, normalizedWordIndex),
+        endTime: placement.endTime,
+        rowIndex: hasRowIndex ? placement.rowIndex : 0,
+        columnIndex: hasColumnIndex ? placement.columnIndex : normalizedWordIndex,
+        wordIndex: normalizedWordIndex,
+      }
+    })
     .filter((placement) => placement.name.length > 0)
 
   return withResolvedEndTimes(line, normalized)

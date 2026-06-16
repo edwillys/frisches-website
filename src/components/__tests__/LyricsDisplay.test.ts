@@ -310,6 +310,57 @@ describe('LyricsDisplay', () => {
     expect(wrapper.find('.sync-button').exists()).toBe(false)
   })
 
+  it('sync button jumps to anchor line immediately when playback is in a lyric timestamp gap', async () => {
+    const gapData: LyricsData = {
+      meta: {
+        title: 'Gap Test',
+        totalDurationMs: 10000,
+        version: '1.0',
+      },
+      lyrics: [
+        {
+          id: 'line-1',
+          startTime: 1000,
+          endTime: 2000,
+          text: 'First line',
+          words: [{ text: 'First', startTime: 1000, endTime: 2000, duration: 1000 }],
+        },
+        {
+          id: 'line-2',
+          startTime: 5000,
+          endTime: 6000,
+          text: 'Second line',
+          words: [{ text: 'Second', startTime: 5000, endTime: 6000, duration: 1000 }],
+        },
+      ],
+    }
+
+    const wrapper = mount(LyricsDisplay, {
+      props: {
+        lyricsData: gapData,
+        currentTime: 3.2,
+        isPlaying: true,
+      },
+      attachTo: document.body,
+    })
+
+    const container = wrapper.find('.lyrics-container')
+    await container.trigger('wheel')
+    await container.trigger('scroll')
+    await nextTick()
+
+    const target = wrapper.find('[data-line-index="0"]').element as HTMLElement & {
+      scrollIntoView?: (options?: unknown) => void
+    }
+    const scrollIntoViewMock = vi.fn() as unknown as (options?: unknown) => void
+    target.scrollIntoView = scrollIntoViewMock
+
+    await wrapper.find('.sync-button').trigger('click')
+    await nextTick()
+
+    expect(scrollIntoViewMock).toHaveBeenCalled()
+  })
+
   it('does not disable sync on programmatic scroll', async () => {
     const wrapper = mount(LyricsDisplay, {
       props: {
@@ -497,6 +548,49 @@ describe('LyricsDisplay', () => {
     expect(wrapper.find('.lyrics-chords-carousel__item').classes()).toContain('is-active')
   })
 
+  it('forces instrumental label mode to once when chords are disabled', () => {
+    const instrumentalData: LyricsData = {
+      meta: {
+        title: 'Instrumental Collapse Test',
+        totalDurationMs: 4000,
+        version: '1.0',
+        chords: {
+          enabled: true,
+        },
+      },
+      lyrics: [
+        {
+          id: 'intro',
+          startTime: 0,
+          endTime: 4000,
+          text: '[Intro]',
+          words: [],
+          instrumental: {
+            mode: 'textOncePerRow',
+            rows: 2,
+            columns: 2,
+          },
+          chords: [
+            { id: 'i-0', name: 'B5', startTime: 0, endTime: 1000, rowIndex: 0, columnIndex: 0 },
+            { id: 'i-1', name: 'E', startTime: 1000, endTime: 2000, rowIndex: 0, columnIndex: 1 },
+            { id: 'i-2', name: 'G', startTime: 2000, endTime: 3000, rowIndex: 1, columnIndex: 0 },
+            { id: 'i-3', name: 'A', startTime: 3000, endTime: 4000, rowIndex: 1, columnIndex: 1 },
+          ],
+        },
+      ],
+    }
+
+    const wrapper = mount(LyricsDisplay, {
+      props: {
+        lyricsData: instrumentalData,
+        currentTime: 0.5,
+        isPlaying: true,
+      },
+    })
+
+    expect(wrapper.findAll('.lyrics-instrumental-glyph')).toHaveLength(1)
+  })
+
   it('seeks to the chord time when an inline chord is clicked', async () => {
     const wrapper = mount(LyricsDisplay, {
       props: {
@@ -610,7 +704,7 @@ describe('LyricsDisplay', () => {
 
   // ----- Chord selection: inline chord click -----
 
-  it('marks the clicked inline chord as active (is-active class)', async () => {
+  it('does not mark inline chords active from selection alone', async () => {
     const wrapper = mount(LyricsDisplay, {
       props: { lyricsData: mockChordLyricsData, currentTime: 0, isPlaying: false },
       attachTo: document.body,
@@ -623,7 +717,7 @@ describe('LyricsDisplay', () => {
     await inlineChords[0]!.trigger('click')
     await nextTick()
 
-    expect(inlineChords[0]!.classes()).toContain('is-active')
+    expect(inlineChords[0]!.classes()).not.toContain('is-active')
   })
 
   it('marks the corresponding carousel item active when an inline chord is clicked', async () => {
@@ -696,6 +790,445 @@ describe('LyricsDisplay', () => {
 
     expect(wrapper.find('.lyrics-chords-carousel__item').classes()).toContain('is-active')
     expect(wrapper.find('.lyrics-side-chord--right').exists()).toBe(false)
+  })
+
+  it('highlights only the active chord placement when the same chord name repeats', async () => {
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: mockChordLyricsData, currentTime: 2.5, isPlaying: true },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    await nextTick()
+
+    const inlineChords = wrapper.findAll('.lyrics-inline-chord')
+    expect(inlineChords).toHaveLength(2)
+    expect(inlineChords[0]?.classes()).not.toContain('is-active')
+    expect(inlineChords[1]?.classes()).toContain('is-active')
+  })
+
+  it('renders instrumental placeholder cells and timed row/column chords when no words exist', async () => {
+    const instrumentalData: LyricsData = {
+      meta: {
+        title: 'Instrumental Intro',
+        totalDurationMs: 4000,
+        version: '1.0',
+        chords: { enabled: true },
+      },
+      lyrics: [
+        {
+          id: 'Intro',
+          startTime: 0,
+          endTime: 4000,
+          text: '[Intro]',
+          words: [],
+          section: 'intro',
+          instrumental: { mode: 'textOncePerColumn', rows: 1, columns: 3 },
+          chords: [
+            { id: 'Intro-0', name: 'B5', startTime: 0, endTime: 1000, rowIndex: 0, columnIndex: 0 },
+            {
+              id: 'Intro-1',
+              name: 'E',
+              startTime: 1000,
+              endTime: 2500,
+              rowIndex: 0,
+              columnIndex: 1,
+            },
+            {
+              id: 'Intro-2',
+              name: 'G',
+              startTime: 2500,
+              endTime: 4000,
+              rowIndex: 0,
+              columnIndex: 2,
+            },
+          ],
+        },
+      ],
+    }
+
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: instrumentalData, currentTime: 1.6, isPlaying: true },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.findAll('.lyrics-instrumental-cell')).toHaveLength(3)
+    expect(wrapper.findAll('.lyrics-inline-chord')).toHaveLength(3)
+
+    const inlineChords = wrapper.findAll('.lyrics-inline-chord')
+    expect(inlineChords[0]?.classes()).not.toContain('is-active')
+    expect(inlineChords[1]?.classes()).toContain('is-active')
+    expect(inlineChords[2]?.classes()).not.toContain('is-active')
+  })
+
+  it('renders instrumental text once per row with mode=textOncePerRow', async () => {
+    const data: LyricsData = {
+      meta: {
+        title: 'Instrumental Rows',
+        totalDurationMs: 3000,
+        version: '1.0',
+        chords: { enabled: true },
+      },
+      lyrics: [
+        {
+          id: 'Intro',
+          startTime: 0,
+          endTime: 3000,
+          text: '[Intro]',
+          words: [],
+          section: 'intro',
+          instrumental: { mode: 'textOncePerRow', rows: 2, columns: 3 },
+          chords: [
+            { id: 'Intro-0', name: 'B5', startTime: 0, endTime: 3000, rowIndex: 0, columnIndex: 0 },
+          ],
+        },
+      ],
+    }
+
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: data, currentTime: 0.5, isPlaying: true },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.findAll('.lyrics-instrumental-cell')).toHaveLength(6)
+    const glyphs = wrapper.findAll('.lyrics-instrumental-glyph')
+    expect(glyphs).toHaveLength(2)
+    expect(glyphs.at(0)?.text()).toBe('[Intro]')
+  })
+
+  it('highlights textOnce labels for the full instrumental block window', async () => {
+    const data: LyricsData = {
+      meta: {
+        title: 'Instrumental Timing',
+        totalDurationMs: 4000,
+        version: '1.0',
+        chords: { enabled: true },
+      },
+      lyrics: [
+        {
+          id: 'Intro',
+          startTime: 1000,
+          endTime: 4000,
+          text: '[Intro]',
+          words: [],
+          section: 'intro',
+          instrumental: { mode: 'textOnce', rows: 1, columns: 2 },
+          chords: [
+            {
+              id: 'Intro-0',
+              name: 'B5',
+              startTime: 1500,
+              endTime: 3000,
+              rowIndex: 0,
+              columnIndex: 0,
+            },
+            {
+              id: 'Intro-1',
+              name: 'E',
+              startTime: 3000,
+              endTime: 4000,
+              rowIndex: 0,
+              columnIndex: 1,
+            },
+          ],
+        },
+      ],
+    }
+
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: data, currentTime: 1.2, isPlaying: true },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    await nextTick()
+
+    const glyph = wrapper.find('.lyrics-instrumental-glyph')
+    expect(glyph.classes()).toContain('is-active')
+    expect(glyph.text()).toBe('[Intro]')
+
+    const firstChord = wrapper.findAll('.lyrics-inline-chord')[0]
+    expect(firstChord?.classes()).not.toContain('is-active')
+
+    await wrapper.setProps({ currentTime: 3.2 })
+    await nextTick()
+    expect(glyph.classes()).toContain('is-active')
+    expect(firstChord?.classes()).not.toContain('is-active')
+
+    await wrapper.setProps({ currentTime: 4.2 })
+    await nextTick()
+    expect(glyph.classes()).toContain('is-past')
+    expect(glyph.classes()).not.toContain('is-active')
+  })
+
+  it('renders a dedicated heading label for textOnce mode', async () => {
+    const data: LyricsData = {
+      meta: {
+        title: 'Instrumental Heading',
+        totalDurationMs: 3000,
+        version: '1.0',
+        chords: { enabled: true },
+      },
+      lyrics: [
+        {
+          id: 'Intro',
+          startTime: 0,
+          endTime: 3000,
+          text: '[Intro]',
+          words: [],
+          section: 'intro',
+          instrumental: { mode: 'textOnce', rows: 1, columns: 3 },
+          chords: [
+            { id: 'Intro-0', name: 'B5', startTime: 0, endTime: 1000, rowIndex: 0, columnIndex: 0 },
+            {
+              id: 'Intro-1',
+              name: 'E',
+              startTime: 1000,
+              endTime: 2000,
+              rowIndex: 0,
+              columnIndex: 1,
+            },
+            {
+              id: 'Intro-2',
+              name: 'G',
+              startTime: 2000,
+              endTime: 3000,
+              rowIndex: 0,
+              columnIndex: 2,
+            },
+          ],
+        },
+      ],
+    }
+
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: data, currentTime: 0.6, isPlaying: true },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.findAll('.lyrics-instrumental-heading')).toHaveLength(1)
+    expect(wrapper.find('.lyrics-instrumental-heading .lyrics-instrumental-glyph').text()).toBe(
+      '[Intro]'
+    )
+  })
+
+  it('does not render instrumental text when mode=textNone', async () => {
+    const data: LyricsData = {
+      meta: {
+        title: 'Instrumental No Text',
+        totalDurationMs: 2000,
+        version: '1.0',
+        chords: { enabled: true },
+      },
+      lyrics: [
+        {
+          id: 'Solo',
+          startTime: 0,
+          endTime: 2000,
+          text: '[Solo]',
+          words: [],
+          section: 'interlude',
+          instrumental: { mode: 'textNone', rows: 1, columns: 2 },
+          chords: [
+            { id: 'Solo-0', name: 'B5', startTime: 0, endTime: 1000, rowIndex: 0, columnIndex: 0 },
+            {
+              id: 'Solo-1',
+              name: 'E',
+              startTime: 1000,
+              endTime: 2000,
+              rowIndex: 0,
+              columnIndex: 1,
+            },
+          ],
+        },
+      ],
+    }
+
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: data, currentTime: 0.8, isPlaying: true },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.findAll('.lyrics-instrumental-glyph')).toHaveLength(0)
+  })
+
+  it('applies no-chords class for instrumental layout when chord display is disabled', () => {
+    const data: LyricsData = {
+      meta: {
+        title: 'Instrumental Centering',
+        totalDurationMs: 2000,
+        version: '1.0',
+        chords: { enabled: true },
+      },
+      lyrics: [
+        {
+          id: 'Intro',
+          startTime: 0,
+          endTime: 2000,
+          text: '[Intro]',
+          words: [],
+          section: 'intro',
+          instrumental: { mode: 'textOncePerColumn', rows: 1, columns: 2 },
+          chords: [
+            { id: 'Intro-0', name: 'B5', startTime: 0, endTime: 1000, rowIndex: 0, columnIndex: 0 },
+            {
+              id: 'Intro-1',
+              name: 'E',
+              startTime: 1000,
+              endTime: 2000,
+              rowIndex: 0,
+              columnIndex: 1,
+            },
+          ],
+        },
+      ],
+    }
+
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: data, currentTime: 0.6, isPlaying: true },
+    })
+
+    expect(wrapper.find('.lyrics-instrumental').classes()).toContain('no-chords')
+    expect(wrapper.findAll('.lyrics-instrumental-row')).toHaveLength(1)
+    expect(wrapper.findAll('.lyrics-instrumental-cell')).toHaveLength(1)
+    expect(wrapper.findAll('.lyrics-instrumental-heading')).toHaveLength(0)
+    expect(wrapper.findAll('.lyrics-instrumental-glyph')).toHaveLength(1)
+  })
+
+  it('renders chord labels from the resolved definition name instead of the raw key', async () => {
+    const data: LyricsData = {
+      meta: {
+        title: 'Variant Chord Labels',
+        totalDurationMs: 2000,
+        version: '1.0',
+        chords: {
+          enabled: true,
+          definitions: {
+            'B-Interlude': {
+              name: 'B',
+              diagram: { frets: ['x', 2, 4, 4, 4, 2] },
+            },
+          },
+        },
+      },
+      lyrics: [
+        {
+          id: 'line-1',
+          startTime: 0,
+          endTime: 2000,
+          text: 'Test line',
+          words: [{ text: 'Test', startTime: 0, endTime: 2000, duration: 2000 }],
+          chords: [
+            { id: 'line-1-b', name: 'B-Interlude', startTime: 0, endTime: 2000, wordIndex: 0 },
+          ],
+        },
+      ],
+    }
+
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: data, currentTime: 0.5, isPlaying: true },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('.lyrics-inline-chord').text()).toBe('B')
+  })
+
+  it('uses row-wide timing windows for textOncePerRow labels', async () => {
+    const data: LyricsData = {
+      meta: {
+        title: 'Instrumental Row Timing',
+        totalDurationMs: 4000,
+        version: '1.0',
+        chords: { enabled: true },
+      },
+      lyrics: [
+        {
+          id: 'Interlude',
+          startTime: 0,
+          endTime: 4000,
+          text: '[Interlude]',
+          words: [],
+          section: 'interlude',
+          instrumental: { mode: 'textOncePerRow', rows: 2, columns: 2 },
+          chords: [
+            { id: 'R0C0', name: 'B5', startTime: 1000, endTime: 1500, rowIndex: 0, columnIndex: 0 },
+            { id: 'R0C1', name: 'E', startTime: 1500, endTime: 2200, rowIndex: 0, columnIndex: 1 },
+            { id: 'R1C0', name: 'G', startTime: 2500, endTime: 3000, rowIndex: 1, columnIndex: 0 },
+            { id: 'R1C1', name: 'A', startTime: 3000, endTime: 3600, rowIndex: 1, columnIndex: 1 },
+          ],
+        },
+      ],
+    }
+
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: data, currentTime: 2.0, isPlaying: true },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    await nextTick()
+
+    let glyphs = wrapper.findAll('.lyrics-instrumental-glyph')
+    expect(glyphs).toHaveLength(2)
+    expect(glyphs[0]?.classes()).toContain('is-active')
+    expect(glyphs[1]?.classes()).not.toContain('is-active')
+
+    await wrapper.setProps({ currentTime: 3.2 })
+    await nextTick()
+
+    glyphs = wrapper.findAll('.lyrics-instrumental-glyph')
+    expect(glyphs[0]?.classes()).toContain('is-past')
+    expect(glyphs[1]?.classes()).toContain('is-active')
+  })
+
+  it('keeps instrumental text empty when line text is empty', async () => {
+    const data: LyricsData = {
+      meta: {
+        title: 'Instrumental Empty',
+        totalDurationMs: 2000,
+        version: '1.0',
+        chords: { enabled: true },
+      },
+      lyrics: [
+        {
+          id: 'Intro',
+          startTime: 0,
+          endTime: 2000,
+          text: '',
+          words: [],
+          section: 'intro',
+          instrumental: { mode: 'textOnce', rows: 1, columns: 2 },
+          chords: [
+            { id: 'Intro-0', name: 'B5', startTime: 0, endTime: 2000, rowIndex: 0, columnIndex: 0 },
+          ],
+        },
+      ],
+    }
+
+    const wrapper = mount(LyricsDisplay, {
+      props: { lyricsData: data, currentTime: 0.5, isPlaying: true },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="lyrics-chords-toggle"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.findAll('.lyrics-instrumental-glyph')).toHaveLength(0)
   })
 
   it('does not auto-scroll the top chord carousel when playback advances', async () => {

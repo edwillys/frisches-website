@@ -24,6 +24,51 @@ const startFret = computed(() => props.diagram?.baseFret ?? 1)
 
 const needsPositionLabel = computed(() => startFret.value > 1)
 
+type ResolvedBarre = {
+  row: number
+  fromString: number
+  toString: number
+  finger: number | null
+}
+
+const barres = computed<ResolvedBarre[]>(() => {
+  const start = startFret.value
+  const fromDiagram = props.diagram?.barres ?? []
+  const fallbackFrets = props.diagram?.barreFrets ?? []
+  const normalizedFromDiagram = fromDiagram
+    .map((barre): ResolvedBarre | null => {
+      const relativeFret = Math.max(1, Number(barre.fret) - start + 1)
+      if (relativeFret > FRET_ROWS) return null
+
+      const left = Math.max(1, Math.min(barre.fromString, barre.toString))
+      const right = Math.min(stringCount.value, Math.max(barre.fromString, barre.toString))
+
+      return {
+        row: relativeFret,
+        fromString: left,
+        toString: right,
+        finger: barre.finger ?? null,
+      }
+    })
+    .filter((barre: ResolvedBarre | null): barre is ResolvedBarre => barre !== null)
+
+  if (normalizedFromDiagram.length > 0) return normalizedFromDiagram
+
+  return fallbackFrets
+    .map((fret): ResolvedBarre | null => {
+      const relativeFret = Math.max(1, Number(fret) - start + 1)
+      if (relativeFret > FRET_ROWS) return null
+
+      return {
+        row: relativeFret,
+        fromString: 1,
+        toString: stringCount.value,
+        finger: null,
+      }
+    })
+    .filter((barre: ResolvedBarre | null): barre is ResolvedBarre => barre !== null)
+})
+
 const markers = computed(() => {
   const frets = props.diagram?.frets ?? []
   const fingers = props.diagram?.fingers ?? []
@@ -34,10 +79,22 @@ const markers = computed(() => {
       if (fret === 'x' || fret === 0 || fret === null) return null
       const relativeFret = Math.max(1, Number(fret) - start + 1)
       if (relativeFret > FRET_ROWS) return null
+
+      const stringNumber = stringIndex + 1
+      const finger = (fingers[stringIndex] as number | undefined) ?? null
+      const coveredByBarre = barres.value.some(
+        (barre) =>
+          barre.row === relativeFret &&
+          stringNumber >= barre.fromString &&
+          stringNumber <= barre.toString &&
+          (barre.finger === null || barre.finger === finger)
+      )
+      if (coveredByBarre) return null
+
       return {
         stringIndex,
         row: relativeFret,
-        finger: (fingers[stringIndex] as number | undefined) ?? null,
+        finger,
       }
     })
     .filter((m): m is { stringIndex: number; row: number; finger: number | null } => m !== null)
@@ -91,6 +148,19 @@ const nutStates = computed(() =>
 
         <!-- Marker overlay: same grid dimensions, absolute positioned -->
         <div class="chord-fretboard__markers-layer" aria-hidden="true">
+          <span
+            v-for="barre in barres"
+            :key="`barre-${barre.row}-${barre.fromString}-${barre.toString}`"
+            class="chord-fretboard__barre"
+            :style="{
+              gridColumn: `${barre.fromString} / ${barre.toString + 1}`,
+              gridRow: barre.row,
+            }"
+          >
+            <span v-if="barre.finger !== null" class="chord-fretboard__barre-finger">{{
+              barre.finger
+            }}</span>
+          </span>
           <span
             v-for="marker in markers"
             :key="`marker-${marker.stringIndex}-${marker.row}`"
@@ -266,6 +336,27 @@ const nutStates = computed(() =>
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.chord-fretboard__barre {
+  place-self: center stretch;
+  margin-inline: calc(var(--chord-cell-w) * 0.1);
+  min-height: calc(var(--chord-marker-d) * 0.92);
+  border-radius: 999px;
+  background: var(--album-theme-color, var(--color-neon-cyan));
+  box-shadow: 0 0 4px
+    color-mix(in srgb, var(--album-theme-color, var(--color-neon-cyan)) 55%, transparent 45%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chord-fretboard__barre-finger {
+  font-size: var(--chord-finger-fs);
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.92);
+  line-height: 1;
+  user-select: none;
 }
 
 .chord-fretboard__finger {

@@ -19,6 +19,17 @@ const fingerDiagram: LyricsChordDiagram = {
   baseFret: 1,
 }
 
+const explicitBarreDiagram: LyricsChordDiagram = {
+  frets: [2, 2, 2, 4, 4, 2],
+  fingers: [1, 1, 1, 3, 4, 1],
+  barres: [{ fret: 2, fromString: 1, toString: 6, finger: 1 }],
+}
+
+const fallbackBarreDiagram: LyricsChordDiagram = {
+  frets: [1, 3, 3, 2, 1, 1],
+  barreFrets: [1],
+}
+
 describe('ChordFretboard', () => {
   // ----- Req 7: 5 frets -----
 
@@ -151,5 +162,22 @@ describe('ChordFretboard', () => {
     })
 
     expect(wrapper.find('.chord-fretboard').classes()).toContain('chord-fretboard--large')
+  })
+
+  it('renders explicit barres with finger labels', () => {
+    const wrapper = mount(ChordFretboard, {
+      props: { name: 'F#m', diagram: explicitBarreDiagram },
+    })
+
+    expect(wrapper.findAll('.chord-fretboard__barre')).toHaveLength(1)
+    expect(wrapper.find('.chord-fretboard__barre-finger').text()).toBe('1')
+  })
+
+  it('renders fallback barres from barreFrets when barres are not provided', () => {
+    const wrapper = mount(ChordFretboard, {
+      props: { name: 'F', diagram: fallbackBarreDiagram },
+    })
+
+    expect(wrapper.findAll('.chord-fretboard__barre')).toHaveLength(1)
   })
 })

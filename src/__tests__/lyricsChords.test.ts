@@ -64,6 +64,8 @@ describe('lyricsChords', () => {
     expect(normalized.lyrics[0]?.chords?.map((chord) => chord.name)).toEqual(['F#m7'])
     expect(normalized.lyrics[0]?.chords?.[0]).toMatchObject({
       wordIndex: 0,
+      rowIndex: 0,
+      columnIndex: 0,
       startTime: 1000,
       endTime: 3000,
     })
@@ -71,6 +73,8 @@ describe('lyricsChords', () => {
     expect(normalized.lyrics[1]?.chords?.map((chord) => chord.name)).toEqual(['F#m6/E', 'B7'])
     expect(normalized.lyrics[1]?.chords?.[1]).toMatchObject({
       wordIndex: 4,
+      rowIndex: 0,
+      columnIndex: 4,
       startTime: 5000,
       endTime: 6000,
     })
@@ -121,5 +125,91 @@ describe('lyricsChords', () => {
       2,
     ])
     expect(getActiveChordAtTime(normalized, 1500)?.name).toBe('B7')
+  })
+
+  it('keeps explicit row/column positions for instrumental sections', () => {
+    const normalized = normalizeLyricsData({
+      ...baseLyrics,
+      lyrics: [
+        {
+          id: 'Intro',
+          startTime: 0,
+          endTime: 2000,
+          text: '[Intro]',
+          words: [],
+          section: 'intro',
+          instrumental: {
+            mode: 'textOncePerColumn',
+            rows: 1,
+            columns: 3,
+          },
+          chords: [
+            { id: 'Intro-0', name: 'B5', startTime: 0, endTime: 600, rowIndex: 0, columnIndex: 0 },
+            {
+              id: 'Intro-1',
+              name: 'E',
+              startTime: 600,
+              endTime: 1200,
+              rowIndex: 0,
+              columnIndex: 1,
+            },
+            {
+              id: 'Intro-2',
+              name: 'G',
+              startTime: 1200,
+              endTime: 2000,
+              rowIndex: 0,
+              columnIndex: 2,
+            },
+          ],
+        },
+        ...baseLyrics.lyrics,
+      ],
+    })
+
+    expect(
+      normalized.lyrics[0]?.chords?.map((chord) => [chord.rowIndex, chord.columnIndex])
+    ).toEqual([
+      [0, 0],
+      [0, 1],
+      [0, 2],
+    ])
+    expect(getActiveChordAtTime(normalized, 1100)?.id).toBe('Intro-1')
+  })
+
+  it('resolves chord definitions by JSON key while preserving the definition name for display', () => {
+    const normalized = normalizeLyricsData({
+      ...baseLyrics,
+      meta: {
+        ...baseLyrics.meta,
+        chords: {
+          enabled: true,
+          definitions: {
+            'B-Interlude': {
+              name: 'B',
+              diagram: { frets: ['x', 2, 4, 4, 4, 2] },
+            },
+          },
+        },
+      },
+      lyrics: [
+        {
+          ...baseLyrics.lyrics[0],
+          chords: [
+            {
+              id: 'L1-B-Interlude',
+              name: 'B-Interlude',
+              startTime: 1000,
+              endTime: 3000,
+              wordIndex: 0,
+            },
+          ],
+        },
+        baseLyrics.lyrics[1],
+      ],
+    })
+
+    expect(normalized.resolvedChords.timeline[0]?.name).toBe('B-Interlude')
+    expect(normalized.resolvedChords.timeline[0]?.definition?.name).toBe('B')
   })
 })

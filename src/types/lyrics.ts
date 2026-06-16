@@ -7,11 +7,19 @@ export interface Word {
 
 export type LyricsChordDiagramFret = number | 'x'
 
+export interface LyricsChordBarre {
+  fret: number
+  fromString: number
+  toString: number
+  finger?: number | null
+}
+
 export interface LyricsChordDiagram {
   frets: LyricsChordDiagramFret[]
   fingers?: Array<number | null>
   baseFret?: number
   barreFrets?: number[]
+  barres?: LyricsChordBarre[]
   tuning?: string[]
 }
 
@@ -26,7 +34,16 @@ export interface LyricsChordPlacement {
   name: string
   startTime: number // ms
   endTime: number // ms
+  rowIndex?: number | null
+  columnIndex?: number | null
+  // Deprecated, kept for backward compatibility with existing lyric JSON files.
   wordIndex?: number | null
+}
+
+export interface InstrumentalLayout {
+  mode?: 'textNone' | 'textOnce' | 'textOncePerRow' | 'textOncePerColumn'
+  rows: number
+  columns: number
 }
 
 export interface LyricsChordMetadata {
@@ -52,6 +69,7 @@ export interface Line {
   text: string // full line text
   words: Word[]
   section?: LyricsSectionType
+  instrumental?: InstrumentalLayout
   chords?: LyricsChordPlacement[]
 }
 
