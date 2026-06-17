@@ -79,7 +79,7 @@
     "wrangler": "^4.90.0"
   },
   "lint-staged": {
-    "src/**/*.{ts,js,vue}": [
+    "{src,e2e}/**/*.{ts,js,vue}": [
       "eslint --fix",
       "prettier --write"
     ],

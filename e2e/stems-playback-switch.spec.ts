@@ -24,6 +24,16 @@ type PairedWaveformChunk = {
   stem: number[]
 }
 
+type E2eAudioProbe = {
+  startFromMusic: (trackId: string) => void
+  seek: (seconds: number) => void
+  readState: () => {
+    storeCurrentTime: number
+    storeIsPlaying: boolean
+    hasUserStartedPlayback: boolean
+  }
+}
+
 const allTojdStemFaders: StemName[] = ['drums', 'guitar', 'bass', 'vocals', 'percussion', 'strings']
 const coreAudibleStems: Array<Extract<StemName, 'vocals' | 'bass' | 'guitar' | 'drums'>> = [
   'vocals',
@@ -31,6 +41,30 @@ const coreAudibleStems: Array<Extract<StemName, 'vocals' | 'bass' | 'guitar' | '
   'guitar',
   'drums',
 ]
+
+async function e2eStartFromMusic(page: Page, trackId: string): Promise<void> {
+  await page.evaluate((id) => {
+    const probe = (
+      window as Window & {
+        __FRISCHES_E2E_AUDIO__?: E2eAudioProbe
+      }
+    ).__FRISCHES_E2E_AUDIO__
+    if (!probe) throw new Error('Missing __FRISCHES_E2E_AUDIO__ probe')
+    probe.startFromMusic(id)
+  }, trackId)
+}
+
+async function e2eSeek(page: Page, seconds: number): Promise<void> {
+  await page.evaluate((targetSeconds) => {
+    const probe = (
+      window as Window & {
+        __FRISCHES_E2E_AUDIO__?: E2eAudioProbe
+      }
+    ).__FRISCHES_E2E_AUDIO__
+    if (!probe) throw new Error('Missing __FRISCHES_E2E_AUDIO__ probe')
+    probe.seek(targetSeconds)
+  }, seconds)
+}
 
 async function ensureStemMixEditingEnabled(page: Page): Promise<void> {
   const toggle = page.locator('[data-testid="stems-enable-toggle"]')
@@ -68,10 +102,7 @@ async function waitForStemsPrebuffered(page: Page, timeout = 20000): Promise<voi
 }
 
 async function seekToKnownHotspot(page: Page, seconds = 32): Promise<void> {
-  await page.evaluate(async (targetSeconds: number) => {
-    const { useAudioStore } = await import('/src/stores/audio.ts')
-    useAudioStore().seek(targetSeconds)
-  }, seconds)
+  await e2eSeek(page, seconds)
 
   await page.waitForFunction(
     (targetSeconds: number) => {
@@ -280,11 +311,7 @@ async function openStemsOverlayOnTojd(page: Page): Promise<Locator> {
 
   await page.locator('[data-testid="album-carousel"]').waitFor({ state: 'visible', timeout: 15000 })
 
-  await page.evaluate(async () => {
-    const { useAudioStore } = await import('/src/stores/audio.ts')
-    const store = useAudioStore()
-    store.startFromMusic('tftc:02-tojd')
-  })
+  await e2eStartFromMusic(page, 'tftc:02-tojd')
 
   await page.waitForFunction(
     () => {
@@ -311,16 +338,21 @@ async function openStemsOverlayOnTojd(page: Page): Promise<Locator> {
 async function capturePlaybackSnapshot(page: Page): Promise<PlaybackSnapshot> {
   return page.evaluate(async () => {
     const audio = document.querySelector('audio') as HTMLAudioElement | null
-    const { useAudioStore } = await import('/src/stores/audio.ts')
-    const store = useAudioStore()
+    const probe = (
+      window as Window & {
+        __FRISCHES_E2E_AUDIO__?: E2eAudioProbe
+      }
+    ).__FRISCHES_E2E_AUDIO__
+    if (!probe) throw new Error('Missing __FRISCHES_E2E_AUDIO__ probe')
+    const state = probe.readState()
 
     return {
       audioPaused: audio?.paused ?? null,
       audioCurrentTime: audio?.currentTime ?? null,
       audioVolume: audio?.volume ?? null,
-      storeCurrentTime: store.currentTime,
-      storeIsPlaying: store.isPlaying,
-      hasUserStartedPlayback: store.hasUserStartedPlayback,
+      storeCurrentTime: state.storeCurrentTime,
+      storeIsPlaying: state.storeIsPlaying,
+      hasUserStartedPlayback: state.hasUserStartedPlayback,
     }
   })
 }
@@ -499,10 +531,7 @@ test.describe('Stems playback switching', () => {
       .locator('[data-testid="album-carousel"]')
       .waitFor({ state: 'visible', timeout: 15000 })
 
-    await page.evaluate(async () => {
-      const { useAudioStore } = await import('/src/stores/audio.ts')
-      useAudioStore().startFromMusic('tftc:02-tojd')
-    })
+    await e2eStartFromMusic(page, 'tftc:02-tojd')
 
     await page.waitForFunction(
       () => {
@@ -534,19 +563,24 @@ test.describe('Stems playback switching', () => {
       'refresh should keep TOJD stems on but fully muted with no output'
     )
 
-    const persistedState = await page.evaluate(async () => {
-      const { useAudioStore } = await import('/src/stores/audio.ts')
-      const store = useAudioStore()
+    const persistedState = await page.evaluate(() => {
+      const raw = window.localStorage.getItem('frisches:audio:stems:v1')
+      if (!raw) {
+        return {
+          stemMixEnabled: null,
+          gains: null,
+        }
+      }
+
+      const parsed = JSON.parse(raw) as {
+        m?: boolean
+        tracks?: Record<string, { sg?: Record<string, number> }>
+      }
+      const tojdGains = parsed.tracks?.['tftc:02-tojd']?.sg ?? null
+
       return {
-        stemMixEnabled: store.stemMixEnabled,
-        gains: {
-          drums: store.stemGains.drums,
-          guitar: store.stemGains.guitar,
-          bass: store.stemGains.bass,
-          vocals: store.stemGains.vocals,
-          percussion: store.stemGains.percussion,
-          strings: store.stemGains.strings,
-        },
+        stemMixEnabled: parsed.m ?? null,
+        gains: tojdGains,
       }
     })
     expect(persistedState.stemMixEnabled).toBe(true)
