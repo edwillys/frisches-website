@@ -86,7 +86,7 @@ watch(
       if (!rail) return
       const safe = name.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
       const btn = rail.querySelector(`[data-chord-name="${safe}"]`) as HTMLElement | null
-      if (!btn) return
+      if (!btn || typeof rail.scrollTo !== 'function') return
 
       const targetTop = btn.offsetTop - rail.clientHeight / 2 + btn.clientHeight / 2
       rail.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' })
