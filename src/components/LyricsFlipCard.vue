@@ -111,7 +111,9 @@ const showCompactChordRail = computed(
   () => compactChordRailFlipped.value && selectedTrackSupportsChords.value
 )
 
-const reserveCompactChordRailSlot = computed(() => compactChordRailEligible.value)
+const reserveCompactChordRailSlot = computed(
+  () => isFlipped.value && !props.isExpanded && selectedTrackSupportsChords.value
+)
 
 const compactChordRailFlipped = computed(
   () => compactChordRailEligible.value && compactChordRailFlipReady.value
@@ -509,6 +511,7 @@ onBeforeUnmount(() => {
 })
 
 defineExpose({
+  compactChordRailRequested,
   showCompactChordRail,
   reserveCompactChordRailSlot,
   compactChordRailFlipped,
@@ -570,7 +573,7 @@ defineExpose({
           class="lyrics-flip-card__floating-controls"
           data-testid="lyrics-card-floating-controls"
         >
-          <template v-if="hasChordData">
+          <template v-if="selectedTrackSupportsChords">
             <!-- "C#" circular toggle -->
             <button
               class="lyrics-flip-card__toggle"

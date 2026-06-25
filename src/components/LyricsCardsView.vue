@@ -59,6 +59,8 @@ function handleDetailOpenChange(isOpen: boolean) {
 // The instance proxy auto-unwraps reactive refs, so these are plain values.
 const showRail = computed<boolean>(() => cardRef.value?.showCompactChordRail ?? false)
 
+const railRequested = computed<boolean>(() => cardRef.value?.compactChordRailRequested ?? false)
+
 const reserveRailSlot = computed<boolean>(() => cardRef.value?.reserveCompactChordRailSlot ?? false)
 
 const isRailFlipped = computed<boolean>(() => cardRef.value?.compactChordRailFlipped ?? false)
@@ -80,13 +82,14 @@ watch(
   (name) => {
     if (!name || !chordRailRef.value) return
     void nextTick(() => {
+      const rail = chordRailRef.value
+      if (!rail) return
       const safe = name.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-      const btn = chordRailRef.value?.querySelector(
-        `[data-chord-name="${safe}"]`
-      ) as HTMLElement | null
-      if (btn && typeof btn.scrollIntoView === 'function') {
-        btn.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }
+      const btn = rail.querySelector(`[data-chord-name="${safe}"]`) as HTMLElement | null
+      if (!btn) return
+
+      const targetTop = btn.offsetTop - rail.clientHeight / 2 + btn.clientHeight / 2
+      rail.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' })
     })
   },
   { immediate: true }
@@ -158,6 +161,7 @@ watch([reserveRailSlot, isExpanded], ([isReserved, expanded], [wasReserved]) => 
           data-about-card
         >
           <article
+            v-if="railRequested || isRailFlipped || isRailLoading"
             class="lyrics-chord-rail-card"
             :class="{ 'lyrics-chord-rail-card--flipped': isRailFlipped }"
             :style="{ '--rail-tone': lyricsCards.themeColor }"
@@ -250,7 +254,7 @@ watch([reserveRailSlot, isExpanded], ([isReserved, expanded], [wasReserved]) => 
   height: 100%;
   min-height: var(--lyrics-cards-carousel-min-height);
   overflow-x: auto;
-  overflow-y: auto;
+  overflow-y: scroll;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
@@ -451,9 +455,7 @@ watch([reserveRailSlot, isExpanded], ([isReserved, expanded], [wasReserved]) => 
 /* ── Flip-in / flip-out animation for the chord rail card ── */
 @media (min-width: 1051px) {
   .lyrics-cards__track--rail-reserved {
-    transform: translateX(
-      calc((var(--lyrics-cards-cell-width) + var(--lyrics-cards-carousel-gap)) / 2)
-    );
+    transform: none;
   }
 }
 

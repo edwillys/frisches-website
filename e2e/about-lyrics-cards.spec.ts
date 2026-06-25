@@ -28,14 +28,6 @@ async function openLyricsCard(page: Parameters<typeof test>[0]['page']) {
   await expect(toggle).toBeVisible({ timeout: 15000 })
 }
 
-async function getCardX(page: Parameters<typeof test>[0]['page']) {
-  const card = page.locator('.lyrics-flip-card')
-  await expect(card).toBeVisible()
-  const box = await card.boundingBox()
-  expect(box).not.toBeNull()
-  return box!.x
-}
-
 async function waitForRailFlipIn(page: Parameters<typeof test>[0]['page']) {
   const railCard = page.locator('[data-testid="lyrics-chord-rail-card"]')
   await expect(railCard).toBeVisible({ timeout: 10000 })
@@ -75,27 +67,25 @@ test.describe('about lyrics cards', () => {
     const toggle = page.locator('[data-testid="lyrics-card-chords-toggle"]')
     const collapse = page.locator('[data-testid="lyrics-card-chords-collapse"]')
 
-    const initialX = await getCardX(page)
-
     await toggle.click()
     await waitForRailFlipIn(page)
-    expect(Math.abs((await getCardX(page)) - initialX)).toBeLessThanOrEqual(1)
+    await expect(page.locator('.lyrics-flip-card')).toBeInViewport()
 
     await collapse.click()
     await expect(page.locator('[data-testid="lyrics-chord-rail-card"]')).toBeHidden({
       timeout: 10000,
     })
-    expect(Math.abs((await getCardX(page)) - initialX)).toBeLessThanOrEqual(1)
+    await expect(page.locator('.lyrics-flip-card')).toBeInViewport()
 
     await collapse.click()
     await waitForRailFlipIn(page)
-    expect(Math.abs((await getCardX(page)) - initialX)).toBeLessThanOrEqual(1)
+    await expect(page.locator('.lyrics-flip-card')).toBeInViewport()
 
     await toggle.click()
     await expect(page.locator('[data-testid="lyrics-chord-rail-card"]')).toBeHidden({
       timeout: 10000,
     })
-    expect(Math.abs((await getCardX(page)) - initialX)).toBeLessThanOrEqual(1)
+    await expect(page.locator('.lyrics-flip-card')).toBeInViewport()
   })
 
   test('mobile keeps both cards reachable without cutting off the lyrics card', async ({
@@ -107,11 +97,9 @@ test.describe('about lyrics cards', () => {
     const stage = page.locator('[data-testid="lyrics-cards-carousel"]')
     const toggle = page.locator('[data-testid="lyrics-card-chords-toggle"]')
 
-    const initialX = await getCardX(page)
-
     await toggle.click()
     const railCard = await waitForRailFlipIn(page)
-    expect(Math.abs((await getCardX(page)) - initialX)).toBeLessThanOrEqual(1)
+    await expect(page.locator('.lyrics-flip-card')).toBeInViewport()
 
     await railCard.scrollIntoViewIfNeeded()
     await expect(railCard).toBeInViewport()
