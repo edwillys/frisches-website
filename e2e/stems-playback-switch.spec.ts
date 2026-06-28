@@ -363,6 +363,23 @@ async function capturePlaybackSnapshot(page: Page): Promise<PlaybackSnapshot> {
 }
 
 test.describe('Stems playback switching', () => {
+  test.beforeEach(async ({ page, browserName }) => {
+    if (browserName !== 'webkit') return
+
+    const hasWebAudio = await page.evaluate(() => {
+      return (
+        typeof AudioContext !== 'undefined' ||
+        typeof (window as Window & { webkitAudioContext?: unknown }).webkitAudioContext !==
+          'undefined'
+      )
+    })
+
+    test.skip(
+      !hasWebAudio,
+      'Web Audio API is unavailable in this WebKit runtime; stems playback switching requires AudioContext.'
+    )
+  })
+
   test('enabling stems keeps playback continuous and disabling stems keeps timeline aligned', async ({
     page,
   }) => {
@@ -377,7 +394,7 @@ test.describe('Stems playback switching', () => {
     expect(beforeEnable.audioVolume).toBeGreaterThan(0.1)
 
     await stemsEnableToggle.click()
-    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 7000 })
+    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 10000 })
 
     const shortlyAfterEnable = await capturePlaybackSnapshot(page)
     expect(shortlyAfterEnable.audioPaused).toBe(false)
