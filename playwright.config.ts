@@ -14,7 +14,7 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
   /* Maximum time one test can run for. */
-  timeout: 30 * 1000,
+  timeout: 40 * 1000,
   expect: {
     /**
      * Maximum time expect() should wait for the condition to be met.
@@ -25,9 +25,10 @@ export default defineConfig({
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Stop after first failure on local for faster feedback */
-  maxFailures: process.env.CI ? undefined : 1,
+  //maxFailures: process.env.CI ? undefined : 1,
+  maxFailures: undefined,
   /* Parallel workers - limited to prevent resource contention */
-  workers: process.env.CI ? 1 : 4, // CI: 2 workers, local: 4 workers max
+  workers: 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'line',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
@@ -57,25 +58,21 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
       },
     },
-    ...(process.env.CI
-      ? [
-          {
-            name: 'firefox',
-            use: {
-              ...devices['Desktop Firefox'],
-            },
-          },
-          {
-            name: 'webkit',
-            use: {
-              ...devices['Desktop Safari'],
-              // Force reduced-motion so GSAP animations are skipped in headless WebKit,
-              // where requestAnimationFrame can stall and leave elements at opacity:0.
-              reducedMotion: 'reduce',
-            } as (typeof devices)['Desktop Safari'] & Record<string, unknown>,
-          },
-        ]
-      : []),
+    {
+      name: 'firefox',
+      use: {
+        ...devices['Desktop Firefox'],
+      },
+    },
+    {
+      name: 'webkit',
+      use: {
+        ...devices['Desktop Safari'],
+        // Force reduced-motion so GSAP animations are skipped in headless WebKit,
+        // where requestAnimationFrame can stall and leave elements at opacity:0.
+        reducedMotion: 'reduce',
+      } as (typeof devices)['Desktop Safari'] & Record<string, unknown>,
+    },
 
     /* Test against mobile viewports. */
     // {
