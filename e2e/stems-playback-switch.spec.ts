@@ -362,21 +362,79 @@ async function capturePlaybackSnapshot(page: Page): Promise<PlaybackSnapshot> {
   })
 }
 
+async function probeWebAudioRuntime(page: Page): Promise<{ supported: boolean; reason: string }> {
+  return page.evaluate(async () => {
+    const ctor =
+      (globalThis as typeof globalThis & { AudioContext?: new () => AudioContext }).AudioContext ??
+      (
+        globalThis as typeof globalThis & {
+          webkitAudioContext?: new () => AudioContext
+        }
+      ).webkitAudioContext
+
+    if (!ctor) {
+      return {
+        supported: false,
+        reason: 'AudioContext constructor missing',
+      }
+    }
+
+    let ctx: AudioContext
+    try {
+      ctx = new ctor()
+    } catch (error) {
+      return {
+        supported: false,
+        reason: `AudioContext construction failed: ${String(error)}`,
+      }
+    }
+
+    try {
+      if (ctx.state === 'suspended') {
+        try {
+          await ctx.resume()
+        } catch {
+          // Some CI runners keep contexts suspended until a trusted gesture.
+          // We still treat this as usable if core graph APIs and destination are present.
+        }
+      }
+
+      const hasCoreApis =
+        typeof ctx.createGain === 'function' && typeof ctx.createBufferSource === 'function'
+      const sampleRate = Number.isFinite(ctx.sampleRate) ? ctx.sampleRate : 0
+      const maxChannels = ctx.destination?.maxChannelCount ?? 0
+      const hasDestination = !!ctx.destination
+
+      const supported = hasCoreApis && hasDestination && sampleRate > 0 && maxChannels > 0
+      const state = ctx.state
+
+      if (!supported) {
+        return {
+          supported: false,
+          reason: `Unusable WebAudio context (state=${state}, sampleRate=${sampleRate}, maxChannels=${maxChannels})`,
+        }
+      }
+
+      return {
+        supported: true,
+        reason: `ok (state=${state}, sampleRate=${sampleRate}, maxChannels=${maxChannels})`,
+      }
+    } finally {
+      try {
+        await ctx.close()
+      } catch {
+        // ignore cleanup failures in probe
+      }
+    }
+  })
+}
+
 test.describe('Stems playback switching', () => {
   test.beforeEach(async ({ page, browserName }) => {
-    if (browserName !== 'webkit') return
-
-    const hasWebAudio = await page.evaluate(() => {
-      return (
-        typeof AudioContext !== 'undefined' ||
-        typeof (window as Window & { webkitAudioContext?: unknown }).webkitAudioContext !==
-          'undefined'
-      )
-    })
-
+    const webAudio = await probeWebAudioRuntime(page)
     test.skip(
-      !hasWebAudio,
-      'Web Audio API is unavailable in this WebKit runtime; stems playback switching requires AudioContext.'
+      !webAudio.supported,
+      `Web Audio runtime not usable for stems tests in ${browserName}: ${webAudio.reason}`
     )
   })
 
