@@ -8,6 +8,7 @@ export type AboutSubmenuKey = 'none' | 'story' | 'members' | 'lyrics' | 'tabs'
 export interface AboutViewExpose {
   goBackOneStep: () => boolean
   navigateToSubmenu: (submenu: AboutSubmenuKey) => void
+  isLyricsExpanded: boolean
 }
 
 interface UseAboutHeaderMenuOptions {

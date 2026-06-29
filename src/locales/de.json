@@ -99,7 +99,11 @@
   },
   "lyrics": {
     "syncToCurrent": "Mit aktuellem Liedtext synchronisieren",
-    "sync": "Synchronisieren"
+    "sync": "Synchronisieren",
+    "showChords": "Akkorde anzeigen",
+    "hideChords": "Akkorde ausblenden",
+    "collapseChords": "Akkordleiste einklappen",
+    "expandChords": "Akkordleiste ausklappen"
   },
   "about": {
     "subHeaderTitle": "Hi, wir sind Frisches!",

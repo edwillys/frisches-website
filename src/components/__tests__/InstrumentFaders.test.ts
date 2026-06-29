@@ -158,6 +158,82 @@ describe('InstrumentFaders', () => {
     expect(value).toBeGreaterThan(0)
   })
 
+  it('disables the global unmute control when no faders are muted', () => {
+    const wrapper = mountOpen()
+
+    const button = wrapper.find('[data-testid="stems-mute-all"]')
+    expect(button.exists()).toBe(true)
+    expect(button.attributes('disabled')).toBeDefined()
+    expect(button.text()).toBe('!M')
+  })
+
+  it('shows the global unmute control when a stem is muted', () => {
+    const wrapper = mount(InstrumentFaders, {
+      props: {
+        modelValue: true,
+        gains: { ...defaultGains, drums: 0 },
+        availability: defaultAvailability,
+        stemsModeAvailable: true,
+      },
+    })
+
+    const button = wrapper.find('[data-testid="stems-mute-all"]')
+    expect(button.exists()).toBe(true)
+    expect(button.attributes('aria-label')).toBe('Unmute all')
+  })
+
+  it('shows the global unmute control when a group item is muted', () => {
+    const guitarItems: StemGroupItem[] = [
+      { label: 'Guitar PRS', role: 'base', type: 'electric', isAvailable: true },
+    ]
+    const wrapper = mount(InstrumentFaders, {
+      props: {
+        modelValue: true,
+        gains: defaultGains,
+        availability: defaultAvailability,
+        stemsModeAvailable: true,
+        groupItems: { guitar: guitarItems },
+        groupGains: { 'guitar-0': 0 },
+      },
+    })
+
+    expect(wrapper.find('[data-testid="stems-mute-all"]').exists()).toBe(true)
+  })
+
+  it('restores all muted stem and group-item faders from the global unmute control', async () => {
+    const guitarItems: StemGroupItem[] = [
+      { label: 'Guitar PRS', role: 'base', type: 'electric', isAvailable: true },
+    ]
+    const wrapper = mount(InstrumentFaders, {
+      props: {
+        modelValue: true,
+        gains: { ...defaultGains, drums: 0.35, bass: 0 },
+        availability: defaultAvailability,
+        stemsModeAvailable: true,
+        groupItems: { guitar: guitarItems },
+        groupGains: { 'guitar-0': 0.4 },
+      },
+    })
+
+    await enableEditing(wrapper)
+    await wrapper.find('[data-testid="stem-bass-mute"]').trigger('click')
+    await wrapper.setProps({
+      gains: { ...defaultGains, drums: 0.35, bass: 0 },
+      groupGains: { 'guitar-0': 0.4 },
+    })
+    await wrapper.find('[data-testid="stem-guitar-expand"]').trigger('click')
+    await wrapper.find('[data-testid="stem-guitar-item-0-mute"]').trigger('click')
+    await wrapper.setProps({
+      gains: { ...defaultGains, drums: 0.35, bass: 0 },
+      groupGains: { 'guitar-0': 0 },
+    })
+
+    await wrapper.find('[data-testid="stems-mute-all"]').trigger('click')
+
+    expect(wrapper.emitted('setGain')?.at(-1)).toEqual(['bass', 1])
+    expect(wrapper.emitted('setGroupGain')?.at(-1)).toEqual(['guitar', 0, 0.4])
+  })
+
   it('emits setGain on slider input', async () => {
     const wrapper = mountOpen()
     await enableEditing(wrapper)
@@ -804,6 +880,19 @@ describe('InstrumentFaders', () => {
       },
     ])
     expect(wrapper.emitted('setGain')).toBeUndefined()
+  })
+
+  it('suppresses hover styling after a touch slider interaction', async () => {
+    const wrapper = mountOpen()
+    await enableEditing(wrapper)
+
+    const stem = wrapper.find('[data-testid="stem-drums"] .stem')
+    const slider = wrapper.find('[data-testid="stem-drums"] .stem__slider')
+
+    await slider.trigger('pointerdown', { pointerType: 'touch' })
+    await slider.trigger('pointerup', { pointerType: 'touch' })
+
+    expect(stem.classes()).toContain('suppress-hover')
   })
 
   it('does not emit setGain when fader editing is disabled', async () => {

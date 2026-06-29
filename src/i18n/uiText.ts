@@ -72,6 +72,10 @@ export interface UiText {
   lyrics: {
     syncToCurrent: string
     sync: string
+    showChords: string
+    hideChords: string
+    collapseChords: string
+    expandChords: string
   }
   about: {
     subHeaderTitle: string
@@ -242,6 +246,10 @@ const buildUiText = (locale: AppLocale): UiText => {
     lyrics: {
       syncToCurrent: messages.lyrics.syncToCurrent,
       sync: messages.lyrics.sync,
+      showChords: messages.lyrics.showChords,
+      hideChords: messages.lyrics.hideChords,
+      collapseChords: messages.lyrics.collapseChords,
+      expandChords: messages.lyrics.expandChords,
     },
     about: {
       subHeaderTitle: messages.about.subHeaderTitle,

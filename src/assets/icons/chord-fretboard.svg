@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Nut at top -->
+  <line x1="5" y1="4" x2="19" y2="4" stroke-width="2.2"/>
+  <!-- 4 strings (vertical) -->
+  <line x1="8" y1="4" x2="8" y2="20"/>
+  <line x1="12" y1="4" x2="12" y2="20"/>
+  <line x1="16" y1="4" x2="16" y2="20"/>
+  <!-- 3 frets (horizontal) -->
+  <line x1="5" y1="9" x2="19" y2="9"/>
+  <line x1="5" y1="14" x2="19" y2="14"/>
+  <line x1="5" y1="19" x2="19" y2="19"/>
+  <!-- 2 fret dots (finger positions) -->
+  <circle cx="8" cy="11.5" r="1.8" fill="currentColor" stroke="none"/>
+  <circle cx="16" cy="16.5" r="1.8" fill="currentColor" stroke="none"/>
+</svg>

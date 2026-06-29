@@ -2,27 +2,38 @@ import { computed, ref, watchEffect } from 'vue'
 
 import { albums } from '@/data/albums'
 import { tracks } from '@/data/tracks'
+import { normalizeLyricsData } from '@/data/lyricsChords'
 import type { LyricsData } from '@/types/lyrics'
 import type { LyricsAlbumCard, LyricsAlbumTrack } from '@/types/lyricsAlbumCard'
 
 const DEFAULT_CREDITS = 'Words & music: Edgar Lubicz'
 
-const fetchTrackCredits = async (
+const fetchTrackMetadata = async (
   trackId: string,
   lyricsPath: string,
-  creditsByTrackId: ReturnType<typeof ref<Record<string, string>>>
+  creditsByTrackId: ReturnType<typeof ref<Record<string, string>>>,
+  hasChordsByTrackId: ReturnType<typeof ref<Record<string, boolean>>>
 ) => {
   try {
     const response = await fetch(lyricsPath)
     if (!response.ok) return
 
     const json = (await response.json()) as LyricsData
+    const normalized = normalizeLyricsData(json)
     const credits = json.meta?.credits?.trim()
-    if (!credits) return
 
-    creditsByTrackId.value = {
-      ...creditsByTrackId.value,
-      [trackId]: credits,
+    if (credits) {
+      creditsByTrackId.value = {
+        ...creditsByTrackId.value,
+        [trackId]: credits,
+      }
+    }
+
+    hasChordsByTrackId.value = {
+      ...hasChordsByTrackId.value,
+      [trackId]: Boolean(
+        normalized.resolvedChords.enabled && normalized.resolvedChords.timeline.length
+      ),
     }
   } catch {
     // Ignore and use fallback credits.
@@ -31,6 +42,7 @@ const fetchTrackCredits = async (
 
 export const useLyricsCards = () => {
   const creditsByTrackId = ref<Record<string, string>>({})
+  const hasChordsByTrackId = ref<Record<string, boolean>>({})
   const hasLoadedCredits = ref(false)
 
   watchEffect(() => {
@@ -41,7 +53,12 @@ export const useLyricsCards = () => {
 
     void Promise.all(
       lyricTracks.map((track) =>
-        fetchTrackCredits(track.trackId, track.lyricsPath as string, creditsByTrackId)
+        fetchTrackMetadata(
+          track.trackId,
+          track.lyricsPath as string,
+          creditsByTrackId,
+          hasChordsByTrackId
+        )
       )
     )
   })
@@ -71,6 +88,7 @@ export const useLyricsCards = () => {
       title: track.title,
       lyricsPath: track.lyricsPath as string,
       credits: creditsByTrackId.value[track.trackId] ?? DEFAULT_CREDITS,
+      hasChords: hasChordsByTrackId.value[track.trackId] ?? null,
     }))
 
     return {

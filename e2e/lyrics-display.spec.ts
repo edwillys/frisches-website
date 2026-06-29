@@ -150,6 +150,123 @@ test.describe('Lyrics Display Feature', () => {
     await expect(lyricsBtn).toHaveClass(/is-active/)
   })
 
+  test('mobile chord strip stays bounded and scrollable after advancing into Witch Hunting', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 476, height: 500 })
+    await navigateToMusicPlayer(page)
+
+    const mrRedJacketRow = page.locator('.track-table__row').filter({ hasText: 'Mr. Red Jacket' })
+    await expect(mrRedJacketRow).toBeVisible({ timeout: 2000 })
+    await clickRowPlayButton(mrRedJacketRow)
+
+    const lyricsBtn = page.locator('.mini-player__right .mini-player__btn--lyrics')
+    await expect(lyricsBtn).toBeVisible({ timeout: 3000 })
+    await expect(lyricsBtn).toBeEnabled()
+    await clickRobust(lyricsBtn)
+
+    const nextBtn = page.locator('button[aria-label="Next track"]')
+    await expect(nextBtn).toBeVisible({ timeout: 3000 })
+    await clickRobust(nextBtn)
+
+    await expect(page.locator('.mini-player').getByText('Witch Hunting')).toBeVisible({
+      timeout: 5000,
+    })
+
+    const chordToggle = page.locator('[data-testid="lyrics-chords-toggle"]')
+    await expect(chordToggle).toBeVisible({ timeout: 5000 })
+    await clickRobust(chordToggle)
+
+    const collapseBtn = page.locator('[data-testid="lyrics-chords-collapse"]')
+    const carousel = page.locator('[data-testid="lyrics-chords-carousel"]')
+    const closeLyricsBtn = page.locator('[data-testid="lyrics-view-close"]')
+    await expect(collapseBtn).toBeVisible({ timeout: 3000 })
+    await expect(carousel).toBeVisible({ timeout: 3000 })
+    await expect(closeLyricsBtn).toBeVisible({ timeout: 3000 })
+
+    const layout = await page.evaluate(() => {
+      const display = document.querySelector('.lyrics-display')
+      const sticky = document.querySelector('.lyrics-display__sticky')
+      const container = document.querySelector('.lyrics-container')
+      const close = document.querySelector('.lyrics-view__close')
+      const tools = document.querySelector('.lyrics-chords-tools')
+      const carouselEl = document.querySelector('.lyrics-chords-carousel') as HTMLElement | null
+      const toggleEl = document.querySelector('[data-testid="lyrics-chords-toggle"]')
+      const collapseEl = document.querySelector('[data-testid="lyrics-chords-collapse"]')
+
+      const width = (element: Element | null) =>
+        Math.round(element?.getBoundingClientRect().width ?? 0)
+      const rect = (element: Element | null) => {
+        const box = element?.getBoundingClientRect()
+        if (!box) return null
+        return {
+          x: Math.round(box.x),
+          y: Math.round(box.y),
+          right: Math.round(box.right),
+          bottom: Math.round(box.bottom),
+        }
+      }
+
+      return {
+        displayWidth: width(display),
+        stickyWidth: width(sticky),
+        containerWidth: width(container),
+        closeRect: rect(close),
+        toolsDirection: tools ? getComputedStyle(tools).flexDirection : null,
+        toolsRect: rect(tools),
+        toggleRect: rect(toggleEl),
+        collapseRect: rect(collapseEl),
+        carouselRect: rect(carouselEl),
+        carouselClientWidth: carouselEl?.clientWidth ?? 0,
+        carouselScrollWidth: carouselEl?.scrollWidth ?? 0,
+      }
+    })
+
+    expect(layout.stickyWidth).toBe(layout.displayWidth)
+    expect(layout.containerWidth).toBe(layout.displayWidth)
+    expect(layout.toolsDirection).toBe('column')
+    expect(layout.toggleRect?.y).toBeGreaterThanOrEqual(layout.closeRect?.bottom ?? 0)
+    expect(
+      Math.min(layout.toggleRect?.right ?? 0, layout.closeRect?.right ?? 0) -
+        Math.max(layout.toggleRect?.x ?? 0, layout.closeRect?.x ?? 0)
+    ).toBeGreaterThanOrEqual(20)
+    expect(layout.toggleRect?.right).toBeLessThanOrEqual(layout.closeRect?.right ?? 0)
+    expect(layout.collapseRect?.y).toBeGreaterThanOrEqual(layout.toggleRect?.bottom ?? 0)
+    expect(layout.carouselRect?.right).toBeLessThanOrEqual(layout.toolsRect?.x ?? 0)
+    expect(layout.carouselScrollWidth).toBeGreaterThan(layout.carouselClientWidth)
+
+    await clickRobust(chordToggle)
+
+    const collapsedLayout = await page.evaluate(() => {
+      const sticky = document.querySelector('.lyrics-display__sticky')
+      const container = document.querySelector('.lyrics-container')
+      const firstLine = document.querySelector('.lyrics-line')
+
+      const rect = (element: Element | null) => {
+        const box = element?.getBoundingClientRect()
+        if (!box) return null
+        return {
+          y: Math.round(box.y),
+          bottom: Math.round(box.bottom),
+          height: Math.round(box.height),
+        }
+      }
+
+      return {
+        stickyRect: rect(sticky),
+        stripExists: !!document.querySelector('.lyrics-chords-strip'),
+        containerRect: rect(container),
+        firstLineRect: rect(firstLine),
+      }
+    })
+
+    expect(collapsedLayout.stickyRect?.height).toBe(0)
+    expect(collapsedLayout.stripExists).toBe(false)
+    expect(collapsedLayout.firstLineRect?.y).toBeGreaterThanOrEqual(
+      collapsedLayout.containerRect?.y ?? 0
+    )
+  })
+
   test('lyrics display shows synced lyrics content', async ({ page }) => {
     await navigateToMusicPlayer(page)
     await playTrackWithLyrics(page)
@@ -166,11 +283,13 @@ test.describe('Lyrics Display Feature', () => {
     const lineCount = await lyricsLines.count()
     expect(lineCount).toBeGreaterThan(0)
 
-    // Lines should contain words
+    // First line can be a placeholder like [Intro] and may not contain .lyrics-word spans.
+    // Assert there is visible, non-empty line content.
     const firstLine = lyricsLines.first()
-    const words = firstLine.locator('.lyrics-word')
-    const wordCount = await words.count()
-    expect(wordCount).toBeGreaterThan(0)
+    const firstLineContent = firstLine.locator('.lyrics-line-content').first()
+    await expect(firstLineContent).toBeVisible()
+    const firstLineText = (await firstLineContent.textContent())?.trim() ?? ''
+    expect(firstLineText.length).toBeGreaterThan(0)
   })
 
   test('clicking lyrics button again hides lyrics', async ({ page }) => {
@@ -306,10 +425,12 @@ test.describe('Lyrics Display Feature', () => {
     const activeLine = page.locator('.lyrics-line.is-active')
     await expect(activeLine).toBeVisible({ timeout: 2000 })
 
-    // Active line should contain active words
-    const activeWords = activeLine.locator('.lyrics-word')
-    const wordCount = await activeWords.count()
-    expect(wordCount).toBeGreaterThan(0)
+    // Active line can be a placeholder like [Intro] and may not contain .lyrics-word spans.
+    // Assert that the active line still has visible content.
+    const activeLineContent = activeLine.locator('.lyrics-line-content').first()
+    await expect(activeLineContent).toBeVisible()
+    const activeText = (await activeLineContent.textContent())?.trim() ?? ''
+    expect(activeText.length).toBeGreaterThan(0)
   })
 
   test('past lines are styled in cyan', async ({ page }) => {

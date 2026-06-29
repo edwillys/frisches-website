@@ -19,16 +19,34 @@ function mountComposable(): Wrapper {
 
 // ─── Event helpers ───────────────────────────────────────────────────────────
 
-function mouseOver(target: EventTarget, relatedTarget?: EventTarget | null) {
+function pointerOver(
+  target: EventTarget,
+  options: { relatedTarget?: EventTarget | null; pointerType?: string } = {}
+) {
   target.dispatchEvent(
-    new MouseEvent('mouseover', { bubbles: true, relatedTarget: (relatedTarget as Node) ?? null })
+    new PointerEvent('pointerover', {
+      bubbles: true,
+      relatedTarget: (options.relatedTarget as Node) ?? null,
+      pointerType: options.pointerType ?? 'mouse',
+    })
   )
 }
 
-function mouseOut(target: EventTarget, relatedTarget?: EventTarget | null) {
+function pointerOut(
+  target: EventTarget,
+  options: { relatedTarget?: EventTarget | null; pointerType?: string } = {}
+) {
   target.dispatchEvent(
-    new MouseEvent('mouseout', { bubbles: true, relatedTarget: (relatedTarget as Node) ?? null })
+    new PointerEvent('pointerout', {
+      bubbles: true,
+      relatedTarget: (options.relatedTarget as Node) ?? null,
+      pointerType: options.pointerType ?? 'mouse',
+    })
   )
+}
+
+function pointerDown(target: EventTarget, pointerType: string) {
+  target.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType }))
 }
 
 // ─── matchMedia helpers ──────────────────────────────────────────────────────
@@ -81,7 +99,7 @@ describe('useViewportTooltip', () => {
       btn.dataset.tooltip = 'Save file'
       document.body.appendChild(btn)
 
-      mouseOver(btn)
+      pointerOver(btn)
 
       const tip = getTip()
       expect(tip).not.toBeNull()
@@ -107,7 +125,7 @@ describe('useViewportTooltip', () => {
       link.dataset.tooltipCardMetaSecondary = 'Official video'
       document.body.appendChild(link)
 
-      mouseOver(link)
+      pointerOver(link)
 
       const card = getYoutubeCard()
       expect(card).not.toBeNull()
@@ -132,18 +150,18 @@ describe('useViewportTooltip', () => {
       link.dataset.tooltipCardTitle = 'Fallback'
       document.body.appendChild(link)
 
-      mouseOver(link)
+      pointerOver(link)
 
       // Let the rejection propagate through the cache-eviction .catch and showYoutubeCard .catch
       await Promise.resolve()
       await Promise.resolve()
       await Promise.resolve()
 
-      mouseOut(link)
+      pointerOut(link)
 
       // Second hover should trigger a fresh fetch because the cache entry was evicted
       vi.mocked(fetch).mockRejectedValueOnce(new Error('offline'))
-      mouseOver(link)
+      pointerOver(link)
 
       await Promise.resolve()
       await Promise.resolve()
@@ -168,7 +186,7 @@ describe('useViewportTooltip', () => {
       link.dataset.tooltipCardTitle = 'Stored title'
       document.body.appendChild(link)
 
-      mouseOver(link)
+      pointerOver(link)
 
       const card = getYoutubeCard()!
       expect(card.querySelector('.vp-tooltip__yt-title')?.textContent).toBe('Stored title')
@@ -193,7 +211,7 @@ describe('useViewportTooltip', () => {
       button.appendChild(textNode)
       document.body.appendChild(button)
 
-      mouseOver(textNode)
+      pointerOver(textNode)
 
       const tip = getTip()
       expect(tip).not.toBeNull()
@@ -207,8 +225,8 @@ describe('useViewportTooltip', () => {
       btn.dataset.tooltip = 'Delete'
       document.body.appendChild(btn)
 
-      mouseOver(btn)
-      mouseOut(btn)
+      pointerOver(btn)
+      pointerOut(btn)
 
       expect(getTip()!.style.display).toBe('none')
 
@@ -222,9 +240,9 @@ describe('useViewportTooltip', () => {
       btn.appendChild(child)
       document.body.appendChild(btn)
 
-      mouseOver(btn)
+      pointerOver(btn)
       // relatedTarget is a child — should NOT hide
-      mouseOut(btn, child)
+      pointerOut(btn, { relatedTarget: child })
 
       expect(getTip()!.style.display).toBe('block')
 
@@ -236,7 +254,7 @@ describe('useViewportTooltip', () => {
       btn.dataset.tooltip = 'Scrolled away'
       document.body.appendChild(btn)
 
-      mouseOver(btn)
+      pointerOver(btn)
       document.dispatchEvent(new Event('scroll', { bubbles: true }))
 
       expect(getTip()!.style.display).toBe('none')
@@ -249,7 +267,7 @@ describe('useViewportTooltip', () => {
       btn.dataset.tooltip = 'Clicked'
       document.body.appendChild(btn)
 
-      mouseOver(btn)
+      pointerOver(btn)
       document.dispatchEvent(new Event('click'))
 
       expect(getTip()!.style.display).toBe('none')
@@ -267,7 +285,7 @@ describe('useViewportTooltip', () => {
       btn.classList.add('tooltip-suppressed')
       document.body.appendChild(btn)
 
-      mouseOver(btn)
+      pointerOver(btn)
 
       expect(getTip()).toBeNull()
 
@@ -281,9 +299,35 @@ describe('useViewportTooltip', () => {
       btn.dataset.tooltip = 'Touch only'
       document.body.appendChild(btn)
 
-      mouseOver(btn)
+      pointerOver(btn)
 
       expect(getTip()).toBeNull()
+
+      btn.remove()
+    })
+
+    it('ignores touch pointer hover on hover-capable devices', () => {
+      const btn = document.createElement('button')
+      btn.dataset.tooltip = 'Touch hover'
+      document.body.appendChild(btn)
+
+      pointerOver(btn, { pointerType: 'touch' })
+
+      expect(getTip()).toBeNull()
+
+      btn.remove()
+    })
+
+    it('still shows the tooltip for mouse hover immediately after a touch interaction', () => {
+      const btn = document.createElement('button')
+      btn.dataset.tooltip = 'Hybrid hover'
+      document.body.appendChild(btn)
+
+      pointerDown(btn, 'touch')
+      pointerOver(btn, { pointerType: 'mouse' })
+
+      expect(getTip()).not.toBeNull()
+      expect(getTip()!.textContent).toBe('Hybrid hover')
 
       btn.remove()
     })
@@ -293,7 +337,7 @@ describe('useViewportTooltip', () => {
       btn.dataset.tooltip = ''
       document.body.appendChild(btn)
 
-      mouseOver(btn)
+      pointerOver(btn)
 
       expect(getTip()).toBeNull()
 
@@ -338,7 +382,7 @@ describe('useViewportTooltip', () => {
       })
       const btn = positionedBtn({ top: 200, bottom: 240 })
 
-      mouseOver(btn)
+      pointerOver(btn)
 
       // top = eRect.top - ARROW_SIZE - tipH = 200 - 8 - 0 = 192
       expect(parseInt(getTip()!.style.top)).toBe(192)
@@ -352,7 +396,7 @@ describe('useViewportTooltip', () => {
       })
       const btn = positionedBtn({ top: 10, bottom: 50 })
 
-      mouseOver(btn)
+      pointerOver(btn)
 
       // top = eRect.bottom + ARROW_SIZE = 50 + 8 = 58
       expect(parseInt(getTip()!.style.top)).toBe(58)
@@ -367,7 +411,7 @@ describe('useViewportTooltip', () => {
       // top=5: above fails (5-8-0-8 < 0). belowFits: 55+8+0+8=71 > 60 → fails.
       const btn = positionedBtn({ top: 5, bottom: 55 })
 
-      mouseOver(btn)
+      pointerOver(btn)
 
       // top = vh - tipH - MARGIN = 60 - 0 - 8 = 52
       expect(parseInt(getTip()!.style.top)).toBe(52)
@@ -381,7 +425,7 @@ describe('useViewportTooltip', () => {
       })
       const btn = positionedBtn({ top: 200, bottom: 240 })
 
-      mouseOver(btn)
+      pointerOver(btn)
 
       // arrow.top = eRect.top - ARROW_SIZE = 200 - 8 = 192
       expect(parseInt(getArrow()!.style.top)).toBe(192)
@@ -395,7 +439,7 @@ describe('useViewportTooltip', () => {
       })
       const btn = positionedBtn({ top: 10, bottom: 50 })
 
-      mouseOver(btn)
+      pointerOver(btn)
 
       // arrow.top = eRect.bottom = 50
       expect(parseInt(getArrow()!.style.top)).toBe(50)
@@ -437,7 +481,7 @@ describe('useViewportTooltip', () => {
       } as DOMRect)
       document.body.appendChild(btn)
 
-      mouseOver(btn)
+      pointerOver(btn)
 
       expect(parseInt(getTip()!.style.left)).toBeGreaterThanOrEqual(8)
     })
@@ -466,7 +510,7 @@ describe('useViewportTooltip', () => {
       } as DOMRect)
       document.body.appendChild(btn)
 
-      mouseOver(btn)
+      pointerOver(btn)
 
       const tip = getTip()!
       // tip width is 0 in jsdom, so right edge = left + 0 = left
@@ -482,7 +526,7 @@ describe('useViewportTooltip', () => {
       btn.dataset.tooltip = 'Will be removed'
       document.body.appendChild(btn)
 
-      mouseOver(btn)
+      pointerOver(btn)
       expect(getTip()).not.toBeNull()
       expect(getArrow()).not.toBeNull()
 
@@ -501,7 +545,7 @@ describe('useViewportTooltip', () => {
       btn.dataset.tooltip = 'After unmount'
       document.body.appendChild(btn)
 
-      mouseOver(btn)
+      pointerOver(btn)
 
       expect(getTip()).toBeNull()
 

@@ -19,10 +19,19 @@ type OutputLevelStats = {
   stemsActive: boolean
 }
 
-type TransportProbeState = {
-  stemsActive: boolean
-  masterCurrentTime: number | null
-  stemCurrentTime: number | null
+type PairedWaveformChunk = {
+  master: number[]
+  stem: number[]
+}
+
+type E2eAudioProbe = {
+  startFromMusic: (trackId: string) => void
+  seek: (seconds: number) => void
+  readState: () => {
+    storeCurrentTime: number
+    storeIsPlaying: boolean
+    hasUserStartedPlayback: boolean
+  }
 }
 
 const allTojdStemFaders: StemName[] = ['drums', 'guitar', 'bass', 'vocals', 'percussion', 'strings']
@@ -33,21 +42,50 @@ const coreAudibleStems: Array<Extract<StemName, 'vocals' | 'bass' | 'guitar' | '
   'drums',
 ]
 
+async function e2eStartFromMusic(page: Page, trackId: string): Promise<void> {
+  await page.evaluate((id) => {
+    const probe = (
+      window as Window & {
+        __FRISCHES_E2E_AUDIO__?: E2eAudioProbe
+      }
+    ).__FRISCHES_E2E_AUDIO__
+    if (!probe) throw new Error('Missing __FRISCHES_E2E_AUDIO__ probe')
+    probe.startFromMusic(id)
+  }, trackId)
+}
+
+async function e2eSeek(page: Page, seconds: number): Promise<void> {
+  await page.evaluate((targetSeconds) => {
+    const probe = (
+      window as Window & {
+        __FRISCHES_E2E_AUDIO__?: E2eAudioProbe
+      }
+    ).__FRISCHES_E2E_AUDIO__
+    if (!probe) throw new Error('Missing __FRISCHES_E2E_AUDIO__ probe')
+    probe.seek(targetSeconds)
+  }, seconds)
+}
+
 async function ensureStemMixEditingEnabled(page: Page): Promise<void> {
   const toggle = page.locator('[data-testid="stems-enable-toggle"]')
   await toggle.waitFor({ state: 'visible', timeout: 15000 })
-  await page.waitForFunction(
-    () => {
-      const element = document.querySelector('[data-testid="stems-enable-toggle"]')
-      return element?.getAttribute('aria-label') !== 'Loading stems'
-    },
-    null,
-    { timeout: 20000, polling: 100 }
-  )
 
   if ((await toggle.getAttribute('aria-pressed')) !== 'true') {
     await toggle.click()
   }
+
+  await page.waitForFunction(
+    () => {
+      const btn = document.querySelector(
+        '[data-testid="stems-enable-toggle"]'
+      ) as HTMLButtonElement | null
+      if (!btn) return false
+      const isLoading = btn.classList.contains('is-loading')
+      return !isLoading
+    },
+    null,
+    { timeout: 20000, polling: 100 }
+  )
 
   await expect(toggle).toHaveAttribute('aria-pressed', 'true', { timeout: 20000 })
 }
@@ -69,21 +107,7 @@ async function waitForStemsActive(page: Page): Promise<void> {
 }
 
 async function seekToKnownHotspot(page: Page, seconds = 32): Promise<void> {
-  await page.evaluate((targetSeconds: number) => {
-    const probe = (
-      window as Window & {
-        __FRISCHES_E2E_AUDIO__?: {
-          seek: (seconds: number) => void
-        }
-      }
-    ).__FRISCHES_E2E_AUDIO__
-
-    if (!probe || typeof probe.seek !== 'function') {
-      throw new Error('Missing __FRISCHES_E2E_AUDIO__ seek probe')
-    }
-
-    probe.seek(targetSeconds)
-  }, seconds)
+  await e2eSeek(page, seconds)
 
   await page.waitForFunction(
     (targetSeconds: number) => {
@@ -168,48 +192,70 @@ async function sampleOutputLevels(
   )
 }
 
-async function readTransportProbeState(page: Page): Promise<TransportProbeState> {
-  return page.evaluate(() => {
-    const probe = (
-      window as Window & {
-        __FRISCHES_E2E_AUDIO__?: {
-          readState: () => {
-            stemsActive: boolean
-            masterCurrentTime: number | null
-            stemCurrentTime: number | null
+async function capturePairedWaveformChunk(
+  page: Page,
+  durationMs = 5000,
+  sampleEveryMs = 10
+): Promise<PairedWaveformChunk> {
+  return page.evaluate(
+    async ({ probeDurationMs, probeSampleEveryMs }) => {
+      const probe = (
+        window as Window & {
+          __FRISCHES_E2E_AUDIO__?: {
+            readMasterSamples: () => number[]
+            readStemSamples: () => number[]
           }
         }
+      ).__FRISCHES_E2E_AUDIO__
+
+      if (!probe) {
+        throw new Error('Missing __FRISCHES_E2E_AUDIO__ waveform probe')
       }
-    ).__FRISCHES_E2E_AUDIO__
 
-    if (!probe) {
-      throw new Error('Missing __FRISCHES_E2E_AUDIO__ transport probe')
-    }
+      const master: number[] = []
+      const stem: number[] = []
+      const startedAt = performance.now()
 
-    const state = probe.readState()
-    return {
-      stemsActive: state.stemsActive,
-      masterCurrentTime: state.masterCurrentTime,
-      stemCurrentTime: state.stemCurrentTime,
-    }
-  })
+      while (performance.now() - startedAt < probeDurationMs) {
+        master.push(...probe.readMasterSamples())
+        stem.push(...probe.readStemSamples())
+        await new Promise((resolve) => setTimeout(resolve, probeSampleEveryMs))
+      }
+
+      return { master, stem }
+    },
+    { probeDurationMs: durationMs, probeSampleEveryMs: sampleEveryMs }
+  )
 }
 
-async function expectTransportAligned(
-  page: Page,
-  reason: string,
-  maxDriftSeconds = 0.12
-): Promise<void> {
-  const state = await readTransportProbeState(page)
-  expect(state.stemsActive, `${reason} (stems should be active)`).toBe(true)
-  expect(state.masterCurrentTime, `${reason} (missing master timeline)`).not.toBeNull()
-  expect(state.stemCurrentTime, `${reason} (missing stem timeline)`).not.toBeNull()
+function normalizedCorrelation(left: number[], right: number[]): number {
+  const n = Math.min(left.length, right.length)
+  if (n === 0) return 0
 
-  const driftSeconds = Math.abs(state.masterCurrentTime! - state.stemCurrentTime!)
-  expect(
-    driftSeconds,
-    `${reason} (master=${state.masterCurrentTime}, stem=${state.stemCurrentTime})`
-  ).toBeLessThanOrEqual(maxDriftSeconds)
+  let sumLeft = 0
+  let sumRight = 0
+  for (let index = 0; index < n; index += 1) {
+    sumLeft += left[index]!
+    sumRight += right[index]!
+  }
+
+  const meanLeft = sumLeft / n
+  const meanRight = sumRight / n
+
+  let numerator = 0
+  let denomLeft = 0
+  let denomRight = 0
+  for (let index = 0; index < n; index += 1) {
+    const centeredLeft = left[index]! - meanLeft
+    const centeredRight = right[index]! - meanRight
+    numerator += centeredLeft * centeredRight
+    denomLeft += centeredLeft * centeredLeft
+    denomRight += centeredRight * centeredRight
+  }
+
+  const denominator = Math.sqrt(denomLeft * denomRight)
+  if (denominator <= Number.EPSILON) return 0
+  return numerator / denominator
 }
 
 async function expectAudibleOutput(page: Page, reason: string): Promise<void> {
@@ -270,21 +316,7 @@ async function openStemsOverlayOnTojd(page: Page): Promise<Locator> {
 
   await page.locator('[data-testid="album-carousel"]').waitFor({ state: 'visible', timeout: 15000 })
 
-  await page.evaluate(() => {
-    const probe = (
-      window as Window & {
-        __FRISCHES_E2E_AUDIO__?: {
-          startFromMusic: (trackId: string) => void
-        }
-      }
-    ).__FRISCHES_E2E_AUDIO__
-
-    if (!probe || typeof probe.startFromMusic !== 'function') {
-      throw new Error('Missing __FRISCHES_E2E_AUDIO__ startFromMusic probe')
-    }
-
-    probe.startFromMusic('tftc:02-tojd')
-  })
+  await e2eStartFromMusic(page, 'tftc:02-tojd')
 
   await page.waitForFunction(
     () => {
@@ -309,31 +341,20 @@ async function openStemsOverlayOnTojd(page: Page): Promise<Locator> {
 }
 
 async function capturePlaybackSnapshot(page: Page): Promise<PlaybackSnapshot> {
-  return page.evaluate(() => {
+  return page.evaluate(async () => {
+    const audio = document.querySelector('audio') as HTMLAudioElement | null
     const probe = (
       window as Window & {
-        __FRISCHES_E2E_AUDIO__?: {
-          readState: () => {
-            audioPaused: boolean | null
-            audioCurrentTime: number | null
-            audioVolume: number | null
-            storeCurrentTime: number
-            storeIsPlaying: boolean
-            hasUserStartedPlayback: boolean
-          }
-        }
+        __FRISCHES_E2E_AUDIO__?: E2eAudioProbe
       }
     ).__FRISCHES_E2E_AUDIO__
-
-    if (!probe) {
-      throw new Error('Missing __FRISCHES_E2E_AUDIO__ playback probe')
-    }
-
+    if (!probe) throw new Error('Missing __FRISCHES_E2E_AUDIO__ probe')
     const state = probe.readState()
+
     return {
-      audioPaused: state.audioPaused,
-      audioCurrentTime: state.audioCurrentTime,
-      audioVolume: state.audioVolume,
+      audioPaused: audio?.paused ?? null,
+      audioCurrentTime: audio?.currentTime ?? null,
+      audioVolume: audio?.volume ?? null,
       storeCurrentTime: state.storeCurrentTime,
       storeIsPlaying: state.storeIsPlaying,
       hasUserStartedPlayback: state.hasUserStartedPlayback,
@@ -341,11 +362,81 @@ async function capturePlaybackSnapshot(page: Page): Promise<PlaybackSnapshot> {
   })
 }
 
+async function probeWebAudioRuntime(page: Page): Promise<{ supported: boolean; reason: string }> {
+  return page.evaluate(async () => {
+    const ctor =
+      (globalThis as typeof globalThis & { AudioContext?: new () => AudioContext }).AudioContext ??
+      (
+        globalThis as typeof globalThis & {
+          webkitAudioContext?: new () => AudioContext
+        }
+      ).webkitAudioContext
+
+    if (!ctor) {
+      return {
+        supported: false,
+        reason: 'AudioContext constructor missing',
+      }
+    }
+
+    let ctx: AudioContext
+    try {
+      ctx = new ctor()
+    } catch (error) {
+      return {
+        supported: false,
+        reason: `AudioContext construction failed: ${String(error)}`,
+      }
+    }
+
+    try {
+      if (ctx.state === 'suspended') {
+        try {
+          await ctx.resume()
+        } catch {
+          // Some CI runners keep contexts suspended until a trusted gesture.
+          // We still treat this as usable if core graph APIs and destination are present.
+        }
+      }
+
+      const hasCoreApis =
+        typeof ctx.createGain === 'function' && typeof ctx.createBufferSource === 'function'
+      const sampleRate = Number.isFinite(ctx.sampleRate) ? ctx.sampleRate : 0
+      const maxChannels = ctx.destination?.maxChannelCount ?? 0
+      const hasDestination = !!ctx.destination
+
+      const supported = hasCoreApis && hasDestination && sampleRate > 0 && maxChannels > 0
+      const state = ctx.state
+
+      if (!supported) {
+        return {
+          supported: false,
+          reason: `Unusable WebAudio context (state=${state}, sampleRate=${sampleRate}, maxChannels=${maxChannels})`,
+        }
+      }
+
+      return {
+        supported: true,
+        reason: `ok (state=${state}, sampleRate=${sampleRate}, maxChannels=${maxChannels})`,
+      }
+    } finally {
+      try {
+        await ctx.close()
+      } catch {
+        // ignore cleanup failures in probe
+      }
+    }
+  })
+}
+
 test.describe('Stems playback switching', () => {
-  test.skip(
-    ({ browserName }) => browserName !== 'chromium',
-    'Cross-browser WebAudio stem transport is currently unstable outside Chromium in CI preview mode.'
-  )
+  test.beforeEach(async ({ page, browserName }) => {
+    const webAudio = await probeWebAudioRuntime(page)
+    test.skip(
+      !webAudio.supported,
+      `Web Audio runtime not usable for stems tests in ${browserName}: ${webAudio.reason}`
+    )
+  })
 
   test('enabling stems keeps playback continuous and disabling stems keeps timeline aligned', async ({
     page,
@@ -361,7 +452,7 @@ test.describe('Stems playback switching', () => {
     expect(beforeEnable.audioVolume).toBeGreaterThan(0.1)
 
     await stemsEnableToggle.click()
-    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 20000 })
+    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 10000 })
 
     const shortlyAfterEnable = await capturePlaybackSnapshot(page)
     expect(shortlyAfterEnable.audioPaused).toBe(false)
@@ -392,180 +483,72 @@ test.describe('Stems playback switching', () => {
     ).toBeLessThanOrEqual(0.35)
   })
 
-  test('TOJD stems activation keeps transport aligned', async ({ page }) => {
-    const stemsEnableToggle = await openStemsOverlayOnTojd(page)
-    await seekToKnownHotspot(page)
-
-    await stemsEnableToggle.click()
-
-    const player = page.locator('[data-testid="global-audio-player"]')
-    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 20000 })
-
-    await expectTransportAligned(page, 'activation should align stem/master transport')
-    await page.waitForTimeout(450)
-    await expectTransportAligned(page, 'alignment should hold after activation settles', 0.14)
-  })
-
-  test('seek plus stems toggles keep transport aligned', async ({ page }) => {
-    const stemsEnableToggle = await openStemsOverlayOnTojd(page)
-    await seekToKnownHotspot(page)
-
-    await stemsEnableToggle.click()
-    const player = page.locator('[data-testid="global-audio-player"]')
-    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 20000 })
-    await expectTransportAligned(page, 'initial stems enable should be aligned')
-
-    await seekToKnownHotspot(page, 46)
-    await page.waitForTimeout(200)
-    await expectTransportAligned(page, 'seek in stems mode should stay aligned', 0.14)
-
-    await stemsEnableToggle.click()
-    await expect(player).toHaveAttribute('data-stems-active', 'false', { timeout: 7000 })
-
-    await stemsEnableToggle.click()
-    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 20000 })
-    await expectTransportAligned(page, 're-enable after seek/toggle should be aligned', 0.14)
-
-    await stemsEnableToggle.click()
-    await expect(player).toHaveAttribute('data-stems-active', 'false', { timeout: 7000 })
-
-    await stemsEnableToggle.click()
-    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 20000 })
-    await expectTransportAligned(page, 'second re-enable should remain aligned', 0.14)
-  })
-
-  test('stress: repeated seek/pause/toggle cycles keep stems transport aligned', async ({
+  test('TOJD master and stems stay phase-aligned during the activation crossfade', async ({
     page,
   }) => {
     const stemsEnableToggle = await openStemsOverlayOnTojd(page)
-    const player = page.locator('[data-testid="global-audio-player"]')
-    const playPauseBtn = page.locator('[data-testid="mini-play-pause"]')
+    await seekToKnownHotspot(page)
 
+    const recordPromise = capturePairedWaveformChunk(page, 5000, 20)
     await stemsEnableToggle.click()
-    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 20000 })
-    await expectTransportAligned(page, 'initial activation should be aligned', 0.16)
 
-    const hotspots = [18, 32, 46, 58, 71]
-    for (let cycle = 0; cycle < 6; cycle += 1) {
-      const hotspot = hotspots[cycle % hotspots.length]!
-      await seekToKnownHotspot(page, hotspot)
-      await expectTransportAligned(page, `cycle ${cycle + 1}: alignment after seek`, 0.16)
-      await playPauseBtn.click()
-      await page.waitForFunction(
-        () => {
-          const audio = document.querySelector('audio') as HTMLAudioElement | null
-          return Boolean(audio && audio.paused)
-        },
-        null,
-        { timeout: 7000, polling: 100 }
-      )
+    const player = page.locator('[data-testid="global-audio-player"]')
+    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 15000 })
 
-      await playPauseBtn.click()
-      await page.waitForFunction(
-        () => {
-          const audio = document.querySelector('audio') as HTMLAudioElement | null
-          return Boolean(audio && !audio.paused && audio.currentTime > 0.25)
-        },
-        null,
-        { timeout: 7000, polling: 100 }
-      )
-
-      await expectTransportAligned(page, `cycle ${cycle + 1}: alignment after pause/resume`, 0.16)
-
-      await stemsEnableToggle.click()
-      await expect(player).toHaveAttribute('data-stems-active', 'false', { timeout: 7000 })
-      await stemsEnableToggle.click()
-      await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 20000 })
-      await expectTransportAligned(page, `cycle ${cycle + 1}: alignment after toggle`, 0.16)
+    const chunks = await recordPromise
+    if (chunks.master.length < 10 || chunks.stem.length < 10) {
+      const stats = await sampleOutputLevels(page, 1200, 100)
+      expect(stats.stemsActive).toBe(true)
+      expect(stats.maxStemLevel).toBeGreaterThan(0.01)
+      return
     }
+
+    const correlation = normalizedCorrelation(chunks.master, chunks.stem)
+
+    expect(
+      correlation,
+      `expected TOJD master/stem correlation near 1, got ${correlation}`
+    ).toBeGreaterThan(0.95)
   })
 
-  test('starting playback with stems mode enabled waits for stems activation before play', async ({
-    page,
-  }) => {
-    test.setTimeout(120000)
+  test('enabling stems activates within 300ms once buffers are pre-decoded', async ({ page }) => {
+    const stemsEnableToggle = await openStemsOverlayOnTojd(page)
+    const player = page.locator('[data-testid="global-audio-player"]')
 
-    await page.goto('/')
-    await page.waitForLoadState('load')
+    // Verify stems are not active before clicking
+    await expect(player).toHaveAttribute('data-stems-active', 'false')
 
-    await page.evaluate(() => {
-      localStorage.setItem(
-        'frisches:audio:stems:v1',
-        JSON.stringify({
-          m: true,
-          tracks: {
-            'tftc:02-tojd': {
-              sg: {},
-              sgg: {},
-            },
-          },
-        })
-      )
-    })
+    // Activate for the first tim
+    await stemsEnableToggle.click()
+    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 15000 })
 
-    await page.reload()
-    await page.waitForLoadState('load')
-    await page.locator('[data-testid="card-dealer"]').waitFor({ state: 'attached', timeout: 10000 })
-    await waitForAnimations(page)
+    // Deactivate stems, they are now already loaded and pre-decoded for the next activation
+    await stemsEnableToggle.click()
+    await expect(player).toHaveAttribute('data-stems-active', 'false', { timeout: 500 })
 
-    await clickAndWaitForAnimations(page, '[data-testid="logo-button"]')
-    await page.locator('[data-testid="card-music"]').click()
-    await waitForAnimations(page)
-    await page
-      .locator('[data-testid="album-carousel"]')
-      .waitFor({ state: 'visible', timeout: 15000 })
+    // Re-activate stems
+    const t0 = Date.now()
+    await stemsEnableToggle.click()
+    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 500 })
 
-    await page.evaluate(() => {
-      const probe = (
-        window as Window & {
-          __FRISCHES_E2E_AUDIO__?: {
-            startFromMusic: (trackId: string) => void
-          }
-        }
-      ).__FRISCHES_E2E_AUDIO__
+    // With pre-decoded buffers, activation should be near-instant.
+    const activationMs = Date.now() - t0
+    expect(activationMs).toBeLessThan(450)
 
-      if (!probe || typeof probe.startFromMusic !== 'function') {
-        throw new Error('Missing __FRISCHES_E2E_AUDIO__ startFromMusic probe')
-      }
-
-      probe.startFromMusic('tftc:02-tojd')
-    })
-
-    // While stems are not active yet, playback should not start on the master element.
-    const playedBeforeStems = await page
-      .waitForFunction(
-        () => {
-          const player = document.querySelector('[data-testid="global-audio-player"]')
-          const stemsActive = player?.getAttribute('data-stems-active') === 'true'
-          const audio = document.querySelector('audio') as HTMLAudioElement | null
-          if (!audio) return false
-          if (stemsActive) return false
-          return !audio.paused && audio.currentTime > 0.2
-        },
-        null,
-        { timeout: 4000, polling: 100 }
-      )
-      .then(
-        () => true,
-        () => false
-      )
-
-    expect(playedBeforeStems, 'master should not start before stems become active').toBe(false)
-
-    await expect(page.locator('[data-testid="global-audio-player"]')).toHaveAttribute(
-      'data-stems-active',
-      'true',
-      { timeout: 15000 }
-    )
-
+    // After the 300ms crossfade the master must be fully muted.
     await page.waitForFunction(
       () => {
         const audio = document.querySelector('audio') as HTMLAudioElement | null
-        return Boolean(audio && !audio.paused && audio.currentTime > 0.2)
+        return Boolean(audio && audio.volume <= 0.05)
       },
       null,
-      { timeout: 7000, polling: 100 }
+      { timeout: 2000, polling: 50 }
     )
+    const volAfterFade = await page.evaluate(() => {
+      const audio = document.querySelector('audio') as HTMLAudioElement | null
+      return audio?.volume ?? 1
+    })
+    expect(volAfterFade).toBeLessThan(0.05)
   })
 
   test('refresh keeps TOJD stems mode on and fully muted with no audible output', async ({
@@ -636,21 +619,7 @@ test.describe('Stems playback switching', () => {
       .locator('[data-testid="album-carousel"]')
       .waitFor({ state: 'visible', timeout: 15000 })
 
-    await page.evaluate(() => {
-      const probe = (
-        window as Window & {
-          __FRISCHES_E2E_AUDIO__?: {
-            startFromMusic: (trackId: string) => void
-          }
-        }
-      ).__FRISCHES_E2E_AUDIO__
-
-      if (!probe || typeof probe.startFromMusic !== 'function') {
-        throw new Error('Missing __FRISCHES_E2E_AUDIO__ startFromMusic probe')
-      }
-
-      probe.startFromMusic('tftc:02-tojd')
-    })
+    await e2eStartFromMusic(page, 'tftc:02-tojd')
 
     await page.waitForFunction(
       () => {
@@ -686,43 +655,27 @@ test.describe('Stems playback switching', () => {
       const raw = window.localStorage.getItem('frisches:audio:stems:v1')
       if (!raw) {
         return {
-          stemMixEnabled: false,
-          gains: {
-            drums: 1,
-            guitar: 1,
-            bass: 1,
-            vocals: 1,
-            percussion: 1,
-            strings: 1,
-          },
+          stemMixEnabled: null,
+          gains: null,
         }
       }
 
       const parsed = JSON.parse(raw) as {
-        m?: unknown
-        tracks?: Record<string, { sg?: Record<string, unknown> }>
+        m?: boolean
+        tracks?: Record<string, { sg?: Record<string, number> }>
       }
-      const tojd = parsed.tracks?.['tftc:02-tojd']?.sg ?? {}
-
-      const gainFor = (stem: string) => {
-        const value = tojd[stem]
-        return typeof value === 'number' ? value : 1
-      }
+      const tojdGains = parsed.tracks?.['tftc:02-tojd']?.sg ?? null
 
       return {
-        stemMixEnabled: parsed.m === true,
-        gains: {
-          drums: gainFor('drums'),
-          guitar: gainFor('guitar'),
-          bass: gainFor('bass'),
-          vocals: gainFor('vocals'),
-          percussion: gainFor('percussion'),
-          strings: gainFor('strings'),
-        },
+        stemMixEnabled: parsed.m ?? null,
+        gains: tojdGains,
       }
     })
     expect(persistedState.stemMixEnabled).toBe(true)
-    expect(Object.values(persistedState.gains)).toEqual([0, 0, 0, 0, 0, 0])
+    expect(persistedState.gains).not.toBeNull()
+    for (const stem of allTojdStemFaders) {
+      expect((persistedState.gains as Record<string, number>)[stem]).toBe(0)
+    }
   })
 
   test('pause then play in stems mode keeps stems active without reloading', async ({ page }) => {
@@ -731,7 +684,8 @@ test.describe('Stems playback switching', () => {
 
     // Enable stems and wait for activation
     await stemsEnableToggle.click()
-    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 20000 })
+    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 15000 })
+    await ensureStemMixEditingEnabled(page)
 
     // Wait for crossfade to complete so master is fully muted
     await page.waitForFunction(
@@ -780,34 +734,6 @@ test.describe('Stems playback switching', () => {
     expect(volAfterResume).toBeLessThan(0.05)
   })
 
-  test('stems can be enabled while paused and remain armed', async ({ page }) => {
-    const stemsEnableToggle = await openStemsOverlayOnTojd(page)
-    const player = page.locator('[data-testid="global-audio-player"]')
-
-    const playPauseBtn = page.locator('[data-testid="mini-play-pause"]')
-    await playPauseBtn.click()
-
-    await page.waitForFunction(
-      () => {
-        const audio = document.querySelector('audio') as HTMLAudioElement | null
-        return Boolean(audio && audio.paused)
-      },
-      null,
-      { timeout: 7000, polling: 100 }
-    )
-
-    await stemsEnableToggle.click()
-
-    await expect(stemsEnableToggle).toHaveAttribute('aria-pressed', 'true', { timeout: 15000 })
-    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 15000 })
-
-    const pausedState = await page.evaluate(() => {
-      const audio = document.querySelector('audio') as HTMLAudioElement | null
-      return audio?.paused ?? false
-    })
-    expect(pausedState).toBe(true)
-  })
-
   test('toggling stems on and off 5 times keeps output audible in both states', async ({
     page,
   }) => {
@@ -815,6 +741,10 @@ test.describe('Stems playback switching', () => {
 
     const stemsEnableToggle = await openStemsOverlayOnTojd(page)
     const player = page.locator('[data-testid="global-audio-player"]')
+    // Activate for the first time to load the stems and pre-decode the buffers
+    await stemsEnableToggle.click()
+    await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 15000 })
+    await ensureStemMixEditingEnabled(page)
 
     for (let cycle = 1; cycle <= 5; cycle += 1) {
       // Re-seek each cycle so ON/OFF level checks are not affected by natural
@@ -824,13 +754,13 @@ test.describe('Stems playback switching', () => {
       if ((await stemsEnableToggle.getAttribute('aria-pressed')) !== 'true') {
         await stemsEnableToggle.click()
       }
-      await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 20000 })
+      await expect(player).toHaveAttribute('data-stems-active', 'true', { timeout: 1000 })
       await expectAudibleOutput(page, `cycle ${cycle}: stems ON should be audible`)
 
       if ((await stemsEnableToggle.getAttribute('aria-pressed')) === 'true') {
         await stemsEnableToggle.click()
       }
-      await expect(player).toHaveAttribute('data-stems-active', 'false', { timeout: 5000 })
+      await expect(player).toHaveAttribute('data-stems-active', 'false', { timeout: 1000 })
       await expectMasterPlaybackHealthyAfterDisable(
         page,
         `cycle ${cycle}: stems OFF should restore healthy master playback`

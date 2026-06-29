@@ -99,7 +99,11 @@
   },
   "lyrics": {
     "syncToCurrent": "Sincronizza con i testi attuali",
-    "sync": "Sincronizza"
+    "sync": "Sincronizza",
+    "showChords": "Mostra accordi",
+    "hideChords": "Nascondi accordi",
+    "collapseChords": "Comprimi la fascia degli accordi",
+    "expandChords": "Espandi la fascia degli accordi"
   },
   "about": {
     "subHeaderTitle": "Ciao, siamo Frisches!",

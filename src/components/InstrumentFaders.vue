@@ -84,6 +84,8 @@ const GROUP_SHELL_PADDING_RIGHT_PX = 2
 const GROUP_SHELL_PADDING_BOTTOM_PX = 0
 const GROUP_SHELL_PADDING_LEFT_PX = 0
 const GROUP_SHELL_EXTENSION_BOTTOM_PX = 8
+const STEMS_EDGE_SCROLL_PADDING_PX =
+  GROUP_HANDLE_OVERHANG_PX + GROUP_SHELL_PADDING_LEFT_PX + GROUP_SHELL_PADDING_RIGHT_PX
 const GROUP_DRAWER_HORIZONTAL_PADDING_PX =
   GROUP_SHELL_PADDING_LEFT_PX + GROUP_SHELL_PADDING_RIGHT_PX
 const GROUP_STEM_TOP_PADDING_PX = 2
@@ -206,12 +208,21 @@ const suppressHandleClick = reactive<Partial<Record<StemName, boolean>>>({})
 const draggingGroupStem = ref<StemName | null>(null)
 const contextMenuState = ref<ContextMenuState | null>(null)
 const contextMenuEl = ref<HTMLElement | null>(null)
+const overlayEl = ref<HTMLElement | null>(null)
 
 const isFaderEditingEnabled = ref(false)
 let activeGroupDrag: GroupDragSession | null = null
 let longPressTimer: ReturnType<typeof setTimeout> | null = null
 const pendingIconActionTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const suppressedIconActionKeys = new Set<string>()
+
+// Explicit pressed-state tracking – replaces CSS :active to prevent the stuck-highlight
+// bug in Firefox (and touch-emulation modes) where :active is not cleared on pointerup.
+const pressedIconKeys = reactive(new Set<string>())
+const pressedSliderKeys = reactive(new Set<string>())
+// Suppresses the sticky :hover colour that browsers apply after a touch tap by
+// synthesising mouse-enter events.  Cleared when the real pointer actually leaves.
+const suppressHoverKeys = reactive(new Set<string>())
 
 watch(
   [() => props.stemsRequested, () => props.stemsEnabled, () => props.stemsModeAvailable],
@@ -346,6 +357,7 @@ const groupDrawerCssVars = computed(() => ({
   '--group-shell-padding-left': `${GROUP_SHELL_PADDING_LEFT_PX}px`,
   '--group-shell-top-overhang': `${GROUP_SHELL_TOP_OVERHANG_PX}px`,
   '--group-shell-extension-bottom': `${GROUP_SHELL_EXTENSION_BOTTOM_PX}px`,
+  '--stems-edge-scroll-padding': `${STEMS_EDGE_SCROLL_PADDING_PX}px`,
   '--group-handle-width': `${GROUP_HANDLE_WIDTH_PX}px`,
   '--group-handle-height': `${GROUP_HANDLE_HEIGHT_PX}px`,
   '--group-handle-overhang': `${GROUP_HANDLE_OVERHANG_PX}px`,
@@ -514,9 +526,13 @@ function applyGroupGainChange(stem: StemName, index: number, value: number) {
   emit('setGroupGain', stem, index, nextValue)
 }
 
-const allVisibleStemsMuted = computed(
-  () => visibleStems.value.length > 0 && visibleStems.value.every((stem) => stem.gain <= 0.001)
-)
+const hasAnyMutedFader = computed(() => {
+  if (visibleStems.value.some((stem) => stem.gain <= 0.001)) return true
+
+  return visibleStems.value.some((stem) =>
+    effectiveGroupItems(stem.key).some((_, index) => groupItemGain(stem.key, index) <= 0.001)
+  )
+})
 
 function clearAllIconActionTimers() {
   for (const timer of pendingIconActionTimers.values()) {
@@ -726,20 +742,22 @@ function runContextMenuAction(action: ContextMenuAction) {
   }
 }
 
-function toggleMuteAll() {
+function unmuteAll() {
   if (!isFaderEditingEnabled.value) return
 
   closeContextMenu()
   for (const stem of visibleStems.value) {
-    if (allVisibleStemsMuted.value) {
+    if (stem.gain <= 0.001) {
       const restore = clamp01(lastNonZeroGain[stem.key] ?? 1)
       applyStemGainChange(stem.key, restore > 0 ? restore : 1)
-      continue
     }
 
-    if (stem.gain > 0.001) {
-      lastNonZeroGain[stem.key] = stem.gain
-      applyStemGainChange(stem.key, 0)
+    for (const [index] of effectiveGroupItems(stem.key).entries()) {
+      if (groupItemGain(stem.key, index) > 0.001) continue
+
+      const key = groupItemKey(stem.key, index)
+      const restore = clamp01(lastNonZeroGroupGain[key] ?? 1)
+      applyGroupGainChange(stem.key, index, restore > 0 ? restore : 1)
     }
   }
 }
@@ -783,9 +801,25 @@ function groupDrawerStyle(stem: StemName) {
   }
 }
 
+function scrollGroupIntoView(stem: StemName) {
+  const groupEl = overlayEl.value?.querySelector(
+    `[data-testid="stem-${stem}"]`
+  ) as HTMLElement | null
+
+  if (typeof groupEl?.scrollIntoView !== 'function') return
+
+  groupEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
+}
+
 function toggleGroup(stem: StemName) {
   delete groupPreviewWidth[stem]
   groupOpen[stem] = !groupOpen[stem]
+
+  if (groupOpen[stem]) {
+    void nextTick(() => {
+      scrollGroupIntoView(stem)
+    })
+  }
 }
 
 function clearGroupDragSession() {
@@ -830,6 +864,12 @@ function onGroupHandlePointerUp() {
   if (didDrag) {
     groupOpen[stem] = currentWidth >= maxWidth / 2
     suppressHandleClick[stem] = true
+
+    if (groupOpen[stem]) {
+      void nextTick(() => {
+        scrollGroupIntoView(stem)
+      })
+    }
   }
 
   delete groupPreviewWidth[stem]
@@ -1055,6 +1095,77 @@ function resetGains() {
   clearAllSoloTargets()
   emit('resetGains')
 }
+
+// ─── Explicit press-state handlers (fix stuck :active on touch / Firefox) ──────────────────
+
+function onStemIconPointerDown(stem: StemName, event: PointerEvent) {
+  pressedIconKeys.add(iconTargetKey(stem))
+  scheduleLongPress(stem, null, event)
+}
+
+function onStemIconPointerUpAll(stem: StemName, event: PointerEvent) {
+  pressedIconKeys.delete(iconTargetKey(stem))
+  if (event.pointerType === 'touch') {
+    suppressHoverKeys.add(iconTargetKey(stem))
+  }
+  onStemIconPointerUp(stem, event)
+}
+
+function onStemIconPointerCancelLeave(stem: StemName, event: PointerEvent) {
+  pressedIconKeys.delete(iconTargetKey(stem))
+  if (event.pointerType === 'touch') {
+    // Keep hover suppressed – synthetic mouse-enter will fire next and must not glow.
+    suppressHoverKeys.add(iconTargetKey(stem))
+  } else {
+    // Real pointer has left – safe to restore hover behaviour.
+    suppressHoverKeys.delete(iconTargetKey(stem))
+  }
+  clearLongPressTimer()
+}
+
+function onGroupItemIconPointerDown(stem: StemName, index: number, event: PointerEvent) {
+  pressedIconKeys.add(iconTargetKey(stem, index))
+  scheduleLongPress(stem, index, event)
+}
+
+function onGroupItemIconPointerUpAll(stem: StemName, index: number, event: PointerEvent) {
+  pressedIconKeys.delete(iconTargetKey(stem, index))
+  if (event.pointerType === 'touch') {
+    suppressHoverKeys.add(iconTargetKey(stem, index))
+  }
+  onGroupItemIconPointerUp(stem, index, event)
+}
+
+function onGroupItemIconPointerCancelLeave(stem: StemName, index: number, event: PointerEvent) {
+  pressedIconKeys.delete(iconTargetKey(stem, index))
+  if (event.pointerType === 'touch') {
+    suppressHoverKeys.add(iconTargetKey(stem, index))
+  } else {
+    suppressHoverKeys.delete(iconTargetKey(stem, index))
+  }
+  clearLongPressTimer()
+}
+
+function onSliderPointerDown(key: string, event: PointerEvent) {
+  pressedSliderKeys.add(key)
+  if (event.pointerType !== 'touch') {
+    suppressHoverKeys.delete(key)
+  }
+}
+
+function onSliderPointerUpOrCancel(key: string, event: PointerEvent) {
+  pressedSliderKeys.delete(key)
+  if (event.pointerType === 'touch') {
+    suppressHoverKeys.add(key)
+  }
+}
+
+function onSliderPointerLeave(key: string, event: PointerEvent) {
+  pressedSliderKeys.delete(key)
+  if (event.pointerType !== 'touch') {
+    suppressHoverKeys.delete(key)
+  }
+}
 </script>
 
 <template>
@@ -1074,6 +1185,7 @@ function resetGains() {
 
     <div
       v-if="modelValue"
+      ref="overlayEl"
       class="stems__overlay"
       data-testid="stems-overlay"
       role="dialog"
@@ -1101,17 +1213,16 @@ function resetGains() {
 
         <div class="stems__header-actions">
           <button
-            class="stems__mode-btn stems__mode-btn--mute"
+            class="stems__mode-btn stems__mode-btn--mute-clear"
             type="button"
-            :class="{ 'is-active': allVisibleStemsMuted }"
-            :aria-label="allVisibleStemsMuted ? t.faders.unmuteAll : t.faders.muteAll"
-            :data-tooltip="allVisibleStemsMuted ? t.faders.unmuteAll : t.faders.muteAll"
-            :aria-pressed="allVisibleStemsMuted"
-            :disabled="!isFaderEditingEnabled"
+            :aria-label="t.faders.unmuteAll"
+            :data-tooltip="t.faders.unmuteAll"
+            :aria-pressed="false"
+            :disabled="!isFaderEditingEnabled || !hasAnyMutedFader"
             data-testid="stems-mute-all"
-            @click="toggleMuteAll"
+            @click="unmuteAll"
           >
-            <span aria-hidden="true">M</span>
+            <span aria-hidden="true">!M</span>
           </button>
 
           <button
@@ -1190,10 +1301,15 @@ function resetGains() {
                       'stem--dimmed': isStemDimmed(stem.key),
                       'stem--unavailable': !stem.isAvailable,
                       'stem--group-parent': hasGroupItems(stem.key),
+                      'suppress-hover': suppressHoverKeys.has(iconTargetKey(stem.key)),
                     }"
                   >
                     <button
                       class="stem__icon-btn"
+                      :class="{
+                        'is-pressed': pressedIconKeys.has(iconTargetKey(stem.key)),
+                        'suppress-hover': suppressHoverKeys.has(iconTargetKey(stem.key)),
+                      }"
                       type="button"
                       :data-tooltip="stem.tooltip"
                       :aria-label="t.faders.muteToggle(stem.title)"
@@ -1202,10 +1318,10 @@ function resetGains() {
                       :data-testid="`stem-${stem.key}-mute`"
                       @click="onStemIconClick(stem.key, $event)"
                       @contextmenu="openStemContextMenu(stem.key, $event)"
-                      @pointerdown="scheduleLongPress(stem.key, null, $event)"
-                      @pointerup="onStemIconPointerUp(stem.key, $event)"
-                      @pointercancel="clearLongPressTimer"
-                      @pointerleave="clearLongPressTimer"
+                      @pointerdown="onStemIconPointerDown(stem.key, $event)"
+                      @pointerup="onStemIconPointerUpAll(stem.key, $event)"
+                      @pointercancel="onStemIconPointerCancelLeave(stem.key, $event)"
+                      @pointerleave="onStemIconPointerCancelLeave(stem.key, $event)"
                     >
                       <span class="stem__icon" aria-hidden="true" v-html="stem.icon" />
                       <span v-if="isStemMuted(stem.key)" class="stem__mute-badge" aria-hidden="true"
@@ -1219,7 +1335,11 @@ function resetGains() {
                       >
                     </button>
 
-                    <div class="stem__slider-wrap" :style="{ '--stem-percent': stem.percent }">
+                    <div
+                      class="stem__slider-wrap"
+                      :class="{ 'is-slider-pressed': pressedSliderKeys.has(stem.key) }"
+                      :style="{ '--stem-percent': stem.percent }"
+                    >
                       <input
                         class="stem__slider"
                         type="range"
@@ -1229,6 +1349,10 @@ function resetGains() {
                         :value="stem.gain"
                         :disabled="!isFaderEditingEnabled || !stem.isAvailable"
                         :aria-label="t.faders.instrumentVolume(stem.title)"
+                        @pointerdown="onSliderPointerDown(stem.key, $event)"
+                        @pointerup="onSliderPointerUpOrCancel(stem.key, $event)"
+                        @pointercancel="onSliderPointerUpOrCancel(stem.key, $event)"
+                        @pointerleave="onSliderPointerLeave(stem.key, $event)"
                         @input="onInput(stem.key, $event)"
                       />
                     </div>
@@ -1249,11 +1373,18 @@ function resetGains() {
                     >
                       <div
                         class="stem stem--child"
-                        :class="{ 'stem--dimmed': isGroupItemDimmed(stem.key, idx) }"
+                        :class="{
+                          'stem--dimmed': isGroupItemDimmed(stem.key, idx),
+                          'suppress-hover': suppressHoverKeys.has(iconTargetKey(stem.key, idx)),
+                        }"
                         :data-testid="`stem-${stem.key}-item-${idx}`"
                       >
                         <button
                           class="stem__icon-btn"
+                          :class="{
+                            'is-pressed': pressedIconKeys.has(iconTargetKey(stem.key, idx)),
+                            'suppress-hover': suppressHoverKeys.has(iconTargetKey(stem.key, idx)),
+                          }"
                           type="button"
                           :data-tooltip="groupItemAriaLabel(stem.title, item, idx)"
                           :aria-label="groupItemAriaLabel(stem.title, item, idx)"
@@ -1262,10 +1393,10 @@ function resetGains() {
                           :data-testid="`stem-${stem.key}-item-${idx}-mute`"
                           @click="onGroupItemIconClick(stem.key, idx, $event)"
                           @contextmenu="openGroupItemContextMenu(stem.key, idx, $event)"
-                          @pointerdown="scheduleLongPress(stem.key, idx, $event)"
-                          @pointerup="onGroupItemIconPointerUp(stem.key, idx, $event)"
-                          @pointercancel="clearLongPressTimer"
-                          @pointerleave="clearLongPressTimer"
+                          @pointerdown="onGroupItemIconPointerDown(stem.key, idx, $event)"
+                          @pointerup="onGroupItemIconPointerUpAll(stem.key, idx, $event)"
+                          @pointercancel="onGroupItemIconPointerCancelLeave(stem.key, idx, $event)"
+                          @pointerleave="onGroupItemIconPointerCancelLeave(stem.key, idx, $event)"
                         >
                           <span
                             class="stem__icon"
@@ -1295,6 +1426,9 @@ function resetGains() {
 
                         <div
                           class="stem__slider-wrap"
+                          :class="{
+                            'is-slider-pressed': pressedSliderKeys.has(groupItemKey(stem.key, idx)),
+                          }"
                           :style="{ '--stem-percent': groupItemPercent(stem.key, idx) }"
                         >
                           <input
@@ -1306,6 +1440,16 @@ function resetGains() {
                             :value="groupItemGain(stem.key, idx)"
                             :disabled="!isFaderEditingEnabled"
                             :aria-label="groupItemAriaLabel(stem.title, item, idx)"
+                            @pointerdown="onSliderPointerDown(groupItemKey(stem.key, idx), $event)"
+                            @pointerup="
+                              onSliderPointerUpOrCancel(groupItemKey(stem.key, idx), $event)
+                            "
+                            @pointercancel="
+                              onSliderPointerUpOrCancel(groupItemKey(stem.key, idx), $event)
+                            "
+                            @pointerleave="
+                              onSliderPointerLeave(groupItemKey(stem.key, idx), $event)
+                            "
                             @input="onGroupItemInput(stem.key, idx, $event)"
                           />
                         </div>
@@ -1386,10 +1530,9 @@ function resetGains() {
 
 .stems__overlay {
   position: absolute;
-  right: 0;
+  right: -2rem;
   bottom: calc(100% + 10px);
   left: auto;
-  transform: none;
   max-width: min(92vw, 38rem);
   padding: 10px 10px 10px;
   background: rgba(0, 0, 0, 0.92);
@@ -1403,10 +1546,10 @@ function resetGains() {
 .stems__overlay::after {
   content: '';
   position: absolute;
-  right: 14px;
-  bottom: -6px;
-  width: 12px;
-  height: 12px;
+  right: 2.5rem;
+  bottom: -0.375rem;
+  width: 0.75rem;
+  height: 0.75rem;
   transform: rotate(45deg);
   background: rgba(0, 0, 0, 0.92);
   border-right: 1px solid rgba(255, 255, 255, 0.12);
@@ -1444,7 +1587,6 @@ function resetGains() {
     transform 140ms ease;
 }
 
-.stems__context-action:hover,
 .stems__context-action:focus-visible {
   background: rgba(255, 255, 255, 0.08);
   color: #ffffff;
@@ -1486,7 +1628,9 @@ function resetGains() {
     opacity 150ms ease;
 }
 
-.stems__mode-btn--mute {
+.stems__mode-btn--mute-clear {
+  min-width: 28px;
+  padding: 0 5px;
   color: rgba(255, 108, 108, 0.92);
 }
 
@@ -1509,6 +1653,12 @@ function resetGains() {
 .stems__mode-btn:disabled {
   opacity: 0.34;
   cursor: default;
+}
+
+.stems__mode-btn--mute-clear:not(:disabled):active {
+  background: rgba(255, 108, 108, 0.92);
+  border-color: rgba(255, 108, 108, 0.96);
+  color: #070707;
 }
 
 .stems__mode-btn--solo-clear:not(:disabled):active {
@@ -1646,22 +1796,16 @@ function resetGains() {
   overflow-x: auto;
   overflow-y: hidden;
   padding-top: var(--group-shell-top-overhang);
-  padding-bottom: 14px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.34) transparent;
+  /* extend bottom padding to fully reveal the group shell's ::before extension */
+  padding-bottom: var(--group-shell-extension-bottom);
+  /* keep edge groups fully reachable by matching the shell + handle geometry */
+  padding-inline: var(--stems-edge-scroll-padding);
+  scroll-padding-inline: var(--stems-edge-scroll-padding);
+  scrollbar-width: none;
 }
 
 .stems__grid::-webkit-scrollbar {
-  height: 4px;
-}
-
-.stems__grid::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.stems__grid::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.34);
-  border-radius: 999px;
+  display: none;
 }
 
 .stems__grid--disabled {
@@ -1674,6 +1818,7 @@ function resetGains() {
   display: flex;
   align-items: flex-end;
   flex-shrink: 0;
+  scroll-margin-inline: var(--stems-edge-scroll-padding);
 }
 
 .stem-group__main {
@@ -1715,10 +1860,6 @@ function resetGains() {
     border-color 180ms ease,
     background 180ms ease,
     box-shadow 220ms ease;
-}
-
-.stem-group__shell--grouped:hover::before {
-  border-color: rgba(255, 255, 255, 0.22);
 }
 
 .stem-group__shell--open::before {
@@ -1764,13 +1905,6 @@ function resetGains() {
 
 .stem-group__handle:active {
   cursor: grabbing;
-}
-
-.stem-group__handle:hover {
-  color: rgba(255, 255, 255, 0.78);
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.28);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .stem-group__handle.is-open {
@@ -1899,10 +2033,75 @@ function resetGains() {
   color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
   transition: color 150ms ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.stem__icon-btn:hover {
-  color: var(--lyrics-album-contour);
+@media (hover: hover) and (pointer: fine) {
+  .stems__context-action:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    transform: translateX(1px);
+  }
+
+  .stem-group__shell--grouped:hover::before {
+    border-color: rgba(255, 255, 255, 0.22);
+  }
+
+  .stem-group__handle:hover {
+    color: rgba(255, 255, 255, 0.78);
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.28);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+
+  .stem__icon-btn:not(.suppress-hover):hover {
+    color: var(--lyrics-album-contour);
+  }
+
+  .stems__grid--disabled .stem__icon-btn:not(.suppress-hover):hover {
+    color: rgba(255, 255, 255, 0.44);
+  }
+
+  .stem:not(.suppress-hover):hover .stem__slider::-webkit-slider-runnable-track {
+    background: linear-gradient(
+      90deg,
+      var(--lyrics-album-contour) 0%,
+      var(--lyrics-album-contour) var(--stem-percent, 100%),
+      rgba(255, 255, 255, 0.22) var(--stem-percent, 100%),
+      rgba(255, 255, 255, 0.22) 100%
+    );
+  }
+
+  .stems__grid--disabled
+    .stem:not(.suppress-hover):hover
+    .stem__slider::-webkit-slider-runnable-track {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.5) 0%,
+      rgba(255, 255, 255, 0.5) var(--stem-percent, 100%),
+      rgba(255, 255, 255, 0.16) var(--stem-percent, 100%),
+      rgba(255, 255, 255, 0.16) 100%
+    );
+  }
+
+  .stem:not(.suppress-hover):hover .stem__slider::-moz-range-progress {
+    background: var(--lyrics-album-contour);
+  }
+
+  .stems__grid--disabled .stem:not(.suppress-hover):hover .stem__slider::-moz-range-progress {
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  .stem__icon-btn.is-pressed {
+    color: var(--lyrics-album-contour);
+  }
+
+  .stem-group__handle:active {
+    color: rgba(255, 255, 255, 0.78);
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.28);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
 }
 
 .stem__solo-badge {
@@ -1933,10 +2132,6 @@ function resetGains() {
 
 .stem__icon-btn:disabled {
   cursor: default;
-}
-
-.stems__grid--disabled .stem__icon-btn:hover {
-  color: rgba(255, 255, 255, 0.44);
 }
 
 .mini-player__btn--stems {
@@ -1986,7 +2181,7 @@ function resetGains() {
   );
 }
 
-.stem:hover .stem__slider::-webkit-slider-runnable-track {
+.stem__slider-wrap.is-slider-pressed .stem__slider::-webkit-slider-runnable-track {
   background: linear-gradient(
     90deg,
     var(--lyrics-album-contour) 0%,
@@ -1996,7 +2191,9 @@ function resetGains() {
   );
 }
 
-.stems__grid--disabled .stem:hover .stem__slider::-webkit-slider-runnable-track {
+.stems__grid--disabled
+  .stem__slider-wrap.is-slider-pressed
+  .stem__slider::-webkit-slider-runnable-track {
   background: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0.5) 0%,
@@ -2025,11 +2222,11 @@ function resetGains() {
   background: rgba(255, 255, 255, 0.92);
 }
 
-.stem:hover .stem__slider::-moz-range-progress {
+.stem__slider-wrap.is-slider-pressed .stem__slider::-moz-range-progress {
   background: var(--lyrics-album-contour);
 }
 
-.stems__grid--disabled .stem:hover .stem__slider::-moz-range-progress {
+.stems__grid--disabled .stem__slider-wrap.is-slider-pressed .stem__slider::-moz-range-progress {
   background: rgba(255, 255, 255, 0.5);
 }
 

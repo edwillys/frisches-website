@@ -99,7 +99,11 @@
   },
   "lyrics": {
     "syncToCurrent": "Синхронизировать с текущим текстом",
-    "sync": "Синхронизировать"
+    "sync": "Синхронизировать",
+    "showChords": "Показать аккорды",
+    "hideChords": "Скрыть аккорды",
+    "collapseChords": "Свернуть панель аккордов",
+    "expandChords": "Развернуть панель аккордов"
   },
   "about": {
     "subHeaderTitle": "Привет, мы Frisches!",

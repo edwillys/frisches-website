@@ -284,7 +284,8 @@ export function useViewportTooltip() {
     ) as HTMLElement | null
   }
 
-  function onMouseOver(e: MouseEvent) {
+  function onPointerOver(e: PointerEvent) {
+    if (e.pointerType !== 'mouse') return
     const target = findTarget(e.target)
     if (!target) {
       if (activeTarget) hide()
@@ -295,7 +296,8 @@ export function useViewportTooltip() {
     show(target)
   }
 
-  function onMouseOut(e: MouseEvent) {
+  function onPointerOut(e: PointerEvent) {
+    if (e.pointerType !== 'mouse') return
     const target = findTarget(e.target)
     if (!target || target !== activeTarget) return
     // Still inside the element (moving between child nodes) — keep showing
@@ -312,15 +314,15 @@ export function useViewportTooltip() {
   }
 
   onMounted(() => {
-    document.addEventListener('mouseover', onMouseOver, { passive: true })
-    document.addEventListener('mouseout', onMouseOut, { passive: true })
+    document.addEventListener('pointerover', onPointerOver, { passive: true })
+    document.addEventListener('pointerout', onPointerOut, { passive: true })
     document.addEventListener('scroll', onScroll, { passive: true, capture: true })
     document.addEventListener('click', onClick, { passive: true })
   })
 
   onUnmounted(() => {
-    document.removeEventListener('mouseover', onMouseOver)
-    document.removeEventListener('mouseout', onMouseOut)
+    document.removeEventListener('pointerover', onPointerOver)
+    document.removeEventListener('pointerout', onPointerOut)
     document.removeEventListener('scroll', onScroll, { capture: true } as EventListenerOptions)
     document.removeEventListener('click', onClick)
     tip?.remove()
