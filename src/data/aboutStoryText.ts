@@ -38,7 +38,7 @@ const aboutStoryTextByLocale: Record<AppLocale, StoryText> = {
       },
       {
         id: 'album',
-        text: `The debut album, "Tales From The Cellar" is a collection of sonic poetry forged by its four creative minds, Camilla (vocals and flute), Tobi (bass), Steff (drums) and Edgar (guitar). Its tracks emerged within the walls of their underground rehearsal lab. In 2023 the band expanded their lore with the animated video clip of `,
+        text: `The debut album, "Tales From The Cellar" is a collection of sonic poetry forged by its four creative minds, Camilla (vocals and flute), Aleksey (bass), Steff (drums) and Edgar (guitar). Its tracks emerged within the walls of their underground rehearsal lab. In 2023 the band expanded their lore with the animated video clip of `,
         linkText: `"Witch Hunting"`,
         linkHref: 'https://www.youtube.com/watch?v=_rZYN5G6-gg',
         linkYtId: '_rZYN5G6-gg',
@@ -65,7 +65,7 @@ const aboutStoryTextByLocale: Record<AppLocale, StoryText> = {
       },
       {
         id: 'album',
-        text: `Das Debütalbum "Tales From The Cellar" ist eine Sammlung klanggewordener Poesie, geschmiedet von vier kreativen Köpfen: Camilla (Gesang und Flöte), Tobi (Bass), Steff (Schlagzeug) und Edgar (Gitarre). Die Songs entstanden zwischen den Wänden ihres unterirdischen Proberaums. 2023 spann die Band ihre eigene Legende mit dem animierten Videoclip zu `,
+        text: `Das Debütalbum "Tales From The Cellar" ist eine Sammlung klanggewordener Poesie, geschmiedet von vier kreativen Köpfen: Camilla (Gesang und Flöte), Aleksey (Bass), Steff (Schlagzeug) und Edgar (Gitarre). Die Songs entstanden zwischen den Wänden ihres unterirdischen Proberaums. 2023 spann die Band ihre eigene Legende mit dem animierten Videoclip zu `,
         linkText: `"Witch Hunting"`,
         linkHref: 'https://www.youtube.com/watch?v=_rZYN5G6-gg',
         linkYtId: '_rZYN5G6-gg',
@@ -92,7 +92,7 @@ const aboutStoryTextByLocale: Record<AppLocale, StoryText> = {
       },
       {
         id: 'album',
-        text: `Leur premier album, "Tales From The Cellar", est un recueil de poésie sonore ayant pris forme dans leur antre de répétition souterraine, façonné par quatre têtes créatives: Camilla (chant et flûte), Tobi (basse), Steff (batterie) et Edgar (guitare). En 2023, le groupe a étoffé son univers d’un clip animé, `,
+        text: `Leur premier album, "Tales From The Cellar", est un recueil de poésie sonore ayant pris forme dans leur antre de répétition souterraine, façonné par quatre têtes créatives: Camilla (chant et flûte), Aleksey (basse), Steff (batterie) et Edgar (guitare). En 2023, le groupe a étoffé son univers d’un clip animé, `,
         linkText: `"Witch Hunting"`,
         linkHref: 'https://www.youtube.com/watch?v=_rZYN5G6-gg',
         linkYtId: '_rZYN5G6-gg',
@@ -119,7 +119,7 @@ const aboutStoryTextByLocale: Record<AppLocale, StoryText> = {
       },
       {
         id: 'album',
-        text: `O álbum de estreia, "Tales From The Cellar", é uma coleção de poesias sonoras concebida por suas quatro mentes criativas: Camilla (vocais e flauta), Tobi (baixo), Steff (bateria) e Edgar (guitarra). Cada faixa emergiu entre as paredes subterrâneas do laboratório de ensaio do grupo. Em 2023, a banda expandiu os horizontes com o clipe de animação de `,
+        text: `O álbum de estreia, "Tales From The Cellar", é uma coleção de poesias sonoras concebida por suas quatro mentes criativas: Camilla (vocais e flauta), Aleksey (baixo), Steff (bateria) e Edgar (guitarra). Cada faixa emergiu entre as paredes subterrâneas do laboratório de ensaio do grupo. Em 2023, a banda expandiu os horizontes com o clipe de animação de `,
         linkText: `"Witch Hunting"`,
         linkHref: 'https://www.youtube.com/watch?v=_rZYN5G6-gg',
         linkYtId: '_rZYN5G6-gg',
@@ -146,7 +146,7 @@ const aboutStoryTextByLocale: Record<AppLocale, StoryText> = {
       },
       {
         id: 'album',
-        text: `L’album d’esordio, "Tales From The Cellar", è una raccolta di poesia sonora forgiata da quattro menti creative: Camilla (voce e flauto), Tobi (basso), Steff (batteria) ed Edgar (chitarra). I brani sono nati fra le pareti del loro covo di prova sotterraneo. Nel 2023 la band ha allargato ulteriormente la propria leggenda con il videoclip animato di `,
+        text: `L’album d’esordio, "Tales From The Cellar", è una raccolta di poesia sonora forgiata da quattro menti creative: Camilla (voce e flauto), Aleksey (basso), Steff (batteria) ed Edgar (chitarra). I brani sono nati fra le pareti del loro covo di prova sotterraneo. Nel 2023 la band ha allargato ulteriormente la propria leggenda con il videoclip animato di `,
         linkText: `"Witch Hunting"`,
         linkHref: 'https://www.youtube.com/watch?v=_rZYN5G6-gg',
         linkYtId: '_rZYN5G6-gg',
@@ -173,7 +173,7 @@ const aboutStoryTextByLocale: Record<AppLocale, StoryText> = {
       },
       {
         id: 'album',
-        text: `Дебютный альбом «Tales From The Cellar» — это коллекция звуковой поэзии, собранная четырьмя творческими умами: Camilla (вокал и флейта), Tobi (бас), Steff (барабаны) и Edgar (гитара). Эти песни родились в стенах их подземного репетиционного логова. В 2023 году группа дополнила собственную легенду анимированным клипом на `,
+        text: `Дебютный альбом «Tales From The Cellar» — это коллекция звуковой поэзии, собранная четырьмя творческими умами: Camilla (вокал и флейта), Aleksey (бас), Steff (барабаны) и Edgar (гитара). Эти песни родились в стенах их подземного репетиционного логова. В 2023 году группа дополнила собственную легенду анимированным клипом на `,
         linkText: `"Witch Hunting"`,
         linkHref: 'https://www.youtube.com/watch?v=_rZYN5G6-gg',
         linkYtId: '_rZYN5G6-gg',

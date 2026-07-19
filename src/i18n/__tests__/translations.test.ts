@@ -70,6 +70,9 @@ describe('translation coverage', () => {
     ])
 
     expect(englishAboutPaths).toEqual([
+      'aleksey.badgeTitles',
+      'aleksey.descriptionLead',
+      'aleksey.name',
       'cami.badgeTitles',
       'cami.descriptionLead',
       'cami.descriptionTail',
@@ -81,9 +84,6 @@ describe('translation coverage', () => {
       'steff.descriptionLead',
       'steff.descriptionTail',
       'steff.name',
-      'tobi.badgeTitles',
-      'tobi.descriptionLead',
-      'tobi.name',
     ])
 
     expect(englishUiPaths).toEqual([

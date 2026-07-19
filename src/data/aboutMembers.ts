@@ -75,19 +75,19 @@ const { frames: steffFlipFrames, avatarBack: steffAvatarBack } = resolveFlipFram
   steffMedium
 )
 // @ts-expect-error - vite-imagetools generates these at build time
-import tobiSmall from '@/assets/private/avatar/tobi.png?w=128&format=webp&quality=78'
+import alekseySmall from '@/assets/private/avatar/aleksey.png?w=128&format=webp&quality=78'
 // @ts-expect-error - vite-imagetools generates these at build time
-import tobiMedium from '@/assets/private/avatar/tobi.png?w=256&format=webp&quality=78'
+import alekseyMedium from '@/assets/private/avatar/aleksey.png?w=256&format=webp&quality=78'
 // @ts-expect-error - vite-imagetools generates these at build time
-import tobiLarge from '@/assets/private/avatar/tobi.png?w=384&format=webp&quality=78'
+import alekseyLarge from '@/assets/private/avatar/aleksey.png?w=384&format=webp&quality=78'
 
-const tobiFrameModules = import.meta.glob<string>(
-  '../assets/private/avatar/poses/tobi/tobi-frame*.png',
+const alekseyFrameModules = import.meta.glob<string>(
+  '../assets/private/avatar/poses/aleksey/aleksey-frame*.png',
   { eager: true, query: { w: '512', format: 'webp', quality: '78' }, import: 'default' }
 )
-const { frames: tobiFlipFrames, avatarBack: tobiAvatarBack } = resolveFlipFrames(
-  tobiFrameModules,
-  tobiMedium
+const { frames: alekseyFlipFrames, avatarBack: alekseyAvatarBack } = resolveFlipFrames(
+  alekseyFrameModules,
+  alekseyMedium
 )
 
 const edgarTrackId = 'tftc:02-tojd'
@@ -153,17 +153,17 @@ export const getAboutMembers = (locale: AppLocale): AboutMember[] => {
       favoriteTrackTitle: getTrackById(steffTrackId)?.title,
     },
     {
-      id: 'tobi',
-      name: memberText.tobi.name,
-      initial: 'T',
-      avatar: tobiMedium,
-      avatarSrcset: avatarSrcset(tobiSmall, tobiMedium, tobiLarge),
-      avatarBack: tobiAvatarBack,
-      flipFrames: tobiFlipFrames,
+      id: 'aleksey',
+      name: memberText.aleksey.name,
+      initial: 'A',
+      avatar: alekseyMedium,
+      avatarSrcset: avatarSrcset(alekseySmall, alekseyMedium, alekseyLarge),
+      avatarBack: alekseyAvatarBack,
+      flipFrames: alekseyFlipFrames,
       flipFps: 8,
-      badges: createBadges(memberText.tobi.badgeTitles, [bassHeadSvg]),
-      descriptionLead: memberText.tobi.descriptionLead,
-      descriptionTail: memberText.tobi.descriptionTail,
+      badges: createBadges(memberText.aleksey.badgeTitles, [bassHeadSvg]),
+      descriptionLead: memberText.aleksey.descriptionLead,
+      descriptionTail: memberText.aleksey.descriptionTail,
     },
   ]
 }

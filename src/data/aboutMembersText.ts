@@ -1,6 +1,6 @@
 import { DEFAULT_APP_LOCALE, type AppLocale } from '@/i18n/locale'
 
-export type AboutMemberTextId = 'edgar' | 'cami' | 'steff' | 'tobi'
+export type AboutMemberTextId = 'edgar' | 'cami' | 'steff' | 'aleksey'
 
 export interface AboutMemberTextEntry {
   name: string
@@ -34,11 +34,11 @@ export const aboutMembersText: Record<
         "Steff keeps the rhythm of Frisches tightly locked — anything that wanders off the beat doesn't stand a chance. Non-negotiable on the Tuesday night rehearsals: Pizza Funghi, no pesto. Rain on the way, play away. Double bass is next on the agenda, coming to fill up the heart and soul of our songs. For her, nothing grooves harder than",
       descriptionTail: '!',
     },
-    tobi: {
-      name: 'Tobi',
+    aleksey: {
+      name: 'Aleksey',
       badgeTitles: ['Bass'],
       descriptionLead:
-        'Tobi is all about the bass and lost his treble long ago. With him, one feels that the JBL bass boost was left turned on, as he brings in groovy lines to support Frisches\u2019 bottom end.',
+        "Aleksey is the newest member of the group, joining the band the very same day he showed up for his audition. Within Frisches, he found more than just a band; he found his soulmates. Whether he's at work training agents to fine-tune a virtual audio assistant or diving into musical leisure, one thing remains constant: he is always pushing to add more bass.",
     },
   },
   de: {
@@ -63,11 +63,11 @@ export const aboutMembersText: Record<
         'Steff hält den Frisches-Groove eisern zusammen – alles, was neben dem Beat landet, hat bei ihr schlechte Karten. Unverhandelbar bei den Dienstagabend-Proben: Pizza Funghi, ohne Pesto. Regen auf dem Weg? Gespielt wird trotzdem. Das Doublebass-Pedal steht als Nächstes auf dem Zettel und soll Herz und Seele unserer Songs noch voller machen. Für sie groovt nichts härter als',
       descriptionTail: '!',
     },
-    tobi: {
-      name: 'Tobi',
+    aleksey: {
+      name: 'Aleksey',
       badgeTitles: ['Bass'],
       descriptionLead:
-        'Bei Tobi dreht sich alles um den Bass – die Höhen hat er schon vor langer Zeit abgeschrieben. Mit ihm wirkt es, als wäre der JBL-Bass-Boost dauerhaft eingerastet: Er liefert groovige Linien, die das Fundament von Frisches tragen.',
+        'Aleksey ist das neueste Mitglied der Gruppe und wurde noch am selben Tag Teil der Band, an dem er zum Vorspielen erschien. Bei Frisches hat er mehr als nur eine Band gefunden: Er hat seine Seelenverwandten gefunden. Ob er bei der Arbeit Agenten trainiert, um einen virtuellen Audioassistenten feinzujustieren, oder in die musikalische Muße eintaucht – eines bleibt konstant: Er treibt den Bass immer weiter nach vorn.',
     },
   },
   fr: {
@@ -92,11 +92,11 @@ export const aboutMembersText: Record<
         'Véritable métronome de Frisches, Steff tient le tempo d’une main de maître: ici, comme le dit Ringo, le f*ing clic, c’est elle. Qu’il neige ou qu’il vente, rien ne l’arrête. Le rituel du mardi est sacré : Pizza Funghi, sans pesto. Prochain rajout à ses atouts ? La double pédale, pour rajouter encore un peu plus de coffre à sa grosse caisse et à l’âme de nos morceaux. Pour elle, rien ne groove plus qu’',
       descriptionTail: ' !',
     },
-    tobi: {
-      name: 'Tobi',
+    aleksey: {
+      name: 'Aleksey',
       badgeTitles: ['Basse'],
       descriptionLead:
-        'Tobi ne jure que par les basses et a laissé tomber les aigus depuis belle lurette. Avec lui, on a l’impression que le bass boost de la JBL est resté enclenché en permanence : il amène des lignes pleines de groove qui tiennent tout le bas du spectre chez Frisches.',
+        "Aleksey est le nouveau membre du groupe : il a rejoint la formation le jour même où il s'est présenté à son audition. Chez Frisches, il a trouvé plus qu'un groupe ; il y a trouvé ses âmes sœurs. Qu'il soit au travail à entraîner des agents pour affiner un assistant audio virtuel ou qu'il plonge dans ses loisirs musicaux, une chose ne change jamais : il pousse toujours pour ajouter plus de basse.",
     },
   },
   br: {
@@ -120,11 +120,11 @@ export const aboutMembersText: Record<
         'Steff mantém o ritmo do Frisches firme no lugar — qualquer coisa que saia do beat não tem a menor chance. Inegociável nos ensaios de terça à noite: Pizza Funghi, sem pesto. Chuva no caminho? A gente toca assim mesmo. O pedal duplo está na pauta, e em breve preencherá o coração e a alma das nossas músicas. Para ela, nada possui um groove mais forte do que',
       descriptionTail: '!',
     },
-    tobi: {
-      name: 'Tobi',
+    aleksey: {
+      name: 'Aleksey',
       badgeTitles: ['Baixo'],
       descriptionLead:
-        'Tobi sabe tudo do baixo e já deixou os agudos para trás faz tempo. Com ele, parece que o bass boost da JBL fica ligado o tempo todo: ele traz linhas cheias de groove que sustentam os graves do Frisches.',
+        'Aleksey é o mais novo integrante do grupo e entrou para a banda no mesmo dia em que apareceu para a audição. No Frisches, ele encontrou mais do que uma banda; encontrou suas almas gêmeas. Seja no trabalho treinando agentes para ajustar com precisão um assistente de áudio virtual ou mergulhando no lazer musical, uma coisa permanece constante: ele está sempre forçando para adicionar mais baixo.',
     },
   },
   it: {
@@ -148,11 +148,11 @@ export const aboutMembersText: Record<
         'Steff tiene il ritmo dei Frisches ben saldo: tutto ciò che esce dal beat con lei non ha scampo. Irrinunciabile alle prove del martedì sera: Pizza Funghi, niente pesto. Piove lungo la strada? Si suona comunque. Il doppio pedale è il prossimo obiettivo, pronto a riempire ancora di più il cuore e l’anima delle nostre canzoni. Per lei, niente ha più groove di',
       descriptionTail: '!',
     },
-    tobi: {
-      name: 'Tobi',
+    aleksey: {
+      name: 'Aleksey',
       badgeTitles: ['Basso'],
       descriptionLead:
-        'Tobi vive di basse frequenze e gli acuti li ha lasciati indietro da un pezzo. Con lui sembra che il bass boost della JBL sia rimasto acceso per sempre: porta linee piene di groove che sorreggono il fondo dei Frisches.',
+        "Aleksey è il membro più recente del gruppo: è entrato nella band lo stesso giorno in cui si è presentato all'audizione. In Frisches ha trovato più di una semplice band; ha trovato le sue anime affini. Che sia al lavoro ad addestrare agenti per perfezionare un assistente audio virtuale o immerso nel tempo libero musicale, una cosa resta costante: spinge sempre per aggiungere più basso.",
     },
   },
   ru: {
@@ -177,11 +177,11 @@ export const aboutMembersText: Record<
         'Steff держит ритм Frisches мёртвой хваткой: всё, что уходит мимо бита, у неё не выживает. Святое на репетициях по вторникам: Pizza Funghi, без песто. Дождь по дороге? Всё равно играем. Двойная бочка уже на очереди, чтобы ещё плотнее заполнить сердце и душу наших песен. Для неё нет ничего грувовее, чем',
       descriptionTail: '!',
     },
-    tobi: {
-      name: 'Tobi',
+    aleksey: {
+      name: 'Aleksey',
       badgeTitles: ['Бас'],
       descriptionLead:
-        'Tobi целиком про бас, а верхние частоты давно оставил в прошлом. Рядом с ним кажется, будто JBL Bass Boost так и не выключали: он приносит грувовые линии, которые держат весь низ Frisches.',
+        'Aleksey — самый новый участник группы: он присоединился к коллективу в тот же день, когда пришел на прослушивание. В Frisches он нашел не просто группу, а родственные души. Будь то работа, где он обучает агентов для тонкой настройки виртуального аудиоассистента, или погружение в музыкальный досуг, одно остается неизменным: он всегда стремится добавить еще больше баса.',
     },
   },
 }
