@@ -1,0 +1,273 @@
+% Compile with:
+%   xelatex -interaction=nonstopmode -halt-on-error frisches-epk.tex
+
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[a4paper,margin=1.45cm]{geometry}
+\usepackage{fontspec}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{multicol}
+\usepackage{pagecolor}
+\usepackage{titlesec}
+\usepackage[most]{tcolorbox}
+\usepackage{fontawesome5}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=white,
+  urlcolor=white,
+  pdfauthor={Frisches},
+  pdftitle={Frisches Electronic Press Kit},
+  pdfsubject={Electronic Press Kit},
+  pdfcreator={LaTeX}
+}
+
+\definecolor{frischesnight}{HTML}{0A0A12}
+\definecolor{frichtesurface}{HTML}{16161F}
+\definecolor{frichesgold}{HTML}{D4AF37}
+\definecolor{frichesmagenta}{HTML}{BF075A}
+\definecolor{frichescyan}{HTML}{68C6E0}
+\definecolor{frichespaper}{HTML}{E8E8F0}
+\definecolor{frichesmuted}{HTML}{A8A8B8}
+\definecolor{fricheswine}{HTML}{2A1F2D}
+
+\setmainfont[
+  Path=fonts/,
+  UprightFont=SpaceMono-Regular,
+  ItalicFont=SpaceMono-Italic,
+  BoldFont=SpaceMono-Bold,
+  BoldItalicFont=SpaceMono-BoldItalic
+]{Space Mono}
+
+\pagecolor{frischesnight}
+\color{frichespaper}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[L]{\textcolor{frichesmuted}{Frisches EPK}}
+\fancyfoot[R]{\textcolor{frichesmuted}{\thepage}}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\setlist[itemize]{leftmargin=1.2em, itemsep=0.35em, topsep=0.3em}
+\setlength{\tabcolsep}{6pt}
+\renewcommand{\arraystretch}{1.22}
+
+\titleformat{\section}
+  {\Large\bfseries\color{frichesgold}}
+  {}
+  {0pt}
+  {}
+  [\vspace{0.2em}\textcolor{frichesmagenta}{\rule{\linewidth}{0.7pt}}]
+
+\newcommand{\frischeswebsite}{https://frisches.band/}
+\newcommand{\frichesspotify}{https://open.spotify.com/artist/3GkLzwg7QBN5fRoCDcI1pW?si=YoFaY--kTPWO-G1bRsnLdA}
+\newcommand{\frischesyoutube}{https://www.youtube.com/@frischestheband}
+\newcommand{\witchhuntingvideo}{https://www.youtube.com/watch?v=_rZYN5G6-gg}
+\newcommand{\frischesinstagram}{https://www.instagram.com/frischestheband/}
+
+\newcommand{\epklogo}{../src/assets/private/images/Frisches_Logo-Mood-3-Round.png}
+\newcommand{\epkhero}{optimized/hero.jpg}
+\newcommand{\epkgroup}{optimized/group.jpg}
+\newcommand{\epkcami}{optimized/cami.jpg}
+\newcommand{\epktobi}{optimized/tobi.jpg}
+\newcommand{\epkedgar}{optimized/edgar.jpg}
+\newcommand{\epksteff}{optimized/steff.jpg}
+
+\tcbset{
+  frcardstyle/.style={
+    enhanced,
+    colback=frichtesurface,
+    colframe=frichesmagenta,
+    coltext=frichespaper,
+    before upper={\raggedright\color{frichespaper}},
+    boxrule=0.6pt,
+    arc=4mm,
+    outer arc=4mm,
+    left=4mm,
+    right=4mm,
+    top=3.2mm,
+    bottom=3.2mm,
+    boxsep=0pt
+  },
+  frpillstyle/.style={
+    enhanced,
+    colback=frichtesurface,
+    coltext=frichespaper,
+    boxrule=0.7pt,
+    arc=6mm,
+    outer arc=6mm,
+    left=2.5mm,
+    right=2.5mm,
+    top=1.8mm,
+    bottom=1.8mm,
+    boxsep=0pt,
+    halign=center,
+    valign=center
+  }
+}
+
+\newtcbox{\linkpill}[2][]{frpillstyle,#1}
+
+\newtcolorbox{frcard}{frcardstyle}
+
+\newcommand{\memberportrait}[4]{%
+  \begin{minipage}[t]{0.47\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=10.5cm,keepaspectratio,#1]{#2}
+    \vspace{0.22em}
+
+    {\color{frichesgold}\textbf{#3}}\\
+    {\small\textcolor{frichesmuted}{#4}}
+  \end{minipage}%
+}
+
+\begin{document}
+
+\hypersetup{pageanchor=false}
+\begin{titlepage}
+\thispagestyle{empty}
+
+\begin{center}
+  \includegraphics[width=2.55cm]{\epklogo}\\[0.35em]
+  {\Huge\bfseries\textcolor{frichespaper}{Frisches}}\\[0.2em]
+  {\Large\textcolor{frichesgold}{Electronic Press Kit}}\\[0.18em]
+  {\large\textcolor{frichesmuted}{Munich rock with flute, riffs, shadows, and sharp hooks}}\\[0.7em]
+  \includegraphics[width=\textwidth]{\epkhero}
+\end{center}
+
+\vfill
+
+\begin{frcard}
+  {\small\textcolor{frichesgold}{\textbf{Frisches}} builds guitar-led rock around melodic flute lines, cinematic turns, and a rhythm section that keeps the songs taut and physical. The band draws from classic-rock drama and 60s/70s songwriting instinct without losing the immediacy of a contemporary live act. Current material from \textit{Tales From The Cellar} moves between tension, character, and release with a clear visual identity already strong enough for booking, editorial use, and promotional features.}
+\end{frcard}
+
+\vspace{0.45em}
+
+\begin{frcard}
+  \centering
+  {\small\textcolor{frichesmuted}{Official website}}\\[0.08em]
+  {\large\textcolor{frichesgold}{\href{\frischeswebsite}{frisches.band}}}\\[0.3em]
+  {\small\textcolor{frichesmuted}{Contact}}\\[0.08em]
+  {\large\textcolor{frichespaper}{\href{mailto:frisches.band@gmail.com}{frisches.band@gmail.com}}}\\[0.3em]
+  {\small\textcolor{frichesmuted}{Social media}}\\[0.12em]
+  {\Large\href{\frischesinstagram}{\textcolor{frichesmagenta}{\faInstagram}}\hspace{1.2em}\href{\frichesspotify}{\textcolor{frichescyan}{\faSpotify}}\hspace{1.2em}\href{\frischesyoutube}{\textcolor{frichesgold}{\faYoutube}}}
+\end{frcard}
+
+\vfill
+
+\end{titlepage}
+\hypersetup{pageanchor=true}
+
+\section*{Quick Take}
+
+\begin{minipage}[t]{0.58\textwidth}
+\vspace{0pt}
+Frisches is a four-piece band from Munich shaped by guitar drive, vocal and flute interplay, and a rhythm section that plays with weight rather than excess. The project works best when presented as both a sonic and visual act: dark surfaces, warm metallic accents, intimate rehearsal energy, and songs that feel staged without becoming theatrical.
+
+The current release, \textit{Tales From The Cellar}, gives journalists and bookers an easy entry point: a tight set of character-rich songs, a recognisable line-up, and enough visual material to support listings, features, previews, and social promotion.
+
+\vspace{0.75em}
+
+\begin{frcard}
+  \textbf{Line-up}\\[0.25em]
+  Cami on vocals and flute, Edgar on guitar and backing vocals, Tobi on bass, and Steff on drums.
+\end{frcard}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.38\textwidth}
+\vspace{0pt}
+\begin{frcard}
+  \textbf{At a glance}\\[0.3em]
+  Base: Munich, Germany\\
+  Setup: four-piece live band\\
+  Release focus: \textit{Tales From The Cellar}\\
+  Best fit: club shows, support slots, press coverage, visual editorials
+\end{frcard}
+
+\vspace{0.7em}
+
+\begin{frcard}
+  \textbf{Use this kit for}\\[0.3em]
+  bookings, editorial pitching, culture listings, interview prep, and social media copy
+\end{frcard}
+\end{minipage}
+
+\section*{Featured Media}
+
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash\bfseries\color{frichesgold}}p{4.5cm}>{\raggedright\arraybackslash\color{frichespaper}}X}
+\toprule
+Track & Why it matters \\
+\midrule
+\href{\frichesspotify}{Misled} & Opening statement from \textit{Tales From The Cellar}; compact, melodic, and immediate enough for a first listen. \\
+\href{\frichesspotify}{Tears Of Joyful Despair} & A concise showcase of the band’s tension-and-release instinct and arrangement detail. \\
+\href{\witchhuntingvideo}{Witch Hunting} & The clearest crossover pick for both editorial pitching and visual discovery because the track and the video reinforce each other. \\
+\bottomrule
+\end{tabularx}
+
+\vspace{0.8em}
+
+\begin{multicols}{2}
+\begin{frcard}
+  \textbf{Video focus}\\[0.3em]
+  The clearest visual entry point is the \href{\witchhuntingvideo}{official \textit{Witch Hunting} video}. For wider browsing, direct press and promoters to the \href{\frischesyoutube}{YouTube channel}, where the band’s moving-image material is collected in one place.
+\end{frcard}
+
+\columnbreak
+
+\begin{frcard}
+  \textbf{Digital presence}\\[0.3em]
+  The \href{\frischeswebsite}{official website} carries the band’s main visual world, while \href{\frischesinstagram}{Instagram} supports current imagery and activity. For direct follow-up, write to \href{mailto:frisches.band@gmail.com}{the band by email}.
+\end{frcard}
+\end{multicols}
+
+\clearpage
+\section*{Member Portraits}
+
+\vfill
+
+\memberportrait{}{\epkcami}{Cami}{Vocals, flute}\hfill
+\memberportrait{}{\epktobi}{Tobi}{Bass}
+
+\vfill
+
+\memberportrait{}{\epkedgar}{Edgar}{Guitar, backing vocals}\hfill
+\memberportrait{}{\epksteff}{Steff}{Drums}
+
+\vfill
+
+\clearpage
+\section*{Photo Use}
+
+\begin{center}
+  \includegraphics[width=\textwidth]{\epkgroup}
+\end{center}
+
+\vspace{0.5em}
+
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash\bfseries\color{frichesgold}}p{3.55cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.05cm}}
+\toprule
+Image type & Suggested editorial or booking use & Credit \\
+\midrule
+Lead live portrait & Cover image, booking deck opener, and website download preview. & Tobias Tschepe \\
+Cami portrait & Interview support, vocalist features, and cropped social placements. & Filippos Ineglis \\
+Edgar, Tobi, and Steff portraits & Individual member features, line-up intros, and band storytelling assets. & Filippos Ineglis \\
+Outdoor band portrait & Listings, landscape banners, and quick press overviews. & Filippos Ineglis \\
+\bottomrule
+\end{tabularx}
+
+\vspace{0.5em}
+
+\begin{center}
+  \includegraphics[height=5.5cm]{\epkhero}\\[0.15em]
+  {\small\textcolor{frichesmuted}{Live performance --- Credit: Tobias Tschepe}}
+\end{center}
+
+\end{document}
