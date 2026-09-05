@@ -1,5 +1,5 @@
 % Compile with:
-%   xelatex -interaction=nonstopmode -halt-on-error frisches-epk.tex
+%   xelatex -interaction=nonstopmode -halt-on-error frisches-epk-fr.tex
 
 \documentclass[11pt,a4paper]{article}
 
@@ -25,8 +25,8 @@
   linkcolor=white,
   urlcolor=white,
   pdfauthor={Frisches},
-  pdftitle={Frisches Electronic Press Kit},
-  pdfsubject={Electronic Press Kit},
+  pdftitle={Dossier de presse électronique de Frisches},
+  pdfsubject={Dossier de presse électronique},
   pdfcreator={LaTeX}
 }
 
@@ -77,7 +77,7 @@
 \newcommand{\suitsvideo}{https://youtu.be/STKDRpYm5j0}
 \newcommand{\frischesinstagram}{https://www.instagram.com/frischestheband/}
 
-\newcommand{\epkstraplinefontsize}{\fontsize{10pt}{12pt}\selectfont}
+\newcommand{\epkstraplinefontsize}{\fontsize{14pt}{16pt}\selectfont}
 \newcommand{\epkcontactfontsize}{\small}
 \newcommand{\epkvideocoverheight}{3.1cm}
 
@@ -125,7 +125,6 @@
 }
 
 \newtcbox{\linkpill}[2][]{frpillstyle,#1}
-
 \newtcolorbox{frcard}{frcardstyle}
 \newtcolorbox{frcompactcard}{frcardstyle,top=1.1mm,bottom=1.1mm}
 \newtcolorbox{frvideocard}{frcardstyle,top=2.2mm,bottom=2.2mm}
@@ -150,14 +149,14 @@
 \begin{center}
   \includegraphics[width=2.55cm]{\epklogo}\\[0.35em]
   {\Huge\bfseries\textcolor{frichespaper}{Frisches}}\\[0.2em]
-  {\Large\textcolor{frichesgold}{Electronic Press Kit}}\\[0.8em]
+  {\Large\textcolor{frichesgold}{Dossier de presse électronique}}\\[0.8em]
   \includegraphics[width=\textwidth]{\epkhero}
 \end{center}
 
 \vfill
 
 \begin{frcard}
-  {\epkstraplinefontsize\textcolor{frichesgold}{Powerful beats, punchy bass lines, gritty guitar riffs and a whole lotta rock. Frisches embodies rock in its purest form!}}
+  {\epkstraplinefontsize\textcolor{frichesgold}{Des rythmes puissants, des lignes de basse percutantes, des riffs de guitare incisifs et une bonne dose de rock. Frisches incarne le rock à l'état pur!}}
 \end{frcard}
 
 \vspace{0.45em}
@@ -165,14 +164,14 @@
 \begin{frcard}
   \begin{minipage}[t]{0.46\linewidth}
     \raggedright
-    {\epkcontactfontsize\textcolor{frichesmuted}{Official website}}\\[0.08em]
+    {\epkcontactfontsize\textcolor{frichesmuted}{Site officiel}}\\[0.08em]
     {\large\textcolor{frichesgold}{\href{\frischeswebsite}{https://frisches.band}}}\\[0.3em]
     {\epkcontactfontsize\textcolor{frichesmuted}{E-mail}}\\[0.08em]
     {\large\textcolor{frichespaper}{\href{mailto:frisches.band@gmail.com}{frisches.band@gmail.com}}}
   \end{minipage}\hfill
   \begin{minipage}[t]{0.49\linewidth}
     \raggedright
-    {\epkcontactfontsize\textcolor{frichesmuted}{Social media}}\\[0.12em]
+    {\epkcontactfontsize\textcolor{frichesmuted}{Réseaux sociaux}}\\[0.12em]
     \begin{tabularx}{\linewidth}{@{}c@{\hspace{0.55em}}>{\raggedright\arraybackslash}X@{}}
       \href{\frischesinstagram}{\textcolor{instagrampink}{\faInstagram}} & \href{\frischesinstagram}{\textcolor{frichespaper}{instagram.com/frischestheband}} \\
       \href{\frichesspotify}{\textcolor{spotifygreen}{\faSpotify}} & \href{\frichesspotify}{\textcolor{frichespaper}{sptfy.com/frischestheband}} \\
@@ -186,13 +185,13 @@
 \end{titlepage}
 \hypersetup{pageanchor=true}
 
-\section*{Quick Take}
+\section*{L'essentiel}
 
 \begin{minipage}[t]{0.52\textwidth}
 \vspace{0pt}
-Starting out in 2019, Frisches truly hit their stride in 2021 when Cami, Tobi, Steff and Edgar started working regularly together. The band's music is a statement of their member's passion for the rock vibes of the 60s and 70s, brought into the present with a modern, punchy sound and lyrical depth.\\
+Formé en 2019 à Munich, le groupe a trouvé son vrai rythme de croisière en 2021 lorsque Cami, Tobi, Steff et Edgar ont commencé à jouer régulièrement ensemble. La musique du groupe témoigne de leur passion pour le rock des années 60 et 70, tout en le réinventant à leur façon: poétique et profond, vintage et moderne, percutant et énergique.\\
 
-The debut album, \textit{Tales From The Cellar}, is a collection of sonic poetry whose tracks emerged within the walls of their underground rehearsal room. In 2023 the band expanded their lore with the animated video clip of "Witch Hunting", casting a veil of mystery over the group's visual identity.
+Le premier album, \textit{Tales From The Cellar}, est un recueil de poésie sonore dont les morceaux ont vu le jour entre les murs de leur salle de répétition. En 2023, le groupe a enrichi son univers avec le clip animé de « Witch Hunting », jetant un voile de mystère sur leur identité visuelle.
 
 \vspace{0.75em}
 
@@ -200,42 +199,42 @@ The debut album, \textit{Tales From The Cellar}, is a collection of sonic poetry
 \begin{minipage}[t]{0.44\textwidth}
 \vspace{0pt}
 \begin{frcompactcard}
-  \textbf{At a glance}\\[0.15em]
+  \textbf{En bref}\\[0.15em]
   {\renewcommand{\arraystretch}{0.9}
   \begin{tabularx}{\linewidth}{@{}>{\vspace{0pt}\raggedright\arraybackslash\bfseries\color{frichesgold}}p{2.4cm}>{\vspace{0pt}\raggedright\arraybackslash}X@{}}
-    Location & Munich, Germany \\
-    Setup & Bass, Guitar, Vocals, Drums \\
-    Latest release & \textit{Tales From The Cellar}
+    Lieu & Munich, Allemagne \\
+    Formation & Basse, Guitare, Batterie, Chant \\
+    Dernier album & \textit{Tales From The Cellar}
   \end{tabularx}}
 \end{frcompactcard}
 
 \vspace{0.3em}
 
 \begin{frcompactcard}
-  \textbf{Line-up}\\[0.15em]
+  \textbf{Formation}\\[0.15em]
   {\renewcommand{\arraystretch}{0.9}
-  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash\bfseries\color{frichesgold}}p{2.4cm}>{\raggedright\arraybackslash\color{frichespaper}}X@{}}
-    Cami & Vocals, flute \\
-    Edgar & Guitar, backing vocals \\
-    Tobi & Bass \\
-    Steff & Drums
+  \begin{tabularx}{\linewidth}{@{}>{\vspace{0pt}\raggedright\arraybackslash\bfseries\color{frichesgold}}p{2.4cm}>{\raggedright\arraybackslash\color{frichespaper}}X@{}}
+    Cami & Chant, flûte \\
+    Edgar & Guitare, choeurs \\
+    Tobi & Basse \\
+    Steff & Batterie
   \end{tabularx}}
 \end{frcompactcard}
 \end{minipage}
 
-\section*{Top Song Picks}
+\section*{Sélection de morceaux}
 
 \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash\bfseries\color{frichesgold}}p{4.5cm}>{\raggedright\arraybackslash\color{frichespaper}}X}
 \midrule
-\href{\frichesspotify}{Misled} & Opens \textit{Tales From The Cellar}; punchy intro, catchy riff, thoughtful lyrics. Fast-paced rock. \\
-\href{\frichesspotify}{Tears Of Joyful Despair} & Showcase the band's simple and yet intricate compositional approach with string arrangements. \\
-\href{\witchhuntingvideo}{Witch Hunting} & First song written by the band. Mysterious melody and incisive solo. Professional animated video-clip available. \\
+\href{\frichesspotify}{Misled} & Premier titre de l'album \textit{Tales From The Cellar}; intro percutante, riff accrocheur, paroles profondes. Du rock qui envoie. \\
+\href{\frichesspotify}{Tears Of Joyful Despair} & Mets en avant l'approche compositionnelle à la fois simple et complexe du groupe, avec des arrangements pour cordes. \\
+\href{\witchhuntingvideo}{Witch Hunting} & Première chanson écrite par le groupe. Mélodie mystérieuse et solo incisif. Clip animé professionnel disponible. \\
 \bottomrule
 \end{tabularx}
 
 \vspace{0em}
 
-\section*{Top Video Picks}
+\section*{Sélection de vidéos}
 \begin{multicols}{2}
 \begin{frvideocard}
   \centering
@@ -250,51 +249,48 @@ The debut album, \textit{Tales From The Cellar}, is a collection of sonic poetry
   \textbf{\href{\suitsvideo}{Suits}}\\[0.15em]
   \href{\suitsvideo}{\includegraphics[width=\linewidth,height=\epkvideocoverheight,keepaspectratio]{\epksuitscover}}
 \end{frvideocard}
-
 \end{multicols}
 
 \clearpage
-\section*{Member Portraits}
+\section*{Portraits des membres}
 
 \vfill
 
-\memberportrait{}{\epkcami}{Cami}{Vocals, flute}\hfill
-\memberportrait{}{\epktobi}{Tobi}{Bass}
+\memberportrait{}{\epkcami}{Cami}{Chant, flûte}\hfill
+\memberportrait{}{\epktobi}{Tobi}{Basse}
 
 \vfill
 
-\memberportrait{}{\epkedgar}{Edgar}{Guitar, backing vocals}\hfill
-\memberportrait{}{\epksteff}{Steff}{Drums}
+\memberportrait{}{\epkedgar}{Edgar}{Guitare, choeurs}\hfill
+\memberportrait{}{\epksteff}{Steff}{Batterie}
 
 \vfill
 
 \clearpage
-\section*{Band Portraits}
+\section*{Utilisation des photos}
 
 \begin{center}
   \begin{minipage}[t][6.1cm][t]{0.48\textwidth}
     \centering
     \hypertarget{bandportraitone}{\includegraphics[width=\linewidth,height=5.5cm,keepaspectratio]{\epkgroup}}\\[0.15em]
-    {\small\textcolor{frichesmuted}{Outdoor band portrait\textsuperscript{\hyperlink{bandportraitone}{1}}}}
+    {\small\textcolor{frichesmuted}{Portrait du groupe en extérieur\textsuperscript{\hyperlink{bandportraitone}{1}}}}
   \end{minipage}\hfill
   \begin{minipage}[t][6.1cm][t]{0.48\textwidth}
     \centering
     \hypertarget{bandportraittwo}{\includegraphics[width=\linewidth,height=5.5cm,keepaspectratio]{\epkhero}}\\[0.15em]
-    {\small\textcolor{frichesmuted}{Live performance\textsuperscript{\hyperlink{bandportraittwo}{2}}}}
+    {\small\textcolor{frichesmuted}{Concert\textsuperscript{\hyperlink{bandportraittwo}{2}}}}
   \end{minipage}
 \end{center}
 
-  {\renewcommand{\arraystretch}{0.95}
-  \begin{tabularx}{\textwidth}{>{\vspace{0pt}\raggedright\arraybackslash\bfseries\color{frichesgold}}p{3.55cm}>{\vspace{0pt}\raggedright\arraybackslash}X>{\vspace{0pt}\raggedright\arraybackslash}p{3.05cm}}
+{\renewcommand{\arraystretch}{0.95}
+\begin{tabularx}{\textwidth}{>{\vspace{0pt}\raggedright\arraybackslash\bfseries\color{frichesgold}}p{3.55cm}>{\vspace{0pt}\raggedright\arraybackslash}X>{\vspace{0pt}\raggedright\arraybackslash}p{3.05cm}}
 \toprule
-Image type & Suggested usage & Credit \\
+Type d'image & Utilisation suggérée & Crédit \\
 \midrule
-Outdoor band portrait\textsuperscript{\hyperlink{bandportraitone}{1}} & Listings, landscape banners, press overviews. & Filippos Ineglis \\
-Live performance\textsuperscript{\hyperlink{bandportraittwo}{2}} & Cover image, booking materials, and website preview. & Tobias Tschepe \\
-Member portraits & Interview and storytelling support, social media placements. & Filippos Ineglis \\
+Portrait du groupe en extérieur\textsuperscript{\hyperlink{bandportraitone}{1}} & Fiches de présentation, bannières horizontales et aperçus presse. & Filippos Ineglis \\
+Concert\textsuperscript{\hyperlink{bandportraittwo}{2}} & Image de couverture, programmation et aperçu du site web. & Tobias Tschepe \\
+Portraits des membres & Interviews, articles consacrés au groupe et publications sur les réseaux sociaux. & Filippos Ineglis \\
 \bottomrule
 \end{tabularx}}
-
-\vspace{0.5em}
 
 \end{document}

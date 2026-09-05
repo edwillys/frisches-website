@@ -44,7 +44,7 @@ const aboutStoryTextByLocale: Record<AppLocale, StoryText> = {
         linkYtId: '_rZYN5G6-gg',
         linkPreviewTitle: 'Witch Hunting - Frisches (Official Music Video)',
         linkPreviewMetaPrimary: '2023',
-        textAfterLink: ` was released, casting a veil of mystery over the group’s visual identity.`,
+        textAfterLink: ` , casting a veil of mystery over the group’s visual identity.`,
       },
       {
         id: 'closing',
@@ -142,11 +142,11 @@ const aboutStoryTextByLocale: Record<AppLocale, StoryText> = {
       },
       {
         id: 'founding',
-        text: `Nel 2019 il panorama musicale ha dato alla luce una creatura fuori dal comune: Frisches. Nutrita dalle acque dorate dell’Isar, tra un sorso e l’altro, Frisches è arrivata con una sola missione: tenere il rock sempre fresco. Beat poderosi, basso che spinge e riff ruvidi colpiscono da allora dritti allo stomaco.`,
+        text: `Nel 2019 il panorama musicale ha dato la luce a una creatura fuori dal comune: i Frisches. Nutriti dalle acque dorate dell’Isar, tra un sorso e l’altro, i Frisches sono nati con una sola missione: tenere il rock sempre vivo. Da allora, con i loro beat poderosi, il basso che spinge e riff ruvidi e pungenti colpiscono dritti allo stomaco.`,
       },
       {
         id: 'album',
-        text: `L’album d’esordio, "Tales From The Cellar", è una raccolta di poesia sonora forgiata da quattro menti creative: Camilla (voce e flauto), Aleksey (basso), Steff (batteria) ed Edgar (chitarra). I brani sono nati fra le pareti del loro covo di prova sotterraneo. Nel 2023 la band ha allargato ulteriormente la propria leggenda con il videoclip animato di `,
+        text: `L’album d’esordio, "Tales From The Cellar", è una raccolta poetica, messa in musica da quattro menti creative: Camilla (voce e flauto), Aleksey (basso), Steff (batteria) ed Edgar (chitarra). I brani sono nati fra le pareti del loro covo di prova sotterraneo. Nel 2023 la band ha ampliato ulteriormente la propria leggenda con il videoclip animato dî `,
         linkText: `"Witch Hunting"`,
         linkHref: 'https://www.youtube.com/watch?v=_rZYN5G6-gg',
         linkYtId: '_rZYN5G6-gg',

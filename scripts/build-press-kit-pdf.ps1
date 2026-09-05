@@ -7,13 +7,22 @@ if (-not (Test-Path $xelatex)) {
 
 Push-Location $pressKitDir
 try {
-  & $xelatex -interaction=nonstopmode -halt-on-error frisches-epk.tex
-  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  $pressKitSources = @(
+    'frisches-epk.tex',
+    'frisches-epk-fr.tex'
+  )
 
-  & $xelatex -interaction=nonstopmode -halt-on-error frisches-epk.tex
-  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  foreach ($source in $pressKitSources) {
+    $baseName = [System.IO.Path]::GetFileNameWithoutExtension($source)
 
-  Remove-Item frisches-epk.aux, frisches-epk.out -ErrorAction SilentlyContinue
+    & $xelatex -interaction=nonstopmode -halt-on-error $source
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+    & $xelatex -interaction=nonstopmode -halt-on-error $source
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+    Remove-Item "$baseName.aux", "$baseName.out" -ErrorAction SilentlyContinue
+  }
 }
 finally {
   Pop-Location

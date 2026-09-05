@@ -132,7 +132,7 @@ export const aboutMembersText: Record<
       name: 'Edgar',
       badgeTitles: ['Chitarra', 'Cori'],
       descriptionLead:
-        'Suona la chitarra e, quando capita, anche il buffone. Compositore di tempi sghembi, la sua nota preferita è sempre dietro l’angolo. Porta la sua passione per il rock classico in ogni riff e assolo dei Frisches. Fra intro e giochi di parole a non finire, il suo racconto preferito lo porta a',
+        'Suona la chitarra e, quando capita, fa anche il buffone. Compositore di tempi sghembi, la sua nota preferita è sempre dietro l’angolo. Porta la sua passione per il rock classico in ogni riff e assolo dei Frisches. Fra intro e giochi di parole a non finire, il suo racconto preferito lo porta a',
     },
     cami: {
       name: 'Cami',
